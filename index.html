@@ -1,19 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#8B0000" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZonHD Cinema</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #050505; color: white; font-family: sans-serif; }
+        .medusa-glow { text-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000; }
+        .movie-card:hover { transform: scale(1.05); transition: 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="p-8 text-center">
+        <h1 class="text-6xl font-bold text-red-600 medusa-glow mb-4">ZonHD</h1>
+        <p class="text-gray-400">Premium Streaming Experience</p>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-4 grid grid-cols-2 md:grid-cols-4 gap-6" id="movie-grid">
+        <div class="text-center p-10 col-span-full">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full"></div>
+            <p class="mt-4">Waking the Medusa...</p>
+        </div>
+    </div>
+
+    <script>
+        // Insert your TMDB API Key below if you have it
+        const API_KEY = 'YOUR_TMDB_API_KEY_HERE'; 
+        const grid = document.getElementById('movie-grid');
+
+        async function loadMovies() {
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${API_KEY}`);
+                const data = await res.json();
+                grid.innerHTML = data.results.map(m => `
+                    <div class="movie-card bg-zinc-900 rounded-lg overflow-hidden shadow-xl">
+                        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" alt="${m.title}">
+                        <div class="p-2 text-sm font-bold">${m.title}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                grid.innerHTML = '<p class="col-span-full text-center text-red-500">Failed to load movies. Check your API Key.</p>';
+            }
+        }
+        loadMovies();
+    </script>
+</body>
 </html>
