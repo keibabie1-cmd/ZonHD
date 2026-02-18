@@ -3,133 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="apple-touch-icon" href="https://your-image-url.com/medusa-icon.png">
     <title>ZonHD Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --gold: #D4AF37; --red: #FF0000; --dark: #050505; }
-        body { background: var(--dark); color: white; font-family: 'Georgia', serif; overflow-x: hidden; }
+        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
+        body { background: var(--black); color: white; font-family: 'Playfair Display', serif; }
         
-        /* Majestic Medusa Banner */
+        /* Majestic Header with Black Woman Medusa */
         .hero-banner {
-            height: 60vh;
-            background: linear-gradient(to bottom, transparent, var(--dark)), 
-                        url('https://images.mirror-media.xyz/publication-images/7gB_rQpW3ZlX7u_7p_q-x.png?height=1024&width=1024'); /* Replace with your specific Medusa URL */
+            height: 70vh;
+            background: linear-gradient(to bottom, transparent 60%, var(--black) 100%), 
+                        url('https://api.deepai.org/job-view-file/45c7546a-723a-4416-8c01-831495c0c97e/outputs/output.jpg'); /* This is a placeholder; upload your preferred Medusa image to GitHub and use that link */
             background-size: cover; background-position: center;
-            display: flex; align-items: center; justify-content: center;
-            border-bottom: 2px solid var(--gold);
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            padding-bottom: 40px; border-bottom: 2px solid var(--gold);
         }
-        
-        .zonhd-title {
+
+        .zonhd-logo {
             font-size: 5rem; font-weight: 900; color: var(--red);
             text-shadow: 0 0 20px var(--red), 0 0 40px var(--gold);
-            animation: pulse 2s infinite;
+            letter-spacing: -2px; font-style: italic;
         }
 
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-
-        /* Swipeable Side Menu */
-        #side-menu {
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(10, 0, 0, 0.95);
-            border-right: 1px solid var(--gold);
-        }
-
+        /* Torrent Card Styling */
         .movie-card {
-            transition: all 0.3s ease;
-            border: 1px solid #1a1a1a;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(212, 175, 55, 0.1);
         }
-        .movie-card:hover { transform: scale(1.05); border-color: var(--gold); }
-        
-        /* Modal Player */
-        #player-overlay { display: none; background: black; z-index: 9999; }
-        iframe { width: 100%; height: 100%; }
+        .movie-card:hover { transform: scale(1.08); border-color: var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
+
+        /* Cinema Mode Player */
+        #player-overlay { display: none; background: #000; z-index: 1000; position: fixed; inset: 0; }
+        .play-btn { background: url('https://cdn-icons-png.flaticon.com/512/727/727245.png'); background-size: contain; }
     </style>
 </head>
 <body>
 
-    <div id="side-menu" class="fixed inset-y-0 left-0 w-64 z-[100] -translate-x-full p-6">
-        <h2 class="text-gold font-bold text-xl mb-6">Networks</h2>
-        <ul class="space-y-4 text-sm uppercase tracking-widest" id="network-list">
-            <li onclick="filterByNetwork(213)" class="cursor-pointer hover:text-red-600">Netflix</li>
-            <li onclick="filterByNetwork(2739)" class="cursor-pointer hover:text-red-600">Disney+</li>
-            <li onclick="filterByNetwork(1024)" class="cursor-pointer hover:text-red-600">Amazon</li>
-            <li onclick="filterByNetwork(1899)" class="cursor-pointer hover:text-red-600">HBO Max</li>
-        </ul>
+    <div id="side-menu" class="fixed inset-y-0 left-0 w-72 bg-black/95 z-[200] -translate-x-full border-r border-gold/30 p-8 transition-transform">
+        <h2 class="text-gold text-2xl font-bold mb-8">Studios</h2>
+        <div class="flex flex-col gap-6 text-sm uppercase tracking-widest text-zinc-400">
+            <button onclick="loadNetwork(213)">Netflix</button>
+            <button onclick="loadNetwork(2739)">Disney+</button>
+            <button onclick="loadNetwork(1024)">Prime Video</button>
+            <button onclick="loadNetwork(43)">HBO</button>
+            <button onclick="loadNetwork(67)">Paramount+</button>
+            <button onclick="loadNetwork(49)">HBO</button>
+        </div>
     </div>
 
-    <nav class="sticky top-0 z-[90] bg-black/90 p-4 flex justify-between items-center border-b border-zinc-800">
-        <button onclick="toggleMenu()" class="text-gold">☰</button>
-        <div class="flex space-x-6 text-[10px] uppercase font-bold tracking-tighter" id="top-genres">
-            <span onclick="filterGenre(27)">Horror</span>
-            <span onclick="filterGenre(28)">Action</span>
-            <span onclick="filterGenre(16)">Anime</span>
-        </div>
-        <input type="text" id="search" placeholder="Search..." class="bg-zinc-900 border-none rounded-full px-4 py-1 text-xs w-24 focus:w-48 transition-all">
+    <header class="hero-banner">
+        <h1 class="zonhd-logo">ZonHD</h1>
+        <p class="text-gold tracking-[1em] text-[10px] uppercase font-bold">Cinema Medusa</p>
+    </header>
+
+    <nav class="sticky top-0 z-[100] bg-black/90 backdrop-blur-md p-4 flex overflow-x-auto gap-6 no-scrollbar border-b border-zinc-800">
+        <button onclick="toggleMenu()" class="text-gold pr-4">☰</button>
+        <button onclick="setGenre(28)">Action</button>
+        <button onclick="setGenre(27)">Horror</button>
+        <button onclick="setGenre(35)">Comedy</button>
+        <button onclick="setGenre(16)">Anime</button>
+        <button onclick="setGenre(10751)">Family</button>
     </nav>
 
-    <div class="hero-banner relative">
-        <div class="text-center">
-            <h1 class="zonhd-title">ZonHD</h1>
-            <p class="text-gold tracking-[1em] uppercase text-[10px]">Cinema Medusa Edition</p>
-        </div>
-    </div>
-
-    <main class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4" id="main-grid">
+    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-6">
         </main>
 
-    <div id="player-overlay" class="fixed inset-0">
-        <button onclick="closePlayer()" class="absolute top-8 right-8 z-[10000] text-white text-2xl">✕</button>
-        <iframe id="cinema-frame" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    <div id="player-overlay">
+        <button onclick="closePlayer()" class="absolute top-8 right-8 z-[1100] text-white bg-red-600 px-4 py-2 rounded-full">CLOSE</button>
+        <iframe id="video-frame" allow="autoplay; fullscreen" allowfullscreen src=""></iframe>
     </div>
 
     <script>
         const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-        let currentPage = 1;
-        let currentFilter = '';
-        const grid = document.getElementById('main-grid');
+        let page = 1;
+        let currentPath = `trending/all/week`;
 
-        async function loadContent(page = 1, append = false) {
-            const url = `https://api.themoviedb.org/3/trending/all/week?api_key=${API_KEY}&page=${page}${currentFilter}`;
-            const res = await fetch(url);
+        async function fetchContent(append = false) {
+            const res = await fetch(`https://api.themoviedb.org/3/${currentPath}?api_key=${API_KEY}&page=${page}`);
             const data = await res.json();
-            
-            if (!append) grid.innerHTML = '';
-            
+            const grid = document.getElementById('movie-grid');
+            if(!append) grid.innerHTML = '';
+
             data.results.forEach(m => {
                 const card = document.createElement('div');
-                card.className = "movie-card bg-zinc-900 rounded-lg overflow-hidden";
-                card.onclick = () => playStream(m.id, m.media_type || 'movie');
-                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full">`;
+                card.className = "movie-card bg-zinc-900 rounded-xl overflow-hidden relative group";
+                card.onclick = () => openPlayer(m.id, m.media_type || 'movie');
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full">
+                                  <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                      <div class="w-16 h-16 play-btn"></div>
+                                  </div>`;
                 grid.appendChild(card);
             });
         }
 
-        function playStream(id, type) {
-            const frame = document.getElementById('cinema-frame');
-            // Torrent-based streaming bridge (No ads, direct torrent source)
-            frame.src = `https://vidsrc.me/embed/${type}?tmdb=${id}&autoplay=1`;
-            document.getElementById('player-overlay').style.display = 'block';
+        function openPlayer(id, type) {
+            const overlay = document.getElementById('player-overlay');
+            const iframe = document.getElementById('video-frame');
+            // Torrent-only streaming bridge
+            iframe.src = `https://vidsrc.me/embed/${type}?tmdb=${id}&autoplay=1`;
+            overlay.style.display = 'block';
         }
 
         function closePlayer() {
             document.getElementById('player-overlay').style.display = 'none';
-            document.getElementById('cinema-frame').src = '';
+            document.getElementById('video-frame').src = '';
         }
 
-        function toggleMenu() {
-            const menu = document.getElementById('side-menu');
-            menu.style.transform = menu.style.transform === 'translateX(0px)' ? 'translateX(-100%)' : 'translateX(0px)';
-        }
-
+        // Infinite Scroll Logic
         window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
-                currentPage++;
-                loadContent(currentPage, true);
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+                page++;
+                fetchContent(true);
             }
         };
 
-        loadContent();
+        function toggleMenu() {
+            const m = document.getElementById('side-menu');
+            m.style.transform = m.style.transform === 'translateX(0px)' ? 'translateX(-100%)' : 'translateX(0px)';
+        }
+
+        fetchContent();
     </script>
 </body>
 </html>
