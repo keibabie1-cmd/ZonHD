@@ -3,14 +3,12 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const app = express();
 
-// Serve the Medusa frontend from the public folder
-app.use(express.static(''));
+// This line tells the server to look in the main folder for index.html
+app.use(express.static(__dirname));
 
-// The Stream Shield Proxy to fix black screens and volume
 app.use('/stream-shield', (req, res, next) => {
   const targetUrl = req.query.url; 
   if (!targetUrl) return res.status(400).send('No URL provided');
-
   return createProxyMiddleware({
     target: targetUrl,
     changeOrigin: true,
@@ -24,5 +22,6 @@ app.use('/stream-shield', (req, res, next) => {
   })(req, res, next);
 });
 
+// Port handling for Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
