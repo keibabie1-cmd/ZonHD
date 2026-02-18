@@ -4,7 +4,7 @@ const path = require('path');
 const app = express();
 
 // Serve the Medusa frontend from the public folder
-app.use(express.static('public'));
+app.use(express.static(''));
 
 // The Stream Shield Proxy to fix black screens and volume
 app.use('/stream-shield', (req, res, next) => {
