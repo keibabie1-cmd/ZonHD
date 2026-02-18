@@ -6,43 +6,69 @@
     <title>ZonHD Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #050505; color: white; font-family: sans-serif; }
+        body { background-color: #050505; color: white; font-family: sans-serif; overflow-x: hidden; }
         .medusa-glow { text-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000; }
-        .movie-card:hover { transform: scale(1.05); transition: 0.3s; }
+        .movie-card { transition: transform 0.3s ease; }
+        .movie-card:hover { transform: scale(1.05); }
     </style>
 </head>
 <body>
     <div class="p-8 text-center">
         <h1 class="text-6xl font-bold text-red-600 medusa-glow mb-4">ZonHD</h1>
-        <p class="text-gray-400">Premium Streaming Experience</p>
+        <p class="text-gray-400 tracking-widest uppercase text-xs">Premium Streaming Experience</p>
     </div>
 
-    <div class="max-w-6xl mx-auto p-4 grid grid-cols-2 md:grid-cols-4 gap-6" id="movie-grid">
-        <div class="text-center p-10 col-span-full">
-            <div class="animate-spin inline-block w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full"></div>
-            <p class="mt-4">Waking the Medusa...</p>
+    <div class="max-w-7xl mx-auto p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6" id="movie-grid">
+        <div id="loader" class="text-center p-20 col-span-full">
+            <div class="animate-spin inline-block w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full"></div>
+            <p class="mt-4 text-red-500 font-bold">Waking the Medusa...</p>
         </div>
     </div>
 
     <script>
-        // Insert your TMDB API Key below if you have it
-        const API_KEY = 'YOUR_TMDB_API_KEY_HERE'; 
+        // Your Verified API Key
+        const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4'; 
         const grid = document.getElementById('movie-grid');
 
         async function loadMovies() {
             try {
-                const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key='b9c746781e1e9b084c4cc4f0420156d4`);
-                const data = await res.json();
-                grid.innerHTML = data.results.map(m => `
-                    <div class="movie-card bg-zinc-900 rounded-lg overflow-hidden shadow-xl">
-                        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" alt="${m.title}">
-                        <div class="p-2 text-sm font-bold">${m.title}</div>
-                    </div>
-                `).join('');
+                // Fetching trending movies from TMDB
+                const response = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${API_KEY}`);
+                
+                if (!response.ok) throw new Error('API Response Error');
+                
+                const data = await response.json();
+                
+                // Clear the loader
+                grid.innerHTML = '';
+
+                // Build the grid
+                data.results.forEach(movie => {
+                    const card = document.createElement('div');
+                    card.className = "movie-card bg-zinc-900 rounded-lg overflow-hidden shadow-2xl border border-zinc-800";
+                    card.innerHTML = `
+                        <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" 
+                             alt="${movie.title}" 
+                             class="w-full h-auto object-cover">
+                        <div class="p-3">
+                            <h3 class="text-sm font-bold truncate">${movie.title}</h3>
+                            <p class="text-xs text-red-500 mt-1">★ ${movie.vote_average.toFixed(1)}</p>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
             } catch (err) {
-                grid.innerHTML = '<p class="col-span-full text-center text-red-500">Failed to load movies. Check your API Key.</p>';
+                console.error(err);
+                grid.innerHTML = \`
+                    <div class="col-span-full text-center p-10">
+                        <p class="text-red-500 font-bold text-xl">Connection Error</p>
+                        <p class="text-gray-500 text-sm mt-2">The Medusa cannot reach the database. Please refresh the page.</p>
+                    </div>
+                \`;
             }
         }
+
+        // Start the app
         loadMovies();
     </script>
 </body>
