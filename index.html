@@ -31,7 +31,7 @@
 
         async function loadMovies() {
             try {
-                const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${API_KEY}`);
+                const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${b9c746781e1e9b084c4cc4f0420156d4}`);
                 const data = await res.json();
                 grid.innerHTML = data.results.map(m => `
                     <div class="movie-card bg-zinc-900 rounded-lg overflow-hidden shadow-xl">
