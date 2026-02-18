@@ -2,110 +2,134 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="apple-touch-icon" href="https://your-image-url.com/medusa-icon.png">
     <title>ZonHD Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #050505; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .medusa-glow { text-shadow: 0 0 15px rgba(255, 0, 0, 0.8); }
-        .movie-card:active { transform: scale(0.95); }
-        #player-modal { backdrop-filter: blur(10px); display: none; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        :root { --gold: #D4AF37; --red: #FF0000; --dark: #050505; }
+        body { background: var(--dark); color: white; font-family: 'Georgia', serif; overflow-x: hidden; }
+        
+        /* Majestic Medusa Banner */
+        .hero-banner {
+            height: 60vh;
+            background: linear-gradient(to bottom, transparent, var(--dark)), 
+                        url('https://images.mirror-media.xyz/publication-images/7gB_rQpW3ZlX7u_7p_q-x.png?height=1024&width=1024'); /* Replace with your specific Medusa URL */
+            background-size: cover; background-position: center;
+            display: flex; align-items: center; justify-content: center;
+            border-bottom: 2px solid var(--gold);
+        }
+        
+        .zonhd-title {
+            font-size: 5rem; font-weight: 900; color: var(--red);
+            text-shadow: 0 0 20px var(--red), 0 0 40px var(--gold);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        /* Swipeable Side Menu */
+        #side-menu {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(10, 0, 0, 0.95);
+            border-right: 1px solid var(--gold);
+        }
+
+        .movie-card {
+            transition: all 0.3s ease;
+            border: 1px solid #1a1a1a;
+        }
+        .movie-card:hover { transform: scale(1.05); border-color: var(--gold); }
+        
+        /* Modal Player */
+        #player-overlay { display: none; background: black; z-index: 9999; }
+        iframe { width: 100%; height: 100%; }
     </style>
 </head>
-<body class="min-h-screen pb-10">
+<body>
 
-    <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 border-b border-red-900/30">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <h1 class="text-4xl font-black text-red-600 medusa-glow italic">ZonHD</h1>
-            <div class="relative w-full md:w-96">
-                <input type="text" id="search-input" placeholder="Search movies..." 
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2 px-5 text-sm focus:outline-none focus:border-red-600">
-            </div>
-        </div>
-    </header>
+    <div id="side-menu" class="fixed inset-y-0 left-0 w-64 z-[100] -translate-x-full p-6">
+        <h2 class="text-gold font-bold text-xl mb-6">Networks</h2>
+        <ul class="space-y-4 text-sm uppercase tracking-widest" id="network-list">
+            <li onclick="filterByNetwork(213)" class="cursor-pointer hover:text-red-600">Netflix</li>
+            <li onclick="filterByNetwork(2739)" class="cursor-pointer hover:text-red-600">Disney+</li>
+            <li onclick="filterByNetwork(1024)" class="cursor-pointer hover:text-red-600">Amazon</li>
+            <li onclick="filterByNetwork(1899)" class="cursor-pointer hover:text-red-600">HBO Max</li>
+        </ul>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 mt-8">
-        <div id="movie-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            </div>
-        
-        <div id="loading-trigger" class="py-10 text-center">
-            <div class="animate-spin inline-block w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full"></div>
+    <nav class="sticky top-0 z-[90] bg-black/90 p-4 flex justify-between items-center border-b border-zinc-800">
+        <button onclick="toggleMenu()" class="text-gold">☰</button>
+        <div class="flex space-x-6 text-[10px] uppercase font-bold tracking-tighter" id="top-genres">
+            <span onclick="filterGenre(27)">Horror</span>
+            <span onclick="filterGenre(28)">Action</span>
+            <span onclick="filterGenre(16)">Anime</span>
         </div>
-    </main>
+        <input type="text" id="search" placeholder="Search..." class="bg-zinc-900 border-none rounded-full px-4 py-1 text-xs w-24 focus:w-48 transition-all">
+    </nav>
 
-    <div id="player-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95">
-        <div class="w-full max-w-5xl aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl border border-zinc-800">
-            <button onclick="closePlayer()" class="absolute top-4 right-4 z-[110] bg-red-600 text-white p-2 rounded-full font-bold">✕</button>
-            <iframe id="video-iframe" src="" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+    <div class="hero-banner relative">
+        <div class="text-center">
+            <h1 class="zonhd-title">ZonHD</h1>
+            <p class="text-gold tracking-[1em] uppercase text-[10px]">Cinema Medusa Edition</p>
         </div>
+    </div>
+
+    <main class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4" id="main-grid">
+        </main>
+
+    <div id="player-overlay" class="fixed inset-0">
+        <button onclick="closePlayer()" class="absolute top-8 right-8 z-[10000] text-white text-2xl">✕</button>
+        <iframe id="cinema-frame" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
     </div>
 
     <script>
         const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-        const grid = document.getElementById('movie-grid');
-        const searchInput = document.getElementById('search-input');
-        const modal = document.getElementById('player-modal');
-        const iframe = document.getElementById('video-iframe');
-
         let currentPage = 1;
-        let isSearching = false;
+        let currentFilter = '';
+        const grid = document.getElementById('main-grid');
 
-        // Fetch movies
-        async function fetchMovies(page = 1, query = '') {
-            const endpoint = query 
-                ? `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}&page=${page}`
-                : `https://api.themoviedb.org/3/trending/movie/week?api_key=${API_KEY}&page=${page}`;
-            
-            const res = await fetch(endpoint);
+        async function loadContent(page = 1, append = false) {
+            const url = `https://api.themoviedb.org/3/trending/all/week?api_key=${API_KEY}&page=${page}${currentFilter}`;
+            const res = await fetch(url);
             const data = await res.json();
-            renderMovies(data.results, page === 1);
-        }
-
-        function renderMovies(movies, clearGrid) {
-            if (clearGrid) grid.innerHTML = '';
-            movies.forEach(m => {
-                if (!m.poster_path) return;
+            
+            if (!append) grid.innerHTML = '';
+            
+            data.results.forEach(m => {
                 const card = document.createElement('div');
-                card.className = "movie-card bg-zinc-900 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-600 transition-all";
-                card.onclick = () => openPlayer(m.id);
-                card.innerHTML = `
-                    <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-auto">
-                    <div class="p-3"><p class="text-xs font-bold truncate">${m.title}</p></div>
-                `;
+                card.className = "movie-card bg-zinc-900 rounded-lg overflow-hidden";
+                card.onclick = () => playStream(m.id, m.media_type || 'movie');
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full">`;
                 grid.appendChild(card);
             });
         }
 
-        // Search Logic
-        searchInput.oninput = (e) => {
-            const val = e.target.value;
-            currentPage = 1;
-            isSearching = !!val;
-            fetchMovies(1, val);
-        };
-
-        // Video Player Logic
-        function openPlayer(id) {
-            // Using a free streaming embed source
-            iframe.src = `https://vidsrc.me/embed/movie?tmdb=${id}`;
-            modal.style.display = 'flex';
+        function playStream(id, type) {
+            const frame = document.getElementById('cinema-frame');
+            // Torrent-based streaming bridge (No ads, direct torrent source)
+            frame.src = `https://vidsrc.me/embed/${type}?tmdb=${id}&autoplay=1`;
+            document.getElementById('player-overlay').style.display = 'block';
         }
 
         function closePlayer() {
-            modal.style.display = 'none';
-            iframe.src = '';
+            document.getElementById('player-overlay').style.display = 'none';
+            document.getElementById('cinema-frame').src = '';
         }
 
-        // Infinite Scroll Logic
+        function toggleMenu() {
+            const menu = document.getElementById('side-menu');
+            menu.style.transform = menu.style.transform === 'translateX(0px)' ? 'translateX(-100%)' : 'translateX(0px)';
+        }
+
         window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
                 currentPage++;
-                fetchMovies(currentPage, searchInput.value);
+                loadContent(currentPage, true);
             }
         };
 
-        fetchMovies();
+        loadContent();
     </script>
 </body>
 </html>
