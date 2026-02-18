@@ -3,15 +3,17 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const app = express();
 
-// This forces the server to send index.html if it's in the same folder as server.js
+// This forces the server to look in the main folder for index.html
 app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'), (err) => {
+    if (err) {
+      res.status(404).send('Error: The server cannot find your index.html file in the root folder.');
+    }
+  });
 });
 
-// This handles any other images or files
 app.use(express.static(__dirname));
 
-// Your Stream Shield Proxy
 app.use('/stream-shield', (req, res, next) => {
   const targetUrl = req.query.url; 
   if (!targetUrl) return res.status(400).send('No URL provided');
@@ -29,4 +31,4 @@ app.use('/stream-shield', (req, res, next) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server active on port ${PORT}`));
+app.listen(PORT, () => console.log('ZonHD Server Active'));
