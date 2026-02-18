@@ -3,15 +3,15 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const app = express();
 
-// 1. THIS IS THE KEY: Explicitly send the index.html file for the root path
+// This forces the server to send index.html if it's in the same folder as server.js
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-// 2. Serve static assets from the current directory
+// This handles any other images or files
 app.use(express.static(__dirname));
 
-// 3. Keep your existing Stream Shield logic
+// Your Stream Shield Proxy
 app.use('/stream-shield', (req, res, next) => {
   const targetUrl = req.query.url; 
   if (!targetUrl) return res.status(400).send('No URL provided');
@@ -28,6 +28,5 @@ app.use('/stream-shield', (req, res, next) => {
   })(req, res, next);
 });
 
-// Port handling for Render (defaults to 10000)
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server active on port ${PORT}`));
