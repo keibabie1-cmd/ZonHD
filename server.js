@@ -1,17 +1,26 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
-// 1. Force the server to send index.html for the root path
+// 1. Debugger: Log exactly what files are in the folder
+const files = fs.readdirSync(__dirname);
+console.log("Current Files in Root:", files);
+
 app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'index.html'));
+  const indexPath = path.join(__dirname, 'index.html');
+  
+  // Check if file exists before sending
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send(`Server Error: index.html not found. Files present: ${files.join(', ')}`);
+  }
 });
 
-// 2. Serve static assets (images/styles) from the current folder
 app.use(express.static(__dirname));
 
-// 3. Keep the Stream Shield Proxy
 app.use('/stream-shield', (req, res, next) => {
   const targetUrl = req.query.url; 
   if (!targetUrl) return res.status(400).send('No URL provided');
@@ -28,6 +37,5 @@ app.use('/stream-shield', (req, res, next) => {
   })(req, res, next);
 });
 
-// Use port 10000 for Render
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`ZonHD active on port ${PORT}`));
+app.listen(PORT, () => console.log(`Diagnostic Server Live on ${PORT}`));
