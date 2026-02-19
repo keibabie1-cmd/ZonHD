@@ -1,22 +1,36 @@
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const axios = require('axios');
+const path = require('path');
+const app = express();
+
+const RD_KEY = 'MQKVSO7O2CYHOGVO6LAXR7H3ADRQADZDMZF2FT4S6ZNJECAM7PWQ';
+
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// LUXE STREAMING ROUTE
 app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
     console.log(`--- Luxe Request: ${type} ${id} (S${s}E${e}) ---`);
     
     try {
-        // 1. Scraper Step
         const scraperUrl = type === 'movie' 
             ? `https://torrentio.strem.fun/stream/movie/${id}.json`
             : `https://torrentio.strem.fun/stream/series/${id}:${s}:${e}.json`;
             
         const scraperRes = await axios.get(scraperUrl);
-        const targetStream = (scraperRes.data.streams || [])[0];
+        const streams = scraperRes.data.streams || [];
+        const targetStream = streams[0];
         
         if (!targetStream) {
             console.log("Luxe Status: No magnets found for this title.");
-            return res.status(404).json({ error: 'No high-quality streams found' });
+            return res.status(404).json({ error: 'No streams found' });
         }
 
-        // 2. Real-Debrid Step
         const addRes = await axios.post('https://api.real-debrid.com/rest/1.0/torrents/addMagnet', 
             `magnet=${targetStream.infoHash}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -38,7 +52,6 @@ app.get('/get-luxe-stream', async (req, res) => {
         res.json({ streamUrl: unrestrictRes.data.download });
 
     } catch (err) {
-        // CRITICAL: Log the detailed error from Real-Debrid
         if (err.response) {
             console.error("Luxe Error (RD API):", err.response.status, err.response.data);
         } else {
@@ -47,3 +60,6 @@ app.get('/get-luxe-stream', async (req, res) => {
         res.status(500).json({ error: 'Streaming service error' });
     }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`ZonHD Luxe: Port ${PORT}`));
