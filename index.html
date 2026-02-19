@@ -40,7 +40,6 @@
             <button onclick="setFilter('network', 2739)">Disney+</button>
             <button onclick="setFilter('network', 34)">Adult Swim</button>
             <button onclick="setFilter('network', 56)">Cartoon Network</button>
-            <button onclick="setFilter('network', 173)">Lifetime</button>
             <button onclick="setFilter('network', 77)">SyFy</button>
         </div>
     </div>
@@ -130,7 +129,7 @@
 
         window.onscroll = () => {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800 && !isFetching) {
-                page++; fetchContent(true); // Infinite scroll for all categories
+                page++; fetchContent(true); // Restore Infinite Scrolling
             }
         };
 
@@ -192,8 +191,8 @@
                 if (data.streamUrl) {
                     art = new ArtPlayer({ container: '#player-container', url: data.streamUrl, autoplay: true, fullscreen: true, autoSize: true });
                     art.on('ready', () => document.getElementById('ad-shield').style.display = 'none');
-                }
-            } catch (err) { document.getElementById('shield-text').innerText = "Streaming Error."; }
+                } else { throw new Error(); }
+            } catch (err) { document.getElementById('shield-text').innerText = "Streaming Error. Link Failed."; }
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
@@ -220,7 +219,7 @@
             }, 1000);
             fetchConfig();
 
-            // Swipe Interactivity
+            // Restore Swipe Interactivity
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
             const menuMc = new Hammer(document.getElementById('side-menu'));
