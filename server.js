@@ -17,36 +17,41 @@ app.get('/get-luxe-stream', async (req, res) => {
     const mediaId = type === 'movie' ? id : `${id}:${s}:${e}`;
 
     try {
-        const scraper = await axios.get(`https://torrentio.strem.fun/stream/${type}/${mediaId}.json`);
+        // High-speed scraper request with 5s timeout
+        const scraper = await axios.get(`https://torrentio.strem.fun/stream/${type}/${mediaId}.json`, { timeout: 5000 });
         const streams = scraper.data.streams || [];
+        
         if (!streams.length) throw new Error("No sources found.");
+        
+        // Pick the best quality stream available
         const hash = streams[0].infoHash;
 
-        // --- STEP 1: CHOOSE ALLDEBRID FIRST ---
+        // --- ATTEMPT 1: ALLDEBRID (Instant Unlock) ---
         try {
-            // Upload magnet to AllDebrid
             const adUpload = await axios.get(`https://api.alldebrid.com/v4/magnet/upload?agent=zonhd&apikey=${AD_KEY}&magnets[]=${hash}`);
             const magId = adUpload.data.data.magnets[0].id;
             
-            // Get status/links from AllDebrid
+            // Allow AllDebrid a moment to process the magnet
             const adStatus = await axios.get(`https://api.alldebrid.com/v4/magnet/status?agent=zonhd&apikey=${AD_KEY}&id=${magId}`);
-            const linkToUnlock = adStatus.data.data.magnets.links[0].link;
-
-            // Unlock the link to get the playable URL
-            const adUnlock = await axios.get(`https://api.alldebrid.com/v4/link/unlock?agent=zonhd&apikey=${AD_KEY}&link=${linkToUnlock}`);
             
-            if (adUnlock.data.data.link) {
-                return res.json({ streamUrl: adUnlock.data.data.link });
+            if (adStatus.data.data.magnets.links && adStatus.data.data.magnets.links.length > 0) {
+                const linkToUnlock = adStatus.data.data.magnets.links[0].link;
+                const adUnlock = await axios.get(`https://api.alldebrid.com/v4/link/unlock?agent=zonhd&apikey=${AD_KEY}&link=${linkToUnlock}`);
+                
+                if (adUnlock.data.data.link) {
+                    return res.json({ streamUrl: adUnlock.data.data.link });
+                }
             }
         } catch (adError) {
-            console.log("AllDebrid failed or file not cached, trying Real-Debrid...");
+            console.log("AllDebrid failed, falling back...");
         }
 
-        // --- STEP 2: BACKUP - REAL-DEBRID ---
+        // --- ATTEMPT 2: REAL-DEBRID (The Tank) ---
         try {
             const add = await axios.post(`https://api.real-debrid.com/rest/1.0/torrents/addMagnet`, `magnet=magnet:?xt=urn:btih:${hash}`, {
                 headers: { Authorization: `Bearer ${RD_TOKEN}`, 'Content-Type': 'application/x-www-form-urlencoded' }
             });
+            
             const info = await axios.get(`https://api.real-debrid.com/rest/1.0/torrents/info/${add.data.id}`, { headers: { Authorization: `Bearer ${RD_TOKEN}` } });
             
             let fileId = 1;
@@ -57,32 +62,24 @@ app.get('/get-luxe-stream', async (req, res) => {
             }
 
             await axios.post(`https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${add.data.id}`, `files=${fileId}`, { headers: { Authorization: `Bearer ${RD_TOKEN}` } });
-            await new Promise(r => setTimeout(r, 2500)); 
+            
+            // Real-Debrid needs a slightly longer sync delay to avoid 404s
+            await new Promise(r => setTimeout(r, 3000)); 
+            
             const updated = await axios.get(`https://api.real-debrid.com/rest/1.0/torrents/info/${add.data.id}`, { headers: { Authorization: `Bearer ${RD_TOKEN}` } });
-            const final = await axios.post(`https://api.real-debrid.com/rest/1.0/unrestrict/link`, `link=${updated.data.links[0]}`, { headers: { Authorization: `Bearer ${RD_TOKEN}` } });
-            return res.json({ streamUrl: final.data.download });
+            
+            if (updated.data.links && updated.data.links.length > 0) {
+                const final = await axios.post(`https://api.real-debrid.com/rest/1.0/unrestrict/link`, `link=${updated.data.links[0]}`, { headers: { Authorization: `Bearer ${RD_TOKEN}` } });
+                return res.json({ streamUrl: final.data.download });
+            }
         } catch (rdError) {
-            throw new Error("Source not reachable on AD or RD.");
+            throw new Error("Both services failed.");
         }
 
     } catch (err) { 
-        res.status(500).json({ error: "No working links found." }); 
+        res.status(500).json({ error: "Source not reachable. Try a different movie." }); 
     }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Cinema Luxe running on port ${PORT}`));
-Here is my package.json: {
-  "name": "zonhd-streaming",
-  "version": "1.0.0",
-  "description": "ZonHD Cinema App",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "http-proxy-middleware": "^2.0.6",
-    "axios": "^1.6.0"
-  }
-}
