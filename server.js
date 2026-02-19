@@ -1,48 +1,62 @@
-// 1. IMPORT TOOLS FIRST
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const path = require('path');
-
-// 2. INITIALIZE THE APP (Crucial: Define 'app' before using it)
 const app = express();
 
-// 3. YOUR SETTINGS & TOKEN
 const RD_KEY = 'MQKVSO7O2CYHOGVO6LAXR7H3ADRQADZDMZF2FT4S6ZNJECAM7PWQ';
 
-// 4. SERVE STATIC FILES (Images, CSS, index.html)
 app.use(express.static(__dirname));
 
-// 5. LANDING PAGE
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 /**
- * LUXE STREAMING ROUTE
- * Fetches magnets from Torrentio and unrestricts them via Real-Debrid.
+ * FAILOVER SCRAPER LOGIC
+ * Tries Torrentio first, then Comet as a backup.
  */
+async function findMagnet(type, id, s, e) {
+    const scrapers = [
+        // Torrentio (Standard)
+        type === 'movie' 
+            ? `https://torrentio.strem.fun/stream/movie/${id}.json`
+            : `https://torrentio.strem.fun/stream/series/${id}:${s}:${e}.json`,
+        // Comet (High-Speed Backup)
+        type === 'movie'
+            ? `https://comet.elfhosted.com/stream/movie/${id}.json`
+            : `https://comet.elfhosted.com/stream/series/${id}:${s}:${e}.json`
+    ];
+
+    for (let url of scrapers) {
+        try {
+            console.log(`Luxe Scraper: Trying ${new URL(url).hostname}...`);
+            const res = await axios.get(url, { timeout: 5000 });
+            const stream = (res.data.streams || [])[0];
+            if (stream) {
+                console.log(`Luxe Scraper: Success on ${new URL(url).hostname}`);
+                return stream;
+            }
+        } catch (err) {
+            console.error(`Luxe Scraper: ${new URL(url).hostname} failed.`);
+        }
+    }
+    return null;
+}
+
 app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
-    console.log(`--- Luxe Request: ${type} ${id} (Season ${s}, Episode ${e}) ---`);
     
     try {
-        // Step 1: Find Magnet Links using Torrentio Scraper
-        const scraperUrl = type === 'movie' 
-            ? `https://torrentio.strem.fun/stream/movie/${id}.json`
-            : `https://torrentio.strem.fun/stream/series/${id}:${s}:${e}.json`;
-            
-        const scraperRes = await axios.get(scraperUrl);
-        const targetStream = (scraperRes.data.streams || [])[0];
+        const targetStream = await findMagnet(type, id, s, e);
         
         if (!targetStream) {
-            console.log("Luxe Status: No magnet links found for this title.");
-            return res.status(404).json({ error: 'No high-quality streams found' });
+            return res.status(404).json({ error: 'No links found on any scraper' });
         }
 
-        // Step 2: Add Magnet to Real-Debrid Account
+        // Real-Debrid Logic
         const addRes = await axios.post('https://api.real-debrid.com/rest/1.0/torrents/addMagnet', 
-            `magnet=${targetStream.infoHash}`, 
+            `magnet=${targetStream.infoHash || targetStream.url}`, 
             { headers: { 
                 'Authorization': `Bearer ${RD_KEY}`, 
                 'Content-Type': 'application/x-www-form-urlencoded' 
@@ -50,36 +64,31 @@ app.get('/get-luxe-stream', async (req, res) => {
         );
 
         const torrentId = addRes.data.id;
-
-        // Step 3: Select Files (Instantly unlocks cached files)
         await axios.post(`https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${torrentId}`, 'files=all', 
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } });
 
-        // Step 4: Get Torrent Information for Download Links
         const infoRes = await axios.get(`https://api.real-debrid.com/rest/1.0/torrents/info/${torrentId}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } });
 
         const downloadLink = infoRes.data.links[0];
-
-        // Step 5: Unrestrict (Unlock) the Link for Streaming
         const unrestrictRes = await axios.post('https://api.real-debrid.com/rest/1.0/unrestrict/link', 
             `link=${downloadLink}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } });
 
-        console.log("Luxe Status: Success! Link unlocked for playback.");
         res.json({ streamUrl: unrestrictRes.data.download });
 
     } catch (err) {
-        // Log detailed error for debugging in Render
         if (err.response) {
-            console.error("Luxe Error (RD API):", err.response.status, err.response.data);
+            // Detailed RD Error Logging
+            console.error(`RD API ERROR [${err.response.status}]:`, err.response.data);
+            if (err.response.status === 401) console.error("FIX: Refresh your RD API Token.");
+            if (err.response.status === 403) console.error("FIX: Check Premium status or IP limits.");
         } else {
-            console.error("Luxe Error (System):", err.message);
+            console.error("SYSTEM ERROR:", err.message);
         }
         res.status(500).json({ error: 'Streaming service failed' });
     }
 });
 
-// 6. START THE SERVER
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`ZonHD Luxe Engine: Active on Port ${PORT}`));
+app.listen(PORT, () => console.log(`ZonHD Luxe: Running on Port ${PORT}`));
