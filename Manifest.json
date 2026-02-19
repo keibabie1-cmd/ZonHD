@@ -1,0 +1,18 @@
+{
+  "name": "ZonHD Cinema",
+  "short_name": "ZonHD",
+  "description": "Extravagant Medusa Cinema Luxe Streaming",
+  "start_url": "index.html",
+  "display": "fullscreen",
+  "background_color": "#050505",
+  "theme_color": "#D4AF37",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "IMG_8035.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
