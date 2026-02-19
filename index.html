@@ -7,52 +7,49 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-512.png">
-    <title>ZonHD Cinema</title>
+    <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; --dark-zinc: #121212; }
+        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
         
+        /* Universal Focus Ring */
         [tabindex="0"]:focus {
             outline: none !important;
-            border: 4px solid var(--gold) !important;
-            box-shadow: 0 0 30px var(--red) !important;
-            transform: scale(1.02);
-            z-index: 99;
-            transition: all 0.2s ease-in-out;
+            border: 3px solid var(--gold) !important;
+            box-shadow: 0 0 20px var(--red) !important;
+            transform: scale(1.03);
+            transition: 0.2s;
         }
 
-        /* LOADER */
+        /* Startup Loader */
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
-        .loader-medusa { width: 150px; height: 150px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 50px var(--red); animation: pulse 2s infinite ease-in-out; }
-        @keyframes pulse { 0%, 100% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+        .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
-        .hero-banner { height: 60vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 50px; }
-        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 12vw, 6rem); color: var(--gold); text-shadow: 0 0 30px var(--red); font-style: italic; }
+        /* UI Elements */
+        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
+        .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.3s; }
+        .movie-card:hover { transform: translateY(-5px); border-color: var(--gold); }
 
+        /* Luxe Details Page */
+        #selector-overlay { display: none; position: fixed; inset: 0; background: var(--black); z-index: 4000; overflow-y: auto; }
+        #details-backdrop { position: fixed; top: 0; width: 100%; height: 100vh; opacity: 0.3; background-size: cover; background-position: center; filter: blur(20px); pointer-events: none; }
+        
+        /* Player Overlay */
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        #ad-shield { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s; }
         .menu-open { transform: translateX(0) !important; }
-
-        .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.3s; }
-        .movie-card:hover { border-color: var(--gold); transform: translateY(-5px); }
-
-        /* LUXE DETAILS PAGE OVERLAY */
-        #selector-overlay { display: none; position: fixed; inset: 0; background: var(--black); z-index: 4000; overflow-y: auto; }
-        #details-backdrop { position: fixed; top: 0; width: 100%; height: 100vh; opacity: 0.25; background-size: cover; background-position: center; filter: blur(8px); pointer-events: none; }
-        
-        .luxe-btn-main { background: linear-gradient(45deg, var(--gold), #f3d06b); color: black; font-weight: 900; letter-spacing: 0.2em; padding: 1.25rem 3rem; border-radius: 50px; box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3); transition: 0.3s; }
-        .luxe-btn-main:hover { transform: scale(1.05); box-shadow: 0 15px 40px var(--red); }
-
-        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        #ad-shield { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-season { background: var(--gold) !important; color: black !important; border-color: var(--gold) !important; }
+        .active-season { background: var(--gold) !important; color: black !important; }
     </style>
 </head>
-<body id="swipe-area">
+<body>
 
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold">ZonHD CINEMA</p></div>
 
@@ -72,7 +69,7 @@
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
         <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none focus:border-gold" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
-        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center">
+        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-center">
             <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
             <button onclick="setFilter('trending')" class="text-red-600 font-black">TRENDING</button>
             <button onclick="setFilter('genre', 27)" class="font-bold">HORROR</button>
@@ -81,20 +78,15 @@
         </nav>
     </div>
 
-    <div id="continue-section" class="p-4 hidden">
-        <h3 class="text-gold font-bold italic mb-4 text-xs tracking-widest uppercase">Continue Watching</h3>
-        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar"></div>
-    </div>
-
-    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
+    <main id="movie-grid" class="p-6 grid grid-cols-2 md:grid-cols-5 gap-6"></main>
 
     <div id="selector-overlay">
         <div id="details-backdrop"></div>
         <div class="relative max-w-6xl mx-auto p-6 md:p-12 min-h-screen">
-            <button onclick="closeSelector()" class="bg-white/5 text-gold border border-gold/30 px-6 py-2 rounded-full mb-12 font-bold text-xs hover:bg-gold hover:text-black transition-all">✕ BACK TO LIBRARY</button>
+            <button onclick="closeSelector()" class="bg-white/5 text-gold border border-gold/30 px-6 py-2 rounded-full mb-12 font-bold text-xs hover:bg-gold hover:text-black">✕ BACK TO LIBRARY</button>
             
             <div class="flex flex-col md:flex-row gap-12 items-center md:items-start mb-16">
-                <img id="details-poster" class="w-72 rounded-2xl shadow-[0_0_80px_rgba(212,175,55,0.2)] border border-white/10" src="">
+                <img id="details-poster" class="w-72 rounded-2xl shadow-2xl border border-white/10" src="">
                 <div class="flex-1 text-center md:text-left">
                     <h2 id="show-title" class="text-5xl md:text-7xl font-black text-white mb-6 italic tracking-tighter leading-tight font-serif"></h2>
                     <div class="flex flex-wrap gap-4 mb-8 justify-center md:justify-start">
@@ -102,38 +94,37 @@
                         <span id="show-status" class="border border-white/20 px-4 py-1 rounded-full text-zinc-400 text-sm"></span>
                     </div>
                     <p id="show-desc" class="text-zinc-300 text-lg max-w-2xl leading-relaxed mb-10"></p>
-                    
                     <div id="movie-action-area" class="hidden">
-                        <button onclick="playDirectly()" class="luxe-btn-main uppercase">Watch Film Now</button>
+                        <button onclick="startLuxeStream()" class="bg-gold text-black px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.4)]">Watch Film Now</button>
                     </div>
                 </div>
             </div>
 
             <div id="tv-action-area" class="hidden border-t border-white/10 pt-10">
-                <h3 class="text-gold font-bold text-[10px] tracking-[0.4em] mb-6 uppercase">Select Season</h3>
+                <h3 class="text-gold font-bold text-xs tracking-widest mb-6 uppercase">Seasons</h3>
                 <div id="season-buttons" class="flex gap-4 overflow-x-auto pb-8 no-scrollbar"></div>
-                
-                <h3 class="text-gold font-bold text-[10px] tracking-[0.4em] mt-8 mb-6 uppercase">Episodes</h3>
+                <h3 class="text-gold font-bold text-xs tracking-widest mt-8 mb-6 uppercase">Episodes</h3>
                 <div id="episode-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
             </div>
         </div>
     </div>
 
     <div id="player-overlay">
-        <div id="ad-shield" onclick="unlockCinema()" tabindex="0">
+        <div id="ad-shield">
             <div class="loader-medusa" style="width:100px; height:100px; margin-bottom:20px;"></div>
-            <div class="bg-red-700 text-white px-10 py-4 rounded-full font-bold shadow-2xl animate-bounce uppercase">Start Stream (Unmuted)</div>
+            <div id="shield-text" class="text-gold font-bold uppercase tracking-widest animate-pulse">Establishing Secure Stream...</div>
         </div>
         <div class="flex justify-between p-6 absolute top-0 w-full z-[7000]">
-            <button id="close-btn" onclick="closePlayer()" class="bg-black/80 text-white px-6 py-2 rounded-full font-bold text-xs border border-white/20 hover:bg-red-700">✕ CLOSE</button>
+            <button onclick="closePlayer()" class="bg-black/80 text-white px-6 py-2 rounded-full font-bold text-xs border border-white/20 hover:bg-red-700">✕ CLOSE CINEMA</button>
         </div>
-        <div id="player-container" class="w-full h-full"></div>
+        <div id="player-container" class="w-full h-full bg-black"></div>
     </div>
 
     <script>
         const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-        let page = 1, activeType = 'trending', activeID = '', currentStreamUrl = '', currentMediaContext = {};
+        let page = 1, activeType = 'trending', activeID = '', currentMediaContext = {};
 
+        // Fetch movies/shows from TMDB
         async function fetchContent(append = false) {
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
@@ -157,11 +148,11 @@
             });
         }
 
+        // Luxe Details Page logic
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            
-            currentMediaContext = { id, type, poster: data.poster_path };
+            currentMediaContext = { id, type, poster: data.poster_path, s: 1, e: 1 };
             
             document.getElementById('show-title').innerText = data.name || data.title;
             document.getElementById('show-desc').innerText = data.overview;
@@ -170,19 +161,10 @@
             document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
             
-            const movieArea = document.getElementById('movie-action-area');
-            const tvArea = document.getElementById('tv-action-area');
+            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
 
-            if (type === 'movie') {
-                movieArea.classList.remove('hidden');
-                tvArea.classList.add('hidden');
-                currentStreamUrl = `https://vidlink.pro/movie/${id}?autoplay=true`;
-            } else {
-                movieArea.classList.add('hidden');
-                tvArea.classList.remove('hidden');
-                renderSeasons(data);
-            }
-
+            if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0,0);
         }
@@ -212,48 +194,62 @@
             grid.innerHTML = '';
             data.episodes.forEach(e => {
                 const ep = document.createElement('div');
-                ep.className = "bg-white/5 p-5 rounded-2xl border border-white/5 hover:border-gold/50 cursor-pointer transition-all flex items-center gap-6 group";
+                ep.className = "bg-white/5 p-5 rounded-2xl border border-white/5 hover:border-gold/50 cursor-pointer flex items-center gap-6";
                 ep.innerHTML = `<div class="text-gold font-black text-2xl">${e.episode_number}</div>
-                                <div class="text-left"><p class="text-white font-bold text-sm">${e.name}</p></div>`;
+                                <div><p class="text-white font-bold text-sm">${e.name}</p></div>`;
                 ep.onclick = () => {
-                    currentStreamUrl = `https://vidlink.pro/tv/${showId}/${seasonNum}/${e.episode_number}?autoplay=true`;
                     currentMediaContext.s = seasonNum;
                     currentMediaContext.e = e.episode_number;
-                    startPlayer();
+                    startLuxeStream();
                 };
                 grid.appendChild(ep);
             });
         }
 
-        function playDirectly() { startPlayer(); }
-
-        function startPlayer() {
+        // Real-Debrid Streaming Logic
+        async function startLuxeStream() {
             document.getElementById('selector-overlay').style.display = 'none';
             document.getElementById('player-overlay').style.display = 'block';
             document.getElementById('ad-shield').style.display = 'flex';
-        }
+            document.getElementById('shield-text').innerText = "Fetching High-Quality Stream...";
 
-        function unlockCinema() {
-            const shield = document.getElementById('ad-shield');
-            const container = document.getElementById('player-container');
-            const { id, type, poster, s, e } = currentMediaContext;
+            const { type, id, s, e } = currentMediaContext;
 
-            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, poster, s: s||1, e: e||1 });
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
-            
-            container.innerHTML = `<iframe src="${currentStreamUrl}" allow="autoplay; fullscreen" allowfullscreen class="w-full h-full border-none"></iframe>`;
-            setTimeout(() => { shield.style.display = 'none'; }, 2000);
+            try {
+                // Call your updated server.js route
+                const response = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
+                const data = await response.json();
+
+                if (data.streamUrl) {
+                    const container = document.getElementById('player-container');
+                    container.innerHTML = `
+                        <video id="luxe-player" controls autoplay class="w-full h-full">
+                            <source src="${data.streamUrl}" type="video/mp4">
+                        </video>
+                    `;
+                    // Hide shield after video is ready
+                    setTimeout(() => { document.getElementById('ad-shield').style.display = 'none'; }, 2000);
+                } else {
+                    throw new Error("No link found");
+                }
+            } catch (err) {
+                document.getElementById('shield-text').innerText = "Streaming Error: Please try another title.";
+            }
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
         function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-        function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; document.getElementById('side-menu').classList.remove('menu-open'); fetchContent(); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; fetchContent(); }
         function handleSearch(e) { if (e.key === 'Enter') { activeType = 'search'; activeID = e.target.value; page = 1; fetchContent(); } }
 
-        window.onload = () => { setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 600); }, 1500); fetchContent(); };
+        window.onload = () => { 
+            setTimeout(() => { 
+                document.getElementById('loader').style.opacity = '0'; 
+                setTimeout(() => document.getElementById('loader').remove(), 600); 
+            }, 1500); 
+            fetchContent(); 
+        };
     </script>
 </body>
 </html>
