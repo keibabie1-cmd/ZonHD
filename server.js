@@ -1,40 +1,27 @@
-const express = require('express');
-const axios = require('axios');
-const path = require('path');
-const app = express();
-
-// Pull keys from Render environment variables
-const RD_TOKEN = process.env.RD_TOKEN;
-const AD_KEY = process.env.AD_KEY;
-const TMDB_KEY = process.env.TMDB_KEY;
-
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-
-// Safely send keys and config to the frontend
-app.get('/api/config', (req, res) => {
-    res.json({ 
-        tmdb_key: TMDB_KEY,
-        rd_token: RD_TOKEN,
-        ad_key: AD_KEY
-    });
-});
-
-app.get('/get-hash', async (req, res) => {
+app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
     const mediaId = type === 'movie' ? id : `${id}:${s}:${e}`;
 
     try {
-        const scraper = await axios.get(`https://torrentio.strem.fun/stream/${type}/${mediaId}.json`, { timeout: 5000 });
+        const scraper = await axios.get(`https://torrentio.strem.fun/stream/${type}/${mediaId}.json`);
         const streams = scraper.data.streams || [];
-        if (!streams.length) throw new Error("No sources found.");
+        if (!streams.length) return res.status(404).json({ error: "No links" });
+
+        const hash = streams[0].infoHash;
+
+        // SERVER-SIDE HANDSHAKE (Bypasses CORS)
+        const adUpload = await axios.get(`https://api.alldebrid.com/v4/magnet/upload?agent=zonhd&apikey=${process.env.AD_KEY}&magnets[]=${hash}`);
+        const magId = adUpload.data.data.magnets[0].id;
         
-        // Just return the hash to the client
-        res.json({ hash: streams[0].infoHash });
+        const adStatus = await axios.get(`https://api.alldebrid.com/v4/magnet/status?agent=zonhd&apikey=${process.env.AD_KEY}&id=${magId}`);
+        const link = adStatus.data.data.magnets.links[0].link;
+
+        const adUnlock = await axios.get(`https://api.alldebrid.com/v4/link/unlock?agent=zonhd&apikey=${process.env.AD_KEY}&link=${link}`);
+        
+        // Send the final playable link back to the browser
+        res.json({ streamUrl: adUnlock.data.data.link });
+
     } catch (err) {
-        res.status(500).json({ error: "Scraper failed." });
+        res.status(500).json({ error: "Bridge failed" });
     }
 });
-
-app.listen(process.env.PORT || 3000);
