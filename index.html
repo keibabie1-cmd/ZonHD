@@ -253,6 +253,14 @@
         window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1200) { page++; fetchContent(true); } };
         loadContinueWatching();
         fetchContent();
-    </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('ZonHD Service Worker Active'))
+        .catch(err => console.log('Worker Sync Failed', err));
+    });
+  }
+</script>
 </body>
 </html>
