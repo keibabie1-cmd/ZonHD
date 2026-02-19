@@ -44,7 +44,10 @@
 </head>
 <body id="swipe-area">
 
-    <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold">ZonHD CINEMA</p></div>
+    <div id="loader">
+        <div class="loader-medusa"></div>
+        <p class="text-gold mt-6 tracking-[0.5em] font-bold">ZonHD CINEMA</p>
+    </div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
@@ -59,7 +62,10 @@
         </div>
     </div>
 
-    <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold">CINEMA LUXE</p></header>
+    <header class="hero-banner">
+        <h1 class="zonhd-logo">ZonHD</h1>
+        <p class="text-gold tracking-[0.8em] text-[10px] font-bold">CINEMA LUXE</p>
+    </header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
         <input type="text" tabindex="0" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
@@ -109,7 +115,16 @@
         let currentStreamUrl = '';
         let currentMediaContext = {};
 
-        window.onload = () => { setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 600); }, 1500); };
+        // LOADER CONTROL: Ensures it disappears correctly
+        window.onload = () => { 
+            setTimeout(() => { 
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.opacity = '0'; 
+                    setTimeout(() => loader.remove(), 600); 
+                }
+            }, 1500); 
+        };
 
         const mc = new Hammer(document.getElementById('swipe-area'));
         mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
@@ -141,15 +156,12 @@
 
         async function playMedia(id, type, poster, s = null, e = null) {
             currentMediaContext = { id, type, poster, s: s || 1, e: e || 1 };
-
             if (type === 'tv' && s === null) {
                 openSelector(id);
             } else {
-                if (type === 'tv') {
-                    currentStreamUrl = `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true`;
-                } else {
-                    currentStreamUrl = `https://vidlink.pro/movie/${id}?autoplay=true`;
-                }
+                currentStreamUrl = (type === 'tv') ? 
+                    `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true` : 
+                    `https://vidlink.pro/movie/${id}?autoplay=true`;
                 startPlayer();
             }
         }
@@ -157,11 +169,9 @@
         async function openSelector(id) {
             const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            
             document.getElementById('show-title').innerText = data.name;
             const seasonContainer = document.getElementById('season-buttons');
             seasonContainer.innerHTML = '';
-            
             data.seasons.forEach(s => {
                 if (s.season_number === 0 || !s.air_date) return;
                 const btn = document.createElement('button');
@@ -174,9 +184,8 @@
                 };
                 seasonContainer.appendChild(btn);
             });
-            
             document.getElementById('selector-overlay').classList.remove('hidden');
-            seasonContainer.firstChild.click(); // Auto-load first season
+            if(seasonContainer.firstChild) seasonContainer.firstChild.click();
         }
 
         async function loadEpisodes(showId, seasonNum, poster) {
@@ -184,15 +193,11 @@
             const data = await res.json();
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
-
             data.episodes.forEach(e => {
                 const ep = document.createElement('div');
                 ep.className = "bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 hover:border-gold cursor-pointer transition-all flex items-center gap-4";
                 ep.tabIndex = "0";
-                ep.innerHTML = `
-                    <div class="text-gold font-black text-xl">#${e.episode_number}</div>
-                    <div class="text-left"><p class="text-white font-bold text-sm">${e.name}</p></div>
-                `;
+                ep.innerHTML = `<div class="text-gold font-black text-xl">#${e.episode_number}</div><div class="text-left"><p class="text-white font-bold text-sm">${e.name}</p></div>`;
                 ep.onclick = () => playMedia(showId, 'tv', poster, seasonNum, e.episode_number);
                 ep.onkeydown = (k) => { if(k.key === 'Enter') ep.click(); };
                 grid.appendChild(ep);
@@ -209,9 +214,8 @@
         function unlockCinema() {
             const shield = document.getElementById('ad-shield');
             const container = document.getElementById('player-container');
-            
-            // Save to Continue Watching
             const { id, type, poster, s, e } = currentMediaContext;
+            
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             history = history.filter(item => item.id !== id);
             history.unshift({ id, type, poster, s, e });
@@ -219,7 +223,6 @@
             loadContinueWatching();
 
             shield.innerHTML = `<div class="bg-red-700 text-white px-10 py-4 rounded-full font-bold shadow-2xl">BYPASSING ADS...</div>`;
-            
             container.innerHTML = `<iframe id="cinema-frame" src="${currentStreamUrl}" allow="autoplay; fullscreen" sandbox="allow-scripts allow-forms allow-same-origin" allowfullscreen class="w-full h-full border-none"></iframe>`;
             
             setTimeout(() => {
@@ -251,163 +254,20 @@
         function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
 
         window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1200) { page++; fetchContent(true); } };
+
+        // INITIALIZE
         loadContinueWatching();
         fetchContent();
+    </script>
+
     <script>
-    const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-    let page = 1;
-    let activeType = 'trending';
-    let activeID = '';
-    let currentStreamUrl = '';
-    let currentMediaContext = {};
-
-    // LOADER REMOVAL - This is what was getting stuck
-    window.onload = () => { 
-        setTimeout(() => { 
-            document.getElementById('loader').style.opacity = '0'; 
-            setTimeout(() => document.getElementById('loader').remove(), 600); 
-        }, 1500); 
-    };
-
-    // SWIPE NAVIGATION
-    const mc = new Hammer(document.getElementById('swipe-area'));
-    mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-    mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
-
-    async function fetchContent(append = false) {
-        let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
-        if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
-        if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
-        if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-        const grid = document.getElementById('movie-grid');
-        if (!append) grid.innerHTML = '';
-        
-        data.results.forEach(m => {
-            if (!m.poster_path) return;
-            let type = m.media_type || (m.first_air_date ? 'tv' : 'movie');
-            const card = document.createElement('div');
-            card.className = "movie-card";
-            card.setAttribute('tabindex', '0');
-            card.onclick = () => playMedia(m.id, type, m.poster_path);
-            card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
-            card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
-            grid.appendChild(card);
-        });
-    }
-
-    async function playMedia(id, type, poster, s = null, e = null) {
-        currentMediaContext = { id, type, poster, s: s || 1, e: e || 1 };
-        if (type === 'tv' && s === null) {
-            openSelector(id);
-        } else {
-            currentStreamUrl = type === 'tv' ? 
-                `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true` : 
-                `https://vidlink.pro/movie/${id}?autoplay=true`;
-            startPlayer();
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('ZonHD Service Worker Active'))
+                    .catch(err => console.log('Worker Failed', err));
+            });
         }
-    }
-
-    async function openSelector(id) {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}`);
-        const data = await res.json();
-        document.getElementById('show-title').innerText = data.name;
-        const seasonContainer = document.getElementById('season-buttons');
-        seasonContainer.innerHTML = '';
-        data.seasons.forEach(s => {
-            if (s.season_number === 0 || !s.air_date) return;
-            const btn = document.createElement('button');
-            btn.className = "px-6 py-2 bg-zinc-900 rounded-full text-[10px] font-bold uppercase tracking-widest border border-zinc-800 focus:bg-gold";
-            btn.innerText = `Season ${s.season_number}`;
-            btn.onclick = () => {
-                document.querySelectorAll('#season-buttons button').forEach(b => b.classList.remove('active-season'));
-                btn.classList.add('active-season');
-                loadEpisodes(id, s.season_number, data.poster_path);
-            };
-            seasonContainer.appendChild(btn);
-        });
-        document.getElementById('selector-overlay').classList.remove('hidden');
-        if(seasonContainer.firstChild) seasonContainer.firstChild.click();
-    }
-
-    async function loadEpisodes(showId, seasonNum, poster) {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
-        const data = await res.json();
-        const grid = document.getElementById('episode-grid');
-        grid.innerHTML = '';
-        data.episodes.forEach(e => {
-            const ep = document.createElement('div');
-            ep.className = "bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 hover:border-gold cursor-pointer transition-all flex items-center gap-4";
-            ep.tabIndex = "0";
-            ep.innerHTML = `<div class="text-gold font-black text-xl">#${e.episode_number}</div><div class="text-left"><p class="text-white font-bold text-sm">${e.name}</p></div>`;
-            ep.onclick = () => playMedia(showId, 'tv', poster, seasonNum, e.episode_number);
-            ep.onkeydown = (k) => { if(k.key === 'Enter') ep.click(); };
-            grid.appendChild(ep);
-        });
-    }
-
-    function startPlayer() {
-        document.getElementById('selector-overlay').classList.add('hidden');
-        document.getElementById('player-overlay').style.display = 'block';
-        document.getElementById('ad-shield').style.display = 'flex';
-        document.getElementById('ad-shield').focus();
-    }
-
-    function unlockCinema() {
-        const shield = document.getElementById('ad-shield');
-        const container = document.getElementById('player-container');
-        const { id, type, poster, s, e } = currentMediaContext;
-        let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-        history = history.filter(item => item.id !== id);
-        history.unshift({ id, type, poster, s, e });
-        localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
-        loadContinueWatching();
-        shield.innerHTML = `<div class="bg-red-700 text-white px-10 py-4 rounded-full font-bold shadow-2xl">BYPASSING ADS...</div>`;
-        container.innerHTML = `<iframe id="cinema-frame" src="${currentStreamUrl}" allow="autoplay; fullscreen" sandbox="allow-scripts allow-forms allow-same-origin" allowfullscreen class="w-full h-full border-none"></iframe>`;
-        setTimeout(() => {
-            shield.style.display = 'none';
-            shield.innerHTML = `<div class="loader-medusa" style="width:100px; height:100px; margin-bottom:20px;"></div><div class="bg-red-700 text-white px-10 py-4 rounded-full font-bold shadow-2xl animate-bounce uppercase">Start Stream (Unmuted)</div>`;
-            document.getElementById('close-btn').focus();
-        }, 1500);
-    }
-
-    function loadContinueWatching() {
-        const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-        const container = document.getElementById('continue-grid');
-        const section = document.getElementById('continue-section');
-        if (history.length > 0) {
-            section.classList.remove('hidden');
-            container.innerHTML = history.map(m => `
-                <div tabindex="0" class="relative min-w-[110px] h-[160px] rounded-lg overflow-hidden border border-zinc-800 flex-shrink-0" onclick="playMedia('${m.id}', '${m.type}', '${m.poster}', ${m.s}, ${m.e})" onkeydown="if(event.key==='Enter')this.click()">
-                    <img src="https://image.tmdb.org/t/p/w300${m.poster}" class="w-full h-full object-cover">
-                    ${m.type === 'tv' ? `<div class="absolute bottom-0 left-0 right-0 bg-red-700 text-[9px] text-center font-black py-1">S${m.s} E${m.e}</div>` : ''}
-                </div>
-            `).join('');
-        }
-    }
-
-    function handleSearch(e) { if (e.key === 'Enter') { activeType = 'search'; activeID = e.target.value; page = 1; fetchContent(); } }
-    function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); fetchContent(); }
-    function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-    function closeSelector() { document.getElementById('selector-overlay').classList.add('hidden'); }
-    function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
-
-    window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1200) { page++; fetchContent(true); } };
-
-    // PWA SERVICE WORKER REGISTRATION
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('ZonHD Service Worker Active'))
-                .catch(err => console.log('Worker Sync Failed', err));
-        });
-    }
-
-    // INITIAL LOAD
-    loadContinueWatching();
-    fetchContent();
-</script>
+    </script>
 </body>
 </html>
