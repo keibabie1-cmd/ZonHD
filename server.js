@@ -1,19 +1,19 @@
-// 1. IMPORT TOOLS FIRST
+// 1. Import all tools
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const path = require('path');
 
-// 2. DEFINE THE APP VARIABLE
+// 2. Initialize 'app' BEFORE using it
 const app = express();
 
-// 3. YOUR SETTINGS & KEY
+// 3. Configuration
 const RD_KEY = 'MQKVSO7O2CYHOGVO6LAXR7H3ADRQADZDMZF2FT4S6ZNJECAM7PWQ';
 
-// 4. SERVE STATIC FILES
+// 4. Global Middleware
 app.use(express.static(__dirname));
 
-// 5. ROUTES (Now 'app' is defined and safe to use)
+// 5. Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -61,6 +61,6 @@ app.get('/get-luxe-stream', async (req, res) => {
     }
 });
 
-// 6. START THE SERVER
+// 6. Start listening
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`ZonHD Luxe: Port ${PORT}`));
