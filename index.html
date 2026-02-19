@@ -4,45 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="apple-touch-icon" href="icon-512.png">
     <title>ZonHD Cinema Luxe</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
+    
     <style>
         :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
-        
-        /* Universal Focus Ring */
-        [tabindex="0"]:focus {
-            outline: none !important;
-            border: 3px solid var(--gold) !important;
-            box-shadow: 0 0 20px var(--red) !important;
-            transform: scale(1.03);
-            transition: 0.2s;
-        }
-
-        /* Startup Loader */
+        [tabindex="0"]:focus { outline: none !important; border: 3px solid var(--gold) !important; box-shadow: 0 0 20px var(--red) !important; transform: scale(1.03); transition: 0.2s; }
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-
-        /* UI Elements */
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.3s; }
         .movie-card:hover { transform: translateY(-5px); border-color: var(--gold); }
-
-        /* Luxe Details Page */
         #selector-overlay { display: none; position: fixed; inset: 0; background: var(--black); z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: fixed; top: 0; width: 100%; height: 100vh; opacity: 0.3; background-size: cover; background-position: center; filter: blur(20px); pointer-events: none; }
-        
-        /* Player Overlay */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         #ad-shield { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s; }
         .menu-open { transform: translateX(0) !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -84,7 +68,6 @@
         <div id="details-backdrop"></div>
         <div class="relative max-w-6xl mx-auto p-6 md:p-12 min-h-screen">
             <button onclick="closeSelector()" class="bg-white/5 text-gold border border-gold/30 px-6 py-2 rounded-full mb-12 font-bold text-xs hover:bg-gold hover:text-black">✕ BACK TO LIBRARY</button>
-            
             <div class="flex flex-col md:flex-row gap-12 items-center md:items-start mb-16">
                 <img id="details-poster" class="w-72 rounded-2xl shadow-2xl border border-white/10" src="">
                 <div class="flex-1 text-center md:text-left">
@@ -99,7 +82,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="tv-action-area" class="hidden border-t border-white/10 pt-10">
                 <h3 class="text-gold font-bold text-xs tracking-widest mb-6 uppercase">Seasons</h3>
                 <div id="season-buttons" class="flex gap-4 overflow-x-auto pb-8 no-scrollbar"></div>
@@ -121,11 +103,22 @@
     </div>
 
     <script>
-        const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
+        let API_KEY = ''; 
         let page = 1, activeType = 'trending', activeID = '', currentMediaContext = {};
+        let art = null;
 
-        // Fetch movies/shows from TMDB
+        // Fetch Secure Config from Render
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                API_KEY = data.tmdb_key;
+                fetchContent();
+            } catch (e) { console.error("Config Load Failed"); }
+        }
+
         async function fetchContent(append = false) {
+            if(!API_KEY) return;
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
@@ -148,7 +141,6 @@
             });
         }
 
-        // Luxe Details Page logic
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
@@ -206,39 +198,48 @@
             });
         }
 
-        // Real-Debrid Streaming Logic
         async function startLuxeStream() {
             document.getElementById('selector-overlay').style.display = 'none';
             document.getElementById('player-overlay').style.display = 'block';
             document.getElementById('ad-shield').style.display = 'flex';
-            document.getElementById('shield-text').innerText = "Fetching High-Quality Stream...";
 
             const { type, id, s, e } = currentMediaContext;
 
             try {
-                // Call your updated server.js route
                 const response = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
                 const data = await response.json();
 
                 if (data.streamUrl) {
-                    const container = document.getElementById('player-container');
-                    container.innerHTML = `
-                        <video id="luxe-player" controls autoplay class="w-full h-full">
-                            <source src="${data.streamUrl}" type="video/mp4">
-                        </video>
-                    `;
-                    // Hide shield after video is ready
-                    setTimeout(() => { document.getElementById('ad-shield').style.display = 'none'; }, 2000);
-                } else {
-                    throw new Error("No link found");
-                }
+                    art = new ArtPlayer({
+                        container: '#player-container',
+                        url: data.streamUrl,
+                        type: 'mp4',
+                        fullscreen: true,
+                        fullscreenWeb: true,
+                        autoplay: true,
+                        autoSize: true,
+                        setting: true,
+                        pip: true,
+                        playbackRate: true,
+                        aspectRatio: true,
+                        lock: true,
+                        fastForward: true,
+                    });
+
+                    art.on('ready', () => {
+                        document.getElementById('ad-shield').style.display = 'none';
+                    });
+                } else { throw new Error("Link Fail"); }
             } catch (err) {
-                document.getElementById('shield-text').innerText = "Streaming Error: Please try another title.";
+                document.getElementById('shield-text').innerText = "Streaming Error: Source not reachable.";
             }
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
-        function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
+        function closePlayer() { 
+            if(art) art.destroy();
+            document.getElementById('player-overlay').style.display = 'none'; 
+        }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; fetchContent(); }
         function handleSearch(e) { if (e.key === 'Enter') { activeType = 'search'; activeID = e.target.value; page = 1; fetchContent(); } }
@@ -248,7 +249,7 @@
                 document.getElementById('loader').style.opacity = '0'; 
                 setTimeout(() => document.getElementById('loader').remove(), 600); 
             }, 1500); 
-            fetchContent(); 
+            fetchConfig(); 
         };
     </script>
 </body>
