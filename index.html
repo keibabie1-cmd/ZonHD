@@ -5,45 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="referrer" content="no-referrer">
     <title>ZonHD Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         
-        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
-        .loader-medusa { width: 150px; height: 150px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 50px var(--red); animation: pulseMedusa 2s infinite ease-in-out; }
-        @keyframes pulseMedusa { 0%, 100% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+        /* THE MEDUSA SPLASH */
+        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .loader-medusa { width: 150px; height: 150px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 50px var(--red); animation: pulse 2s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
-        .hero-banner { height: 75vh; position: relative; background: linear-gradient(to bottom, transparent 10%, rgba(5,5,5,0.9) 80%, var(--black) 100%), url('IMG_8035.jpeg'); background-size: cover; background-position: center 10%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 50px; }
-        .medusa-eyes { position: absolute; top: 36%; width: 100%; height: 25px; background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, transparent 70%); filter: blur(8px); animation: eyePulse 1.5s infinite alternate; pointer-events: none; }
-        @keyframes eyePulse { from { opacity: 0.3; } to { opacity: 1; } }
-        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 12vw, 6rem); color: var(--gold); text-shadow: 0 0 30px var(--red); font-style: italic; }
+        /* CINEMA UI */
+        .hero-banner { height: 75vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center 10%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 50px; }
+        .medusa-eyes { position: absolute; top: 36%; width: 100%; height: 25px; background: radial-gradient(circle, rgba(255,0,0,0.9), transparent 70%); filter: blur(8px); animation: eyePulse 1.5s infinite alternate; }
+        @keyframes eyePulse { from { opacity: 0.2; } to { opacity: 1; } }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: 4rem; color: var(--gold); text-shadow: 0 0 30px var(--red); font-style: italic; }
 
-        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .menu-open { transform: translateX(0) !important; }
-
-        .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; transition: 0.3s; cursor: pointer; border: 1px solid #1a1a1a; }
-        .movie-card:hover { transform: scale(1.03); border-color: var(--gold); }
-        
+        /* THE PLAYER SHIELD (THE HACK) */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        
-        /* AD-SHIELD LAYER */
-        #ad-killer { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        #interaction-blocker { 
+            position: absolute; inset: 0; z-index: 6000; 
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; cursor: pointer;
+        }
+        .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; transition: 0.3s; }
+        .movie-card:hover { transform: scale(1.03); border-color: var(--gold); }
     </style>
 </head>
 <body id="swipe-area">
 
-    <div id="loader">
-        <div class="loader-medusa"></div>
-        <p class="text-gold mt-6 tracking-[0.5em] font-bold text-sm">ZonHD CINEMA</p>
-    </div>
+    <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold">ZonHD CINEMA</p></div>
 
-    <div id="side-menu" class="p-8 overflow-y-auto no-scrollbar">
-        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2">NETWORKS</h2>
+    <div id="side-menu" class="fixed inset-y-0 left-0 w-72 bg-black border-r border-gold z-[3000] -translate-x-full transition-transform duration-500 p-8">
+        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
         <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button onclick="setFilter('network', 213)">Netflix</button>
             <button onclick="setFilter('network', 2739)">Disney+</button>
@@ -51,43 +48,33 @@
             <button onclick="setFilter('network', 34)">Adult Swim</button>
             <button onclick="setFilter('network', 19)">Nickelodeon</button>
             <button onclick="setFilter('network', 56)">Cartoon Network</button>
-            <button onclick="setFilter('network', 2552)">Boomerang</button>
         </div>
     </div>
 
-    <header class="hero-banner">
-        <div class="medusa-eyes"></div>
-        <h1 class="zonhd-logo">ZonHD</h1>
-        <p class="text-gold tracking-[0.8em] text-[10px] font-bold mt-2 uppercase">Cinema Luxe</p>
-    </header>
+    <header class="hero-banner"><div class="medusa-eyes"></div><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold">CINEMA LUXE</p></header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white" placeholder="Search movies or shows..." onkeyup="handleSearch(event)">
+        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none focus:border-red-600 transition" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
         <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center">
             <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
             <button onclick="setFilter('trending')" class="text-red-600 font-black">TRENDING</button>
             <button onclick="setFilter('genre', 27)" class="font-bold">HORROR</button>
             <button onclick="setFilter('genre', 28)" class="font-bold">ACTION</button>
             <button onclick="setFilter('genre', 16)" class="font-bold">ANIME</button>
-            <button onclick="setFilter('genre', 10751)" class="font-bold whitespace-nowrap">FAMILY</button>
+            <button onclick="setFilter('genre', 10751)" class="font-bold">FAMILY</button>
         </nav>
-    </div>
-
-    <div id="continue-section" class="p-4 hidden">
-        <h3 class="text-gold font-bold italic mb-4 text-xs tracking-widest">CONTINUE WATCHING</h3>
-        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar"></div>
     </div>
 
     <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
     <div id="player-overlay">
-        <div id="ad-killer" onclick="killAdsAndPlay()">
-            <div class="loader-medusa" style="width:80px; height:80px; margin-bottom:20px;"></div>
-            <div class="bg-[#D4AF37] text-black px-8 py-3 rounded-full font-bold shadow-2xl animate-bounce">TAP TO UNMUTE CINEMA</div>
-            <p class="text-zinc-500 text-[10px] mt-4 uppercase tracking-widest">Shielding Cinema Experience...</p>
+        <div id="interaction-blocker" onclick="engageCinema()">
+            <div class="loader-medusa" style="width:100px; height:100px; margin-bottom:20px;"></div>
+            <div class="bg-red-700 text-white px-10 py-4 rounded-full font-bold shadow-2xl animate-pulse">START UNMUTED STREAM</div>
+            <p class="text-gold text-[10px] mt-6 tracking-widest uppercase opacity-50">Anti-Redirect Active</p>
         </div>
         <div class="flex justify-between p-6 absolute top-0 w-full z-[7000]">
-            <button onclick="closePlayer()" class="bg-red-700 text-white px-6 py-2 rounded-full font-bold text-xs shadow-xl">✕ CLOSE</button>
+            <button onclick="closePlayer()" class="bg-zinc-900 text-white px-6 py-2 rounded-full font-bold text-xs border border-zinc-700">✕ CLOSE</button>
         </div>
         <div id="player-container" class="w-full h-full"></div>
     </div>
@@ -101,8 +88,8 @@
         window.onload = () => { setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 600); }, 2000); };
 
         const mc = new Hammer(document.getElementById('swipe-area'));
-        mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-        mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
+        mc.on("swiperight", () => document.getElementById('side-menu').style.transform = 'translateX(0)');
+        mc.on("swipeleft", () => document.getElementById('side-menu').style.transform = 'translateX(-100%)');
 
         async function fetchContent(append = false) {
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
@@ -118,53 +105,44 @@
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
                 card.className = "movie-card";
-                card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'), m.poster_path);
+                card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'));
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
 
-        function playMovie(id, type, poster) {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            if (!history.find(h => h.id === id)) { history.unshift({ id, type, poster }); localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10))); }
-            loadContinueWatching();
+        function playMovie(id, type) {
+            const container = document.getElementById('player-container');
+            // Hack: Direct API call with forced UI parameters
+            const source = `https://vidlink.pro/${type}/${id}?autoplay=true&muted=false&volume=1`;
             
-            // Switch to VidSrc as it has better iPhone fullscreen support
-            const source = `https://vidsrc.xyz/embed/${type}/${id}`;
-            document.getElementById('player-container').innerHTML = `<iframe id="player-frame" src="${source}" allow="autoplay; fullscreen" allowfullscreen class="w-full h-full border-none"></iframe>`;
+            container.innerHTML = `
+                <iframe id="cinema-iframe" src="${source}" 
+                    allow="autoplay; fullscreen" allowfullscreen 
+                    class="w-full h-full border-none"
+                    sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-modals">
+                </iframe>`;
+            
             document.getElementById('player-overlay').style.display = 'block';
-            document.getElementById('ad-killer').style.display = 'flex';
+            document.getElementById('interaction-blocker').style.display = 'flex';
         }
 
-        function killAdsAndPlay() {
-            const shield = document.getElementById('ad-killer');
-            // Change text to let the user know we are absorbing the ad-clicks
-            shield.innerHTML = `<div class="bg-red-700 text-white px-8 py-3 rounded-full font-bold">LOADING CINEMA...</div>`;
+        function engageCinema() {
+            const blocker = document.getElementById('interaction-blocker');
+            // Force a hidden interaction with the iframe to trigger audio
+            const iframe = document.getElementById('cinema-iframe');
+            iframe.focus();
             
-            // Wait 2 seconds while the user taps to absorb any popups, then remove shield
-            setTimeout(() => {
-                shield.style.display = 'none';
-                shield.innerHTML = `<div class="loader-medusa" style="width:80px; height:80px; margin-bottom:20px;"></div><div class="bg-[#D4AF37] text-black px-8 py-3 rounded-full font-bold shadow-2xl">TAP TO UNMUTE CINEMA</div>`;
-            }, 1000);
-        }
-
-        function loadContinueWatching() {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            const container = document.getElementById('continue-grid');
-            const section = document.getElementById('continue-section');
-            if (history.length > 0) {
-                section.classList.remove('hidden');
-                container.innerHTML = history.map(m => `<div class="min-w-[100px] h-[150px] rounded-lg overflow-hidden border border-zinc-800 flex-shrink-0" onclick="playMovie('${m.id}', '${m.type}', '${m.poster}')"><img src="https://image.tmdb.org/t/p/w300${m.poster}" class="w-full h-full object-cover"></div>`).join('');
-            }
+            blocker.style.opacity = '0';
+            setTimeout(() => { blocker.style.display = 'none'; blocker.style.opacity = '1'; }, 400);
         }
 
         function handleSearch(e) { if (e.key === 'Enter') { activeType = 'search'; activeID = e.target.value; page = 1; fetchContent(); } }
-        function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); fetchContent(); }
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; page = 1; document.getElementById('side-menu').style.transform = 'translateX(-100%)'; fetchContent(); }
+        function toggleMenu() { const s = document.getElementById('side-menu'); s.style.transform = s.style.transform === 'translateX(0px)' ? 'translateX(-100%)' : 'translateX(0px)'; }
         function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
 
         window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1200) { page++; fetchContent(true); } };
-        loadContinueWatching();
         fetchContent();
     </script>
 </body>
