@@ -1,18 +1,15 @@
 {
   "name": "ZonHD Cinema",
   "short_name": "ZonHD",
-  "description": "Extravagant Medusa Cinema Luxe Streaming App for Movies and Black Anime.",
   "start_url": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#D4AF37",
-  "orientation": "landscape",
   "icons": [
     {
       "src": "IMG_8035.jpeg",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/jpeg"
     }
   ]
 }
