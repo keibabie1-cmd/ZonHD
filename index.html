@@ -119,99 +119,102 @@
         <div id="player-container" class="w-full h-full"></div>
     </div>
 
-    <script>
-        const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-        let page = 1;
-        let activeType = 'trending';
-        let activeID = '';
-        let isFetching = false;
+ <script>
+    const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
+    let page = 1;
+    let activeType = 'trending';
+    let activeID = '';
+    let isFetching = false;
 
-        // Hammer.js for Mobile Swiping
-        const mc = new Hammer(document.getElementById('swipe-area'));
-        mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-        mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
+    // Mobile Swipe Logic
+    const mc = new Hammer(document.getElementById('swipe-area'));
+    mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
+    mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
 
-        async function fetchContent(append = false) {
-            if (isFetching) return;
-            isFetching = true;
-            
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}&sort_by=popularity.desc`;
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+    async function fetchContent(append = false) {
+        if (isFetching) return;
+        isFetching = true;
+        
+        let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
+        if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}&sort_by=popularity.desc`;
+        if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+        if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
 
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                renderMovies(data.results, append);
-            } catch (e) { console.error("Load failed"); }
-            isFetching = false;
-        }
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            renderMovies(data.results, append);
+        } catch (e) { console.error("Load failed"); }
+        isFetching = false;
+    }
 
-        function renderMovies(movies, append) {
-            const grid = document.getElementById('movie-grid');
-            if (!append) grid.innerHTML = '';
-            
-            movies.forEach(m => {
-                if (!m.poster_path) return;
-                const card = document.createElement('div');
-                card.className = "movie-card";
-                card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'));
-                card.innerHTML = `
-                    <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">
-                    <div class="medusa-play-btn"></div>
-                `;
-                grid.appendChild(card);
-            });
-        }
+    function renderMovies(movies, append) {
+        const grid = document.getElementById('movie-grid');
+        if (!append) grid.innerHTML = '';
+        
+        movies.forEach(m => {
+            if (!m.poster_path) return;
+            const card = document.createElement('div');
+            card.className = "movie-card";
+            // This calls the playMovie function below
+            card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'));
+            card.innerHTML = `
+                <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">
+                <div class="medusa-play-btn"></div>
+            `;
+            grid.appendChild(card);
+        });
+    }
 
-        function playMovie(id, type) {
-            const container = document.getElementById('player-container');
-            // Using VidLink as primary with autoplay and unmuted flags
-            // Added allow="autoplay" and sandbox tweaks to prevent redirects
-            const source = `https://vidlink.pro/${type}/${id}?autoplay=true&primaryColor=D4AF37`;
-            
-            container.innerHTML = `
-                <iframe 
-                    src="${source}" 
-                    allow="autoplay; fullscreen; picture-in-picture" 
-                    allowfullscreen 
-                    sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation">
-                </iframe>`;
-            document.getElementById('player-overlay').style.display = 'block';
-        }
+    // THE PLAYER FUNCTION YOU WERE LOOKING FOR
+    function playMovie(id, type) {
+        const container = document.getElementById('player-container');
+        
+        // We use VidLink but we've relaxed the sandbox so it doesn't give that error
+        const source = `https://vidlink.pro/${type}/${id}?autoplay=true&primaryColor=D4AF37`;
+        
+        container.innerHTML = `
+            <iframe 
+                src="${source}" 
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media" 
+                allowfullscreen 
+                sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-modals">
+            </iframe>`;
+        
+        document.getElementById('player-overlay').style.display = 'block';
+    }
 
-        function handleSearch(e) {
-            if (e.key === 'Enter') {
-                activeType = 'search';
-                activeID = e.target.value;
-                page = 1;
-                fetchContent();
-            }
-        }
-
-        function setFilter(type, id = '') {
-            activeType = type; activeID = id; page = 1;
-            document.getElementById('side-menu').classList.remove('menu-open');
-            window.scrollTo(0,0);
+    function handleSearch(e) {
+        if (e.key === 'Enter') {
+            activeType = 'search';
+            activeID = e.target.value;
+            page = 1;
             fetchContent();
         }
+    }
 
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-        function closePlayer() { 
-            document.getElementById('player-overlay').style.display = 'none';
-            document.getElementById('player-container').innerHTML = ''; 
-        }
-
-        // Infinite Scroll Logic
-        window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1500) {
-                page++;
-                fetchContent(true);
-            }
-        };
-
+    function setFilter(type, id = '') {
+        activeType = type; activeID = id; page = 1;
+        document.getElementById('side-menu').classList.remove('menu-open');
+        window.scrollTo(0,0);
         fetchContent();
-    </script>
+    }
+
+    function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+    
+    function closePlayer() { 
+        document.getElementById('player-overlay').style.display = 'none';
+        document.getElementById('player-container').innerHTML = ''; 
+    }
+
+    window.onscroll = () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1500) {
+            page++;
+            fetchContent(true);
+        }
+    };
+
+    fetchContent();
+</script>
 </body>
 </html>
