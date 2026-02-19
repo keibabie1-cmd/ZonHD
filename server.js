@@ -1,18 +1,23 @@
+// 1. IMPORT TOOLS FIRST
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const path = require('path');
+
+// 2. DEFINE THE APP VARIABLE
 const app = express();
 
+// 3. YOUR SETTINGS & KEY
 const RD_KEY = 'MQKVSO7O2CYHOGVO6LAXR7H3ADRQADZDMZF2FT4S6ZNJECAM7PWQ';
 
+// 4. SERVE STATIC FILES
 app.use(express.static(__dirname));
 
+// 5. ROUTES (Now 'app' is defined and safe to use)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// LUXE STREAMING ROUTE
 app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
     console.log(`--- Luxe Request: ${type} ${id} (S${s}E${e}) ---`);
@@ -27,7 +32,7 @@ app.get('/get-luxe-stream', async (req, res) => {
         const targetStream = streams[0];
         
         if (!targetStream) {
-            console.log("Luxe Status: No magnets found for this title.");
+            console.log("Luxe Status: No magnets found.");
             return res.status(404).json({ error: 'No streams found' });
         }
 
@@ -48,18 +53,14 @@ app.get('/get-luxe-stream', async (req, res) => {
             `link=${downloadLink}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } });
 
-        console.log("Luxe Status: Stream successfully unlocked!");
         res.json({ streamUrl: unrestrictRes.data.download });
 
     } catch (err) {
-        if (err.response) {
-            console.error("Luxe Error (RD API):", err.response.status, err.response.data);
-        } else {
-            console.error("Luxe Error (System):", err.message);
-        }
+        console.error("Luxe Error:", err.message);
         res.status(500).json({ error: 'Streaming service error' });
     }
 });
 
+// 6. START THE SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`ZonHD Luxe: Port ${PORT}`));
