@@ -4,130 +4,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ZonHD Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
-        body { 
-            background: var(--black); color: white; 
-            font-family: 'Playfair Display', serif;
-            overscroll-behavior-y: contain; /* Prevents "pull to refresh" bounce */
-        }
-
-        /* Majestic Medusa Banner */
+        body { background: var(--black); color: white; font-family: 'Playfair Display', serif; overflow-x: hidden; }
+        
+        /* THE MEDUSA BANNER */
         .hero-banner {
-            height: 75vh;
-            background: linear-gradient(to bottom, transparent 40%, var(--black) 100%), 
-                        url('https://api.deepai.org/job-view-file/45c7546a-723a-4416-8c01-831495c0c97e/outputs/output.jpg');
+            height: 65vh;
+            background: linear-gradient(to bottom, transparent 30%, var(--black) 100%), 
+                        url('https://images.mirror-media.xyz/publication-images/7gB_rQpW3ZlX7u_7p_q-x.png?height=1024&width=1024'); /* Replace with your Black Medusa Image */
             background-size: cover; background-position: center;
             display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-            padding-bottom: 50px;
+            padding-bottom: 40px; border-bottom: 2px solid var(--gold);
         }
 
         .zonhd-logo {
-            font-size: 5.5rem; font-weight: 900; color: var(--red);
-            text-shadow: 0 0 25px var(--red), 0 0 50px var(--gold);
-            letter-spacing: -3px; font-style: italic;
+            font-size: 5rem; font-weight: 900; color: var(--red);
+            text-shadow: 0 0 20px var(--red), 0 0 40px var(--gold);
+            letter-spacing: -2px; font-style: italic;
         }
 
-        /* Swipeable Side Menu */
+        /* SWIPE MENU */
         #side-menu {
             position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
             background: rgba(10, 0, 0, 0.98); border-right: 1px solid var(--gold);
-            z-index: 1000; transform: translateX(-100%);
-            transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1);
+            z-index: 1000; transform: translateX(-100%); transition: 0.3s;
         }
-
         .menu-open { transform: translateX(0) !important; }
 
-        /* Cinema Player */
-        #player-overlay { 
-            display: none; position: fixed; inset: 0; 
-            background: #000; z-index: 2000; 
-        }
-
-        /* Hide Scrollbars */
+        /* MOVIE CARDS */
+        .movie-card { border: 1px solid rgba(212, 175, 55, 0.1); transition: 0.3s; }
+        .movie-card:active { transform: scale(0.95); border-color: var(--gold); }
+        
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 2000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="selection:bg-red-900">
+<body>
 
-    <div id="side-menu" class="p-8 flex flex-col">
-        <h2 class="text-gold text-3xl font-black mb-10 italic">ZonHD Studios</h2>
-        <nav class="flex flex-col gap-8 text-lg uppercase tracking-widest font-bold">
-            <button onclick="loadNetwork(213)" class="text-left hover:text-red-600">Netflix</button>
-            <button onclick="loadNetwork(2739)" class="text-left hover:text-red-600">Disney+</button>
-            <button onclick="loadNetwork(1024)" class="text-left hover:text-red-600">Hulu</button>
-            <button onclick="loadNetwork(43)" class="text-left hover:text-red-600">HBO</button>
-            <button onclick="loadNetwork(34)" class="text-left hover:text-red-600">Adult Swim</button>
-        </nav>
+    <div id="side-menu" class="p-8 overflow-y-auto no-scrollbar">
+        <h2 class="text-gold text-2xl font-black mb-6 italic">Networks</h2>
+        <div class="flex flex-col gap-6 text-sm uppercase tracking-widest font-bold text-zinc-400">
+            <button onclick="setFilter('network', 213, 'Netflix')">Netflix</button>
+            <button onclick="setFilter('network', 2739, 'Disney+')">Disney+</button>
+            <button onclick="setFilter('network', 1024, 'Amazon')">Amazon</button>
+            <button onclick="setFilter('network', 43, 'HBO')">HBO</button>
+            <button onclick="setFilter('network', 34, 'Adult Swim')">Adult Swim</button>
+            <button onclick="setFilter('network', 19, 'Nickelodeon')">Nickelodeon</button>
+            <button onclick="setFilter('network', 56, 'Cartoon Network')">Cartoon Network</button>
+        </div>
     </div>
 
-    <div id="app-content">
-        <header class="hero-banner">
-            <h1 class="zonhd-logo">ZonHD</h1>
-            <p class="text-gold tracking-[1.2em] text-[12px] uppercase font-bold mt-2">Cinema Medusa</p>
-        </header>
+    <header class="hero-banner">
+        <h1 class="zonhd-logo">ZonHD</h1>
+        <p class="text-gold tracking-[1em] text-[10px] uppercase font-bold">Cinema Medusa</p>
+    </header>
 
-        <nav class="sticky top-0 z-[500] bg-black/90 backdrop-blur-xl p-5 flex overflow-x-auto gap-10 no-scrollbar border-b border-zinc-900">
-            <button onclick="openMenu()" class="text-gold text-2xl">☰</button>
-            <button onclick="setGenre(28)" class="font-bold">Action</button>
-            <button onclick="setGenre(27)" class="font-bold">Horror</button>
-            <button onclick="setGenre(16)" class="font-bold">Anime</button>
-            <button onclick="setGenre(10751)" class="font-bold">Family</button>
-        </nav>
+    <nav class="sticky top-0 z-[500] bg-black/95 backdrop-blur-md p-4 flex overflow-x-auto gap-8 no-scrollbar border-b border-zinc-900">
+        <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
+        <button onclick="setFilter('genre', 27, 'Horror')" class="whitespace-nowrap font-bold">Horror</button>
+        <button onclick="setFilter('genre', 28, 'Action')" class="whitespace-nowrap font-bold">Action</button>
+        <button onclick="setFilter('genre', 16, 'Anime')" class="whitespace-nowrap font-bold">Anime</button>
+        <button onclick="setFilter('genre', 53, 'Thriller')" class="whitespace-nowrap font-bold">Thriller</button>
+        <button onclick="setFilter('genre', 14, 'Fantasy')" class="whitespace-nowrap font-bold">Fantasy</button>
+        <button onclick="setFilter('genre', 10751, 'Family')" class="whitespace-nowrap font-bold">Family</button>
+    </nav>
 
-        <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-6">
-            </main>
-    </div>
+    <div id="current-label" class="p-4 text-center text-gold uppercase text-[10px] tracking-widest">Trending Now</div>
+
+    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+        </main>
 
     <div id="player-overlay">
-        <button onclick="closePlayer()" class="absolute top-10 right-10 z-[2100] bg-red-600 p-4 rounded-full font-bold">CLOSE</button>
-        <iframe id="video-frame" allow="autoplay; fullscreen" allowfullscreen src="" class="w-full h-full border-none"></iframe>
+        <button onclick="closePlayer()" class="absolute top-10 right-10 z-[2100] bg-red-600 p-4 rounded-full font-bold">✕</button>
+        <iframe id="video-frame" allow="autoplay; fullscreen" allowfullscreen class="w-full h-full border-none"></iframe>
     </div>
 
     <script>
         const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
         let page = 1;
-        const menu = document.getElementById('side-menu');
-        
-        // --- TOUCH SWIPE LOGIC ---
-        let touchStartX = 0;
-        document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
-        document.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].clientX;
-            if (touchStartX < 50 && touchEndX > 100) openMenu(); // Swipe Right
-            if (touchStartX > 200 && touchEndX < 100) closeMenu(); // Swipe Left
-        });
+        let activeType = 'trending'; 
+        let activeID = '';
 
-        function openMenu() { menu.classList.add('menu-open'); }
-        function closeMenu() { menu.classList.remove('menu-open'); }
-
-        // --- CONTENT LOGIC ---
+        // LOAD CONTENT LOGIC
         async function fetchContent(append = false) {
-            const res = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=${API_KEY}&page=${page}`);
+            let url = `https://api.themoviedb.org/3/trending/all/week?api_key=${API_KEY}&page=${page}`;
+            
+            if (activeType === 'genre') {
+                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
+            } else if (activeType === 'network') {
+                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+            }
+
+            const res = await fetch(url);
             const data = await res.json();
             const grid = document.getElementById('movie-grid');
             if(!append) grid.innerHTML = '';
 
             data.results.forEach(m => {
+                if (!m.poster_path) return;
                 const card = document.createElement('div');
-                card.className = "bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 transition-transform active:scale-95";
+                card.className = "movie-card bg-zinc-900 rounded-xl overflow-hidden";
                 card.onclick = () => {
                     document.getElementById('video-frame').src = `https://vidsrc.me/embed/${m.media_type || 'movie'}?tmdb=${m.id}&autoplay=1`;
                     document.getElementById('player-overlay').style.display = 'block';
                 };
-                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-auto">`;
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full">`;
                 grid.appendChild(card);
             });
         }
 
-        function closePlayer() {
-            document.getElementById('player-overlay').style.display = 'none';
-            document.getElementById('video-frame').src = '';
+        // FILTER SWITCHER
+        function setFilter(type, id, label) {
+            activeType = type;
+            activeID = id;
+            page = 1;
+            document.getElementById('current-label').innerText = label;
+            document.getElementById('side-menu').classList.remove('menu-open');
+            fetchContent();
         }
 
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('video-frame').src = ''; }
+
+        // INFINITE SCROLL
         window.onscroll = () => {
             if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1200) {
                 page++; fetchContent(true);
