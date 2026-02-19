@@ -6,92 +6,90 @@ const app = express();
 const RD_KEY = process.env.RD_KEY;
 const TMDB_KEY = process.env.TMDB_KEY;
 
+// Stealth headers to bypass bot-detection
+const sharkHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json'
+};
+
 app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('/api/config', (req, res) => {
-    res.json({ tmdb_key: TMDB_KEY });
-});
+app.get('/api/config', (req, res) => res.json({ tmdb_key: TMDB_KEY }));
 
 app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
-    console.log(`--- [START] Fetching: ${type} ${id} (S${s}E${e}) ---`);
+    console.log(`--- [HUNTER MODE] Seeking cached source for: ${id} ---`);
     
     try {
-        // Step 1: Try Torrentio Scraper
-        const scraperUrl = type === 'movie' 
-            ? `https://torrentio.strem.fun/stream/movie/${id}.json`
-            : `https://torrentio.strem.fun/stream/series/${id}:${s}:${e}.json`;
-            
-        let scraperRes = await axios.get(scraperUrl, { timeout: 8000 });
-        let streams = scraperRes.data.streams || [];
+        // 1. Gather all possible magnets from multiple scrapers
+        const scraperUrls = [
+            `https://torrentio.strem.fun/stream/${type}/${type === 'movie' ? id : id + ':' + s + ':' + e}.json`,
+            `https://knightcrawler.elfhosted.com/stream/${type}/${type === 'movie' ? id : id + ':' + s + ':' + e}.json`
+        ];
 
-        // Fallback: If Torrentio is empty, try a second community scraper (KnightCrawler)
-        if (streams.length === 0) {
-            console.log("--- [INFO] Torrentio empty, trying KnightCrawler ---");
-            const fallbackUrl = type === 'movie'
-                ? `https://knightcrawler.elfhosted.com/stream/movie/${id}.json`
-                : `https://knightcrawler.elfhosted.com/stream/series/${id}:${s}:${e}.json`;
-            const fbRes = await axios.get(fallbackUrl, { timeout: 8000 });
-            streams = fbRes.data.streams || [];
+        let allStreams = [];
+        for (const url of scraperUrls) {
+            try {
+                const response = await axios.get(url, { headers: sharkHeaders, timeout: 4000 });
+                if (response.data.streams) allStreams = [...allStreams, ...response.data.streams];
+            } catch (err) { console.log(`Scraper ${url} timed out.`); }
         }
 
-        const targetStream = streams[0];
-        if (!targetStream) {
-            return res.status(404).json({ error: 'No cached sources found.' });
-        }
+        if (allStreams.length === 0) return res.status(404).json({ error: "No sources found." });
 
-        const infoHash = targetStream.infoHash;
+        // 2. CACHE HUNTING LOOP: Iteratively try the top 10 streams
+        let finalStreamUrl = null;
+        const maxAttempts = Math.min(allStreams.length, 10);
 
-        // Step 2: Add Magnet using auth_token in URL (More reliable)
-        const addRes = await axios.post(
-            `https://api.real-debrid.com/rest/1.0/torrents/addMagnet?auth_token=${RD_KEY}`, 
-            `magnet=magnet:?xt=urn:btih:${infoHash}`, 
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
+        for (let i = 0; i < maxAttempts; i++) {
+            const hash = allStreams[i].infoHash;
+            console.log(`--- [ATTEMPT ${i+1}] Testing Hash: ${hash} ---`);
 
-        const torrentId = addRes.data.id;
+            try {
+                // Add Magnet
+                const add = await axios.post(
+                    `https://api.real-debrid.com/rest/1.0/torrents/addMagnet?auth_token=${RD_KEY}`, 
+                    `magnet=magnet:?xt=urn:btih:${hash}`, 
+                    { headers: { ...sharkHeaders, 'Content-Type': 'application/x-www-form-urlencoded' } }
+                );
+                const torrentId = add.data.id;
 
-        // Step 3: Select Files
-        await axios.post(
-            `https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${torrentId}?auth_token=${RD_KEY}`, 
-            'files=all', 
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
+                // Select Files
+                await axios.post(`https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${torrentId}?auth_token=${RD_KEY}`, 'files=all', { headers: sharkHeaders });
 
-        // Step 4: Check if Cached and Get Link
-        let downloadLink = null;
-        for (let i = 0; i < 5; i++) {
-            const infoRes = await axios.get(`https://api.real-debrid.com/rest/1.0/torrents/info/${torrentId}?auth_token=${RD_KEY}`);
-            
-            // If the status is 'downloaded', it means it's cached and ready instantly
-            if (infoRes.data.links && infoRes.data.links.length > 0) {
-                downloadLink = infoRes.data.links[0];
-                break;
+                // Check Status Immediately
+                const info = await axios.get(`https://api.real-debrid.com/rest/1.0/torrents/info/${torrentId}?auth_token=${RD_KEY}`, { headers: sharkHeaders });
+                
+                // Real-Debrid marks cached files as "downloaded" instantly
+                if (info.data.status === 'downloaded' && info.data.links.length > 0) {
+                    console.log("--- [FOUND CACHED SOURCE] ---");
+                    const unrestrict = await axios.post(
+                        `https://api.real-debrid.com/rest/1.0/unrestrict/link?auth_token=${RD_KEY}`, 
+                        `link=${info.data.links[0]}`, 
+                        { headers: sharkHeaders }
+                    );
+                    finalStreamUrl = unrestrict.data.download;
+                    break; // EXIT LOOP - WE WON
+                } else {
+                    // Not cached - DELETE to keep RD cloud clean and try next
+                    console.log("Not cached. Skipping...");
+                    await axios.delete(`https://api.real-debrid.com/rest/1.0/torrents/delete/${torrentId}?auth_token=${RD_KEY}`, { headers: sharkHeaders });
+                }
+            } catch (err) {
+                console.log(`Attempt ${i+1} failed due to RD error.`);
             }
-            await new Promise(r => setTimeout(r, 1500));
         }
 
-        if (!downloadLink) throw new Error("This source isn't cached. Try another title.");
-
-        // Step 5: Unrestrict Link
-        const unrestrictRes = await axios.post(
-            `https://api.real-debrid.com/rest/1.0/unrestrict/link?auth_token=${RD_KEY}`, 
-            `link=${downloadLink}`, 
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
-
-        console.log("--- [SUCCESS] Stream ready! ---");
-        res.json({ streamUrl: unrestrictRes.data.download });
+        if (finalStreamUrl) {
+            res.json({ streamUrl: finalStreamUrl });
+        } else {
+            res.status(404).json({ error: "No instantly streamable (cached) sources found." });
+        }
 
     } catch (err) {
-        console.error("--- [DEBUG FAIL] ---", err.response ? err.response.data : err.message);
-        res.status(500).json({ error: 'Source not reachable.' });
+        res.status(500).json({ error: "System failure." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Cinema Luxe: Port ${PORT}`));
+app.listen(PORT, () => console.log(`Shark Hunter Running on ${PORT}`));
