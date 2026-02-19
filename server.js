@@ -18,27 +18,28 @@ app.get('/api/config', (req, res) => {
 
 app.get('/get-luxe-stream', async (req, res) => {
     const { type, id, s, e } = req.query;
-    console.log(`--- [DEBUG] Request: ${type} ${id} (S${s}E${e}) ---`);
+    console.log(`--- [START] Fetching: ${type} ${id} ---`);
     
     try {
-        // Step 1: Torrentio Scraper
+        // Step 1: Get Magnet from Torrentio
         const scraperUrl = type === 'movie' 
             ? `https://torrentio.strem.fun/stream/movie/${id}.json`
             : `https://torrentio.strem.fun/stream/series/${id}:${s}:${e}.json`;
             
-        const scraperRes = await axios.get(scraperUrl);
+        const scraperRes = await axios.get(scraperUrl, { timeout: 5000 });
         const targetStream = (scraperRes.data.streams || [])[0];
         
         if (!targetStream) {
-            console.error("--- [DEBUG] No magnets found on Torrentio ---");
+            console.log("--- [ERROR] No streams found for this title ---");
             return res.status(404).json({ error: 'No streams found' });
         }
 
-        // Step 2: Add to RD
-        console.log("--- [DEBUG] Adding Magnet to RD ---");
+        const magnet = `magnet:?xt=urn:btih:${targetStream.infoHash}`;
+
+        // Step 2: Add Magnet to RD
         const addRes = await axios.post(
             'https://api.real-debrid.com/rest/1.0/torrents/addMagnet', 
-            `magnet=magnet:?xt=urn:btih:${targetStream.infoHash}`, 
+            `magnet=${magnet}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
 
@@ -51,38 +52,45 @@ app.get('/get-luxe-stream', async (req, res) => {
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } }
         );
 
-        // Step 4: Wait for RD link (5 tries, 1.5s apart)
+        // Step 4: Link Generation Loop
         let downloadLink = null;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 6; i++) {
             const infoRes = await axios.get(
                 `https://api.real-debrid.com/rest/1.0/torrents/info/${torrentId}`, 
                 { headers: { 'Authorization': `Bearer ${RD_KEY}` } }
             );
+
             if (infoRes.data.links && infoRes.data.links.length > 0) {
                 downloadLink = infoRes.data.links[0];
                 break;
             }
-            await new Promise(res => setTimeout(res, 1500));
+            console.log(`--- [INFO] Waiting for RD link (Attempt ${i+1})... ---`);
+            await new Promise(res => setTimeout(res, 2000));
         }
 
-        if (!downloadLink) throw new Error("RD link not generated in time");
+        if (!downloadLink) throw new Error("RD link timed out.");
 
-        // Step 5: Unrestrict
-        console.log("--- [DEBUG] Unrestricting RD link ---");
+        // Step 5: Unrestrict Link
         const unrestrictRes = await axios.post(
             'https://api.real-debrid.com/rest/1.0/unrestrict/link', 
             `link=${downloadLink}`, 
             { headers: { 'Authorization': `Bearer ${RD_KEY}` } }
         );
 
+        console.log("--- [SUCCESS] Stream URL generated ---");
         res.json({ streamUrl: unrestrictRes.data.download });
 
     } catch (err) {
-        // This will print the exact error to your Render dashboard logs
-        console.error("--- [ERROR] Luxe Backend Fail:", err.response ? err.response.data : err.message);
-        res.status(500).json({ error: 'Service fail' });
+        console.error("--- [CRITICAL ERROR] ---");
+        if (err.response) {
+            console.error("Status:", err.response.status);
+            console.error("Data:", err.response.data);
+        } else {
+            console.error("Message:", err.message);
+        }
+        res.status(500).json({ error: 'Source not reachable' });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`ZonHD Running on Port ${PORT}`));
+app.listen(PORT, () => console.log(`Cinema running on ${PORT}`));
