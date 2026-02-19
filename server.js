@@ -3,11 +3,11 @@ const axios = require('axios');
 const path = require('path');
 const app = express();
 
-// Parse the single config string from Render
-const config = JSON.parse(process.env.ZON_CONFIG || "{}");
-const RD_TOKEN = config.rd;
-const AD_KEY = config.ad;
-const TMDB_KEY = config.tmdb;
+// --- API KEYS LOADED HERE ---
+const RD_TOKEN = "Y5Q2ED5JGZID2HVYKBZWBODILUVIL3QXDTTEIUID2G4MZQLAW5LQ";
+const AD_KEY = "OpmUEjVJwOC5wg0cSOVU";
+const TMDB_KEY = "b9c746781e1e9b084c4cc4f0420156d4";
+// ----------------------------
 
 app.use(express.static('public'));
 
