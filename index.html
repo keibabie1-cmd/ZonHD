@@ -10,211 +10,204 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; --dark-gray: #121212; }
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; }
+        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
         
-        /* EXTRAVAGANT MEDUSA BANNER */
+        /* LOADING SCREEN */
+        #loader {
+            position: fixed; inset: 0; background: var(--black); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease-out;
+        }
+        .loader-medusa {
+            width: 150px; height: 150px; border-radius: 50%;
+            background: url('IMG_8035.jpeg'); background-size: cover;
+            border: 3px solid var(--gold); box-shadow: 0 0 50px var(--red);
+            animation: pulseMedusa 2s infinite ease-in-out;
+        }
+        @keyframes pulseMedusa { 0% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.7; } }
+
+        /* HEADER & UI */
         .hero-banner {
-            height: 85vh;
-            position: relative;
-            background: linear-gradient(to bottom, transparent 20%, rgba(5,5,5,0.8) 70%, var(--black) 100%), 
-                        url('IMG_8035.jpeg');
+            height: 80vh; position: relative;
+            background: linear-gradient(to bottom, transparent 10%, rgba(5,5,5,0.9) 80%, var(--black) 100%), url('IMG_8035.jpeg');
             background-size: cover; background-position: center 10%;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-            padding-bottom: 80px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 60px;
         }
-
-        /* GLOWING RED EYES ANIMATION */
         .medusa-eyes {
-            position: absolute; top: 35%; width: 100%; height: 20px;
-            background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, transparent 60%);
-            filter: blur(5px); animation: eyeGlow 2s infinite alternate ease-in-out;
-            pointer-events: none;
+            position: absolute; top: 36%; width: 100%; height: 25px;
+            background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, transparent 70%);
+            filter: blur(8px); animation: eyePulse 1.5s infinite alternate; pointer-events: none;
         }
-        @keyframes eyeGlow { from { opacity: 0.2; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+        @keyframes eyePulse { from { opacity: 0.3; transform: scale(0.8); } to { opacity: 1; transform: scale(1.2); } }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3.5rem, 15vw, 7rem); color: var(--gold); text-shadow: 0 0 40px var(--red); font-style: italic; line-height: 0.8; }
 
-        .zonhd-logo {
-            font-family: 'Playfair Display', serif; font-size: clamp(4rem, 18vw, 8rem);
-            font-weight: 900; color: var(--gold); text-shadow: 0 0 30px var(--red);
-            letter-spacing: -4px; font-style: italic; line-height: 0.8;
-        }
-
-        /* SIDE MENU LUXE */
         #side-menu {
             position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
-            background: linear-gradient(135deg, #0a0a0a 0%, #000 100%);
-            border-right: 1px solid var(--gold); z-index: 3000;
-            transform: translateX(-100%); transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            background: #000; border-right: 1px solid var(--gold); z-index: 3000;
+            transform: translateX(-100%); transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .menu-open { transform: translateX(0) !important; }
 
-        /* MOVIE CARDS */
-        .movie-card { 
-            position: relative; aspect-ratio: 2/3; border-radius: 8px; 
-            overflow: hidden; transition: 0.5s; cursor: pointer;
-            border: 1px solid rgba(212, 175, 55, 0.1);
-        }
-        .movie-card:active { transform: scale(0.95); }
+        .movie-card { position: relative; aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; transition: 0.4s; cursor: pointer; border: 1px solid #1a1a1a; }
+        .movie-card:hover { transform: scale(1.05); border-color: var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
         .medusa-play-btn {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.4) url('IMG_8035.jpeg');
-            background-size: cover; background-position: center; border-radius: 50%;
-            width: 60px; height: 60px; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border: 2px solid var(--gold); opacity: 0; transition: 0.3s;
+            position: absolute; inset: 0; background: rgba(0,0,0,0.5) url('IMG_8035.jpeg');
+            background-size: cover; border-radius: 50%; width: 60px; height: 60px;
+            top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid var(--gold);
+            opacity: 0; transition: 0.3s;
         }
         .movie-card:hover .medusa-play-btn { opacity: 1; }
 
-        /* PLAYER OVERLAY */
-        #player-overlay { 
-            display: none; position: fixed; inset: 0; background: #000; z-index: 5000; 
-            padding-top: env(safe-area-inset-top);
-        }
-        iframe { width: 100%; height: 100%; border: none; }
-        
-        .search-bar {
-            background: rgba(255,255,255,0.1); border: 1px solid var(--gold);
-            border-radius: 50px; padding: 10px 20px; color: white; width: 80%;
-            margin: 20px auto; display: block; outline: none;
-        }
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body id="swipe-area">
 
-    <div id="side-menu" class="p-6">
-        <h2 class="text-gold text-xl font-bold mb-8 tracking-tighter italic border-b border-red-900 pb-2">NETWORKS</h2>
-        <div class="flex flex-col gap-5 text-zinc-400 font-semibold uppercase text-xs tracking-widest">
+    <div id="loader">
+        <div class="loader-medusa"></div>
+        <p class="text-gold mt-6 tracking-[0.5em] font-bold">ZonHD CINEMA</p>
+    </div>
+
+    <div id="side-menu" class="p-8">
+        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2">NETWORKS</h2>
+        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button onclick="setFilter('network', 213)">Netflix</button>
             <button onclick="setFilter('network', 2739)">Disney+</button>
-            <button onclick="setFilter('network', 43)">HBO</button>
+            <button onclick="setFilter('network', 453)">Hulu</button>
             <button onclick="setFilter('network', 34)">Adult Swim</button>
             <button onclick="setFilter('network', 19)">Nickelodeon</button>
             <button onclick="setFilter('network', 56)">Cartoon Network</button>
+            <button onclick="setFilter('network', 2552)">Boomerang</button>
         </div>
     </div>
 
     <header class="hero-banner">
         <div class="medusa-eyes"></div>
         <h1 class="zonhd-logo">ZonHD</h1>
-        <p class="text-gold tracking-[1em] text-[10px] font-bold mt-4 uppercase">The Medusa Standard</p>
+        <p class="text-gold tracking-[0.8em] text-[10px] font-bold mt-4">CINEMA LUXE</p>
     </header>
 
-    <div class="sticky top-0 z-[1000] bg-black/90 backdrop-blur-md">
-        <input type="text" id="search-input" class="search-bar" placeholder="Search Movies or TV Shows..." onkeyup="handleSearch(event)">
-        <nav class="flex p-4 gap-6 overflow-x-auto no-scrollbar border-b border-zinc-900 items-center">
-            <button onclick="toggleMenu()" class="text-gold text-2xl pr-2">☰</button>
-            <button onclick="setFilter('trending')" class="text-red-600 font-bold whitespace-nowrap">TRENDING</button>
-            <button onclick="setFilter('genre', 27)" class="whitespace-nowrap hover:text-gold transition">HORROR</button>
-            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap hover:text-gold transition">ACTION</button>
-            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap hover:text-gold transition">ANIME</button>
-            <button onclick="setFilter('genre', 10751)" class="whitespace-nowrap hover:text-gold transition">FAMILY</button>
+    <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
+        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/10 border border-gold/30 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search movies or shows..." onkeyup="handleSearch(event)">
+        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center">
+            <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
+            <button onclick="setFilter('trending')" class="text-red-600 font-black">TRENDING</button>
+            <button onclick="setFilter('genre', 27)" class="font-bold">HORROR</button>
+            <button onclick="setFilter('genre', 28)" class="font-bold">ACTION</button>
+            <button onclick="setFilter('genre', 16)" class="font-bold">ANIME</button>
+            <button onclick="setFilter('genre', 10751)" class="font-bold">FAMILY</button>
         </nav>
     </div>
 
-    <main id="movie-grid" class="p-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></main>
+    <div id="continue-section" class="p-4 hidden">
+        <h3 class="text-gold font-bold italic mb-4">CONTINUE WATCHING</h3>
+        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar"></div>
+    </div>
+
+    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
     <div id="player-overlay">
-        <div class="flex justify-between items-center p-4 absolute top-0 w-full z-[6000]">
-            <button onclick="closePlayer()" class="bg-red-600 text-white px-4 py-2 rounded-full font-bold">CLOSE</button>
-            <span class="text-gold font-bold italic">ZonHD CINEMA</span>
+        <div class="flex justify-between p-6 absolute top-0 w-full z-[6000]">
+            <button onclick="closePlayer()" class="bg-red-700 text-white px-6 py-2 rounded-full font-bold shadow-lg">✕ CLOSE</button>
         </div>
         <div id="player-container" class="w-full h-full"></div>
     </div>
 
- <script>
-    const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
-    let page = 1;
-    let activeType = 'trending';
-    let activeID = '';
-    let isFetching = false;
+    <script>
+        const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
+        let page = 1;
+        let activeType = 'trending';
+        let activeID = '';
+        let isFetching = false;
 
-    // Mobile Swipe Logic
-    const mc = new Hammer(document.getElementById('swipe-area'));
-    mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-    mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
+        window.onload = () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 800);
+            }, 1500);
+        };
 
-    async function fetchContent(append = false) {
-        if (isFetching) return;
-        isFetching = true;
-        
-        let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
-        if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}&sort_by=popularity.desc`;
-        if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
-        if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+        const mc = new Hammer(document.getElementById('swipe-area'));
+        mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
+        mc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
 
-        try {
+        async function fetchContent(append = false) {
+            if (isFetching) return;
+            isFetching = true;
+            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
+            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+
             const res = await fetch(url);
             const data = await res.json();
             renderMovies(data.results, append);
-        } catch (e) { console.error("Load failed"); }
-        isFetching = false;
-    }
+            isFetching = false;
+        }
 
-    function renderMovies(movies, append) {
-        const grid = document.getElementById('movie-grid');
-        if (!append) grid.innerHTML = '';
-        
-        movies.forEach(m => {
-            if (!m.poster_path) return;
-            const card = document.createElement('div');
-            card.className = "movie-card";
-            // This calls the playMovie function below
-            card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'));
-            card.innerHTML = `
-                <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">
-                <div class="medusa-play-btn"></div>
-            `;
-            grid.appendChild(card);
-        });
-    }
+        function renderMovies(movies, append) {
+            const grid = document.getElementById('movie-grid');
+            if (!append) grid.innerHTML = '';
+            movies.forEach(m => {
+                if (!m.poster_path) return;
+                const card = document.createElement('div');
+                card.className = "movie-card";
+                card.onclick = () => playMovie(m.id, m.media_type || (activeType === 'network' ? 'tv' : 'movie'), m.poster_path);
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover"><div class="medusa-play-btn"></div>`;
+                grid.appendChild(card);
+            });
+        }
 
-    // THE PLAYER FUNCTION YOU WERE LOOKING FOR
-    function playMovie(id, type) {
-        const container = document.getElementById('player-container');
-        
-        // We use VidLink but we've relaxed the sandbox so it doesn't give that error
-        const source = `https://vidlink.pro/${type}/${id}?autoplay=true&primaryColor=D4AF37`;
-        
-        container.innerHTML = `
-            <iframe 
-                src="${source}" 
-                allow="autoplay; fullscreen; picture-in-picture; encrypted-media" 
-                allowfullscreen 
-                sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-modals">
-            </iframe>`;
-        
-        document.getElementById('player-overlay').style.display = 'block';
-    }
+        function playMovie(id, type, poster) {
+            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            const entry = { id, type, poster };
+            if (!history.find(h => h.id === id)) {
+                history.unshift(entry);
+                localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
+            }
+            loadContinueWatching();
+            const source = `https://vidlink.pro/${type}/${id}?autoplay=true&muted=false`;
+            document.getElementById('player-container').innerHTML = `<iframe src="${source}" allow="autoplay; fullscreen" allowfullscreen class="w-full h-full"></iframe>`;
+            document.getElementById('player-overlay').style.display = 'block';
+        }
 
-    function handleSearch(e) {
-        if (e.key === 'Enter') {
-            activeType = 'search';
-            activeID = e.target.value;
-            page = 1;
+        function loadContinueWatching() {
+            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            const container = document.getElementById('continue-grid');
+            const section = document.getElementById('continue-section');
+            if (history.length > 0) {
+                section.classList.remove('hidden');
+                container.innerHTML = history.map(m => `
+                    <div class="min-w-[120px] h-[180px] rounded-lg overflow-hidden border border-zinc-800" onclick="playMovie('${m.id}', '${m.type}', '${m.poster}')">
+                        <img src="https://image.tmdb.org/t/p/w300${m.poster}" class="w-full h-full object-cover">
+                    </div>
+                `).join('');
+            }
+        }
+
+        function handleSearch(e) {
+            if (e.key === 'Enter') { activeType = 'search'; activeID = e.target.value; page = 1; fetchContent(); }
+        }
+
+        function setFilter(type, id = '') {
+            activeType = type; activeID = id; page = 1;
+            document.getElementById('side-menu').classList.remove('menu-open');
+            window.scrollTo(0,0);
             fetchContent();
         }
-    }
 
-    function setFilter(type, id = '') {
-        activeType = type; activeID = id; page = 1;
-        document.getElementById('side-menu').classList.remove('menu-open');
-        window.scrollTo(0,0);
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function closePlayer() { document.getElementById('player-overlay').style.display = 'none'; document.getElementById('player-container').innerHTML = ''; }
+
+        window.onscroll = () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) { page++; fetchContent(true); }
+        };
+
+        loadContinueWatching();
         fetchContent();
-    }
-
-    function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-    
-    function closePlayer() { 
-        document.getElementById('player-overlay').style.display = 'none';
-        document.getElementById('player-container').innerHTML = ''; 
-    }
-
-    window.onscroll = () => {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1500) {
-            page++;
-            fetchContent(true);
-        }
-    };
-
-    fetchContent();
-</script>
+    </script>
 </body>
 </html>
