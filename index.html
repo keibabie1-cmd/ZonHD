@@ -1,78 +1,230 @@
-let RD_TOKEN = '', AD_KEY = '';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ZonHD Cinema Luxe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
+        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+        .hero-banner { height: 60vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.3s; }
+        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
+        .menu-open { transform: translateX(0) !important; }
+        #selector-overlay { display: none; position: fixed; inset: 0; background: var(--black); z-index: 4000; overflow-y: auto; }
+        #details-backdrop { position: fixed; top: 0; width: 100%; height: 100vh; opacity: 0.3; background-size: cover; background-position: center; filter: blur(20px); pointer-events: none; }
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        #ad-shield { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
-// Update fetchConfig to grab all keys
-async function fetchConfig() {
-    const res = await fetch('/api/config');
-    const data = await res.json();
-    API_KEY = data.tmdb_key;
-    RD_TOKEN = data.rd_token;
-    AD_KEY = data.ad_key;
-    fetchContent();
-}
+    <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
+        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
+        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
+            <button onclick="setFilter('network', 213)">Netflix</button>
+            <button onclick="setFilter('network', 453)">Hulu</button>
+            <button onclick="setFilter('network', 243)">Boomerang</button>
+            <button onclick="setFilter('network', 19)">Nickelodeon</button>
+            <button onclick="setFilter('network', 2739)">Disney+</button>
+            <button onclick="setFilter('network', 34)">Adult Swim</button>
+            <button onclick="setFilter('network', 56)">Cartoon Network</button>
+            <button onclick="setFilter('network', 77)">SyFy</button>
+        </div>
+    </div>
 
-async function startLuxeStream() {
-    document.getElementById('player-overlay').style.display = 'block';
-    document.getElementById('ad-shield').style.display = 'flex';
-    const { type, id, s, e } = currentMediaContext;
+    <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
-    try {
-        // Step 1: Get the magnet hash from your Render server
-        const hashRes = await fetch(`/get-hash?type=${type}&id=${id}&s=${s}&e=${e}`);
-        const hashData = await hashRes.json();
-        const hash = hashData.hash;
+    <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
+        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none focus:border-gold" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-center text-[10px] font-bold tracking-widest uppercase">
+            <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="active-filter">Trending</button>
+            <button id="btn-27" onclick="setFilter('genre', 27)">Horror</button>
+            <button id="btn-28" onclick="setFilter('genre', 28)">Action</button>
+            <button id="btn-16" onclick="setFilter('genre', 16)">Anime</button>
+            <button id="btn-10751" onclick="setFilter('genre', 10751)">Family</button>
+            <button id="btn-14" onclick="setFilter('genre', 14)">Fantasy</button>
+        </nav>
+    </div>
 
-        let finalUrl = '';
+    <main id="movie-grid" class="p-6 grid grid-cols-2 md:grid-cols-5 gap-6"></main>
 
-        // Step 2: Try AllDebrid directly from the browser (Your Residential IP)
-        try {
-            const adUpload = await fetch(`https://api.alldebrid.com/v4/magnet/upload?agent=zonhd&apikey=${AD_KEY}&magnets[]=${hash}`);
-            const adUpData = await adUpload.json();
-            const magId = adUpData.data.magnets[0].id;
-            
-            const adStatus = await fetch(`https://api.alldebrid.com/v4/magnet/status?agent=zonhd&apikey=${AD_KEY}&id=${magId}`);
-            const adStatData = await adStatus.json();
-            const linkToUnlock = adStatData.data.magnets.links[0].link;
+    <div id="selector-overlay">
+        <div id="details-backdrop"></div>
+        <div class="relative max-w-6xl mx-auto p-6 md:p-12 min-h-screen">
+            <button onclick="closeSelector()" class="bg-white/5 text-gold border border-gold/30 px-6 py-2 rounded-full mb-12 font-bold text-xs">✕ BACK</button>
+            <div class="flex flex-col md:flex-row gap-12 items-center md:items-start mb-16">
+                <img id="details-poster" class="w-72 rounded-2xl shadow-2xl border border-white/10">
+                <div class="flex-1 text-center md:text-left">
+                    <h2 id="show-title" class="text-5xl md:text-7xl font-black text-white mb-6 italic tracking-tighter leading-tight font-serif"></h2>
+                    <div class="flex flex-wrap gap-4 mb-8 justify-center md:justify-start">
+                        <span id="show-rating" class="bg-gold text-black px-4 py-1 rounded-full font-black text-sm"></span>
+                        <span id="show-status" class="border border-white/20 px-4 py-1 rounded-full text-zinc-400 text-sm"></span>
+                    </div>
+                    <p id="show-desc" class="text-zinc-300 text-lg max-w-2xl leading-relaxed mb-10"></p>
+                    <div id="movie-action-area" class="hidden"><button onclick="startLuxeStream()" class="bg-gold text-black px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(212,175,55,0.4)]">Watch Now</button></div>
+                </div>
+            </div>
+            <div id="tv-action-area" class="hidden border-t border-white/10 pt-10">
+                <div id="season-buttons" class="flex gap-4 overflow-x-auto pb-8 no-scrollbar"></div>
+                <div id="episode-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
+            </div>
+        </div>
+    </div>
 
-            const adUnlock = await fetch(`https://api.alldebrid.com/v4/link/unlock?agent=zonhd&apikey=${AD_KEY}&link=${linkToUnlock}`);
-            const adFinal = await adUnlock.json();
-            finalUrl = adFinal.data.link;
-        } catch (e) {
-            // Step 3: Fallback to Real-Debrid directly from the browser
-            const rdAdd = await fetch(`https://api.real-debrid.com/rest/1.0/torrents/addMagnet`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${RD_TOKEN}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `magnet=magnet:?xt=urn:btih:${hash}`
-            });
-            const rdAddData = await rdAdd.json();
-            
-            // Select all files and wait
-            await fetch(`https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${rdAddData.id}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${RD_TOKEN}` },
-                body: `files=all`
-            });
+    <div id="player-overlay">
+        <div id="ad-shield">
+            <div class="loader-medusa" style="width:100px; height:100px; margin-bottom:20px;"></div>
+            <div id="shield-text" class="text-gold font-bold uppercase tracking-widest animate-pulse">Establishing Secure Stream...</div>
+        </div>
+        <div class="flex justify-between p-6 absolute top-0 w-full z-[7000]"><button onclick="closePlayer()" class="bg-black/80 text-white px-6 py-2 rounded-full font-bold text-xs border border-white/20">✕ CLOSE</button></div>
+        <div id="player-container" class="w-full h-full bg-black"></div>
+    </div>
 
-            await new Promise(r => setTimeout(r, 3000));
+    <script>
+        let API_KEY = '', page = 1, activeType = 'trending', activeID = '', currentMediaContext = {}, art = null, isFetching = false;
 
-            const rdInfo = await fetch(`https://api.real-debrid.com/rest/1.0/torrents/info/${rdAddData.id}`, {
-                headers: { 'Authorization': `Bearer ${RD_TOKEN}` }
-            });
-            const rdInfoData = await rdInfo.json();
-            
-            const rdUnrestrict = await fetch(`https://api.real-debrid.com/rest/1.0/unrestrict/link`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${RD_TOKEN}` },
-                body: `link=${rdInfoData.links[0]}`
-            });
-            const rdFinal = await rdUnrestrict.json();
-            finalUrl = rdFinal.download;
+        async function fetchConfig() {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            API_KEY = data.tmdb_key;
+            fetchContent();
         }
 
-        if (finalUrl) {
-            art = new ArtPlayer({ container: '#player-container', url: finalUrl, autoplay: true, fullscreen: true });
-            art.on('ready', () => document.getElementById('ad-shield').style.display = 'none');
+        async function fetchContent(append = false) {
+            if(!API_KEY || isFetching) return;
+            isFetching = true;
+            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
+            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const grid = document.getElementById('movie-grid');
+                if (!append) grid.innerHTML = '';
+                data.results.forEach(m => {
+                    if (!m.poster_path) return;
+                    const card = document.createElement('div');
+                    card.className = "movie-card";
+                    card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                    card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                    grid.appendChild(card);
+                });
+            } finally { isFetching = false; }
         }
-    } catch (err) {
-        document.getElementById('shield-text').innerText = "Streaming Error: Direct Handshake Failed.";
-    }
-}
+
+        window.onscroll = () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800 && !isFetching) {
+                page++; fetchContent(true); // Restore Infinite Scrolling
+            }
+        };
+
+        async function openDetails(id, type) {
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
+            const data = await res.json();
+            currentMediaContext = { id, type, s: 1, e: 1 };
+            document.getElementById('show-title').innerText = data.name || data.title;
+            document.getElementById('show-desc').innerText = data.overview;
+            document.getElementById('show-status').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+            document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
+            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
+            if (type === 'tv') renderSeasons(data);
+            document.getElementById('selector-overlay').style.display = 'block';
+        }
+
+        function renderSeasons(data) {
+            const container = document.getElementById('season-buttons');
+            container.innerHTML = '';
+            data.seasons.forEach(s => {
+                if (s.season_number === 0) return;
+                const btn = document.createElement('button');
+                btn.className = "px-6 py-2 bg-zinc-900 rounded-lg text-xs font-bold uppercase border border-white/5 whitespace-nowrap";
+                btn.innerText = `Season ${s.season_number}`;
+                btn.onclick = () => {
+                    document.querySelectorAll('#season-buttons button').forEach(b => b.classList.remove('active-season'));
+                    btn.classList.add('active-season');
+                    loadEpisodes(data.id, s.season_number);
+                };
+                container.appendChild(btn);
+            });
+            if(container.firstChild) container.firstChild.click();
+        }
+
+        async function loadEpisodes(showId, seasonNum) {
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+            const data = await res.json();
+            const grid = document.getElementById('episode-grid');
+            grid.innerHTML = '';
+            data.episodes.forEach(e => {
+                const ep = document.createElement('div');
+                ep.className = "bg-white/5 p-4 rounded-xl border border-white/5 cursor-pointer flex items-center gap-4 hover:border-gold";
+                ep.innerHTML = `<div class="text-gold font-black">${e.episode_number}</div><div class="text-xs font-bold">${e.name}</div>`;
+                ep.onclick = () => { currentMediaContext.s = seasonNum; currentMediaContext.e = e.episode_number; startLuxeStream(); };
+                grid.appendChild(ep);
+            });
+        }
+
+        async function startLuxeStream() {
+            document.getElementById('player-overlay').style.display = 'block';
+            document.getElementById('ad-shield').style.display = 'flex';
+            const { type, id, s, e } = currentMediaContext;
+            try {
+                const res = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
+                const data = await res.json();
+                if (data.streamUrl) {
+                    art = new ArtPlayer({ container: '#player-container', url: data.streamUrl, autoplay: true, fullscreen: true, autoSize: true });
+                    art.on('ready', () => document.getElementById('ad-shield').style.display = 'none');
+                } else { throw new Error(); }
+            } catch (err) { document.getElementById('shield-text').innerText = "Streaming Error. Link Failed."; }
+        }
+
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
+        function closePlayer() { if(art) art.destroy(); document.getElementById('player-overlay').style.display = 'none'; }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+
+        function setFilter(type, id = '') {
+            activeType = type; activeID = id; page = 1; 
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
+            const activeBtn = document.getElementById(`btn-${id || type}`);
+            if(activeBtn) activeBtn.classList.add('active-filter');
+            fetchContent(); 
+            document.getElementById('side-menu').classList.remove('menu-open');
+            window.scrollTo(0,0);
+        }
+
+        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); } }
+
+        window.onload = () => { 
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 600);
+            }, 1000);
+            fetchConfig();
+
+            // Restore Swipe Interactivity
+            const mc = new Hammer(document.body);
+            mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
+            const menuMc = new Hammer(document.getElementById('side-menu'));
+            menuMc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
+        };
+    </script>
+</body>
+</html>
