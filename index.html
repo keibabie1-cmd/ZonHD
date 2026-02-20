@@ -15,116 +15,110 @@
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
-        /* Navigation Components */
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
 
-        /* TV/Firestick Focus States */
-        button:focus, [tabindex="0"]:focus { 
-            outline: 4px solid var(--gold) !important; 
-            transform: scale(1.08); 
-            background: rgba(212, 175, 55, 0.2);
-            z-index: 50;
-        }
-
-        /* Responsive UI */
-        .hero-banner { height: 55vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
-        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3.5rem, 12vw, 6rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
         
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
-        .rating-badge { border: 2px solid var(--gold); color: var(--gold); padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 16px; }
-        .tv-tag { background: #331a1a; color: #ff4d4d; padding: 2px 8px; border-radius: 4px; font-size: 14px; font-weight: 800; }
-        .active-filter { color: var(--gold) !important; border-bottom: 3px solid var(--gold); }
+        .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
+        .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
         
-        .btn-play-red { background: var(--red); color: white; font-weight: 800; padding: 18px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 450px; margin: 20px 0; font-size: 1.2rem; }
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
         
-        .episode-row { display: flex; gap: 20px; padding: 20px 0; border-bottom: 1px solid #222; cursor: pointer; border-radius: 8px; transition: 0.2s; }
-        .ep-thumbnail { width: 160px; aspect-ratio: 16/9; background-size: cover; border-radius: 6px; flex-shrink: 0; position: relative; }
-        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
+        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; }
+        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
+        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
 </head>
 <body>
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
-        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter text-xl">Networks</h2>
-        <div class="flex flex-col gap-8 text-zinc-400 font-bold uppercase text-sm tracking-widest">
+        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
+        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button onclick="setFilter('network', 213)">Netflix</button>
             <button onclick="setFilter('network', 453)">Hulu</button>
             <button onclick="setFilter('network', 2739)">Disney+</button>
-            <button onclick="setFilter('network', 34)">Adult Swim</button>
+            <button onclick="setFilter('network', 19)">Nickelodeon</button>
             <button onclick="setFilter('network', 243)">Boomerang</button>
+            <button onclick="setFilter('network', 34)">Adult Swim</button>
             <button onclick="setFilter('network', 56)">Cartoon Network</button>
             <button onclick="setFilter('network', 77)">SyFy</button>
-            <button onclick="setFilter('network', 19)">Nickelodeon</button>
         </div>
     </div>
 
-    <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[12px] font-bold uppercase">Cinema Luxe</p></header>
+    <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-3 px-8 my-4 text-white outline-none text-lg" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
-        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-8 text-[12px] font-bold tracking-widest uppercase">
-            <button onclick="toggleMenu()" class="text-gold text-3xl pr-4">☰</button>
+        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
+            <button onclick="toggleMenu()" class="text-gold text-2xl pr-2">☰</button>
             <button id="btn-trending" onclick="setFilter('trending')" class="active-filter whitespace-nowrap">Trending</button>
             <button onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
+            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
             <button onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button onclick="setFilter('genre', 14)" class="whitespace-nowrap">Fantasy</button>
-            <button onclick="setFilter('genre', 18)" class="whitespace-nowrap">Drama</button>
-            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
-    <main id="movie-grid" class="p-6 grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-6"></main>
+    <section id="continue-section" class="hidden px-4 pt-6">
+        <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
+        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
+    </section>
+
+    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
-        <div class="relative z-10 p-8 pt-12 max-w-6xl mx-auto">
-            <button onclick="closeSelector()" class="mb-8 bg-black/60 p-3 rounded-full border border-white/20">
-                <svg width="32" height="32" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
+            <button onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <div class="flex flex-col md:flex-row gap-8 mb-10">
-                <img id="details-poster" class="w-48 md:w-64 rounded-xl shadow-2xl border border-white/10">
+            <div class="flex gap-5 mb-6">
+                <img id="details-poster" class="w-32 rounded-lg shadow-2xl">
                 <div class="flex flex-col justify-end">
-                    <h2 id="show-title" class="text-4xl md:text-6xl font-black mb-4 tracking-tighter"></h2>
-                    <div class="flex items-center gap-5">
-                        <span id="show-year" class="text-zinc-400 text-xl font-bold"></span>
+                    <h2 id="show-title" class="text-3xl font-extrabold mb-2 tracking-tighter"></h2>
+                    <div class="flex items-center gap-3">
+                        <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
                         <span class="tv-tag">TV</span>
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="movie-play-btn" onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button></div>
+            <div id="movie-action-area" class="hidden"><button onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button></div>
             <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="btn-play-red">▶ Play S1 E1</button></div>
-            <p id="show-desc" class="text-zinc-300 text-lg md:text-xl leading-relaxed mb-12 max-w-4xl"></p>
+            <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
-                <h3 class="text-2xl font-bold mb-6 border-b border-zinc-800 pb-3 text-gold">Episodes</h3>
-                <div id="season-buttons" class="flex gap-4 overflow-x-auto no-scrollbar mb-8"></div>
+                <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
+                <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
                 <div id="episode-grid" class="flex flex-col"></div>
             </div>
         </div>
     </div>
 
     <div id="player-overlay">
-        <button onclick="closePlayer()" class="absolute top-8 left-8 z-[7000] bg-black/70 text-white px-6 py-3 rounded-full border border-white/30 font-bold text-sm">✕ CLOSE</button>
+        <button onclick="closePlayer()" class="absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = { id: '', type: '', s: 1, e: 1 };
+        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
 
         async function fetchConfig() {
             const res = await fetch('/api/config');
             const data = await res.json();
             API_KEY = data.tmdb_key;
+            renderContinueWatching();
             fetchContent();
         }
 
@@ -142,7 +136,6 @@
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
                 card.className = "movie-card";
-                card.setAttribute('tabindex', '0'); // For Firestick Navigation
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
@@ -152,9 +145,9 @@
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentMedia = { id, type, s: 1, e: 1 };
+            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
             
-            document.getElementById('show-title').innerText = data.name || data.title;
+            document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
@@ -167,7 +160,6 @@
             
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
-            document.getElementById('selector-overlay').scrollTo(0,0);
         }
 
         function renderSeasons(data) {
@@ -176,7 +168,7 @@
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
-                btn.className = "px-6 py-3 bg-zinc-900 rounded-lg text-sm font-bold border border-white/10 whitespace-nowrap";
+                btn.className = "px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
@@ -192,15 +184,9 @@
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row";
-                epRow.setAttribute('tabindex', '0');
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                epRow.innerHTML = `
-                    <div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div>
-                    <div class="flex-1 px-2">
-                        <div class="text-white font-black text-lg">E${e.episode_number} ${e.name}</div>
-                        <div class="text-zinc-400 text-sm md:text-base line-clamp-2 mt-2">${e.overview}</div>
-                    </div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
             });
             document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
@@ -209,10 +195,41 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         function startLuxeStream() {
-            const { type, id, s, e } = currentMedia;
+            const { type, id, s, e, title, poster } = currentMedia;
+            saveToHistory(id, type, s, e, title, poster); // Save progress
             const iframe = document.getElementById('luxe-player');
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
+        }
+
+        function saveToHistory(id, type, s, e, title, poster) {
+            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            history = history.filter(item => item.id !== id); // Remove old entry
+            history.unshift({ id, type, s, e, title, poster }); // Add to front
+            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10))); // Keep last 10
+            renderContinueWatching();
+        }
+
+        function renderContinueWatching() {
+            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            const section = document.getElementById('continue-section');
+            const grid = document.getElementById('continue-grid');
+            if (history.length === 0) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
+            grid.innerHTML = '';
+            history.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "min-w-[120px] max-w-[120px] cursor-pointer";
+                card.onclick = () => openDetails(item.id, item.type);
+                card.innerHTML = `
+                    <div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2">
+                        <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
+                    </div>
+                    <p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p>
+                    <p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>
+                `;
+                grid.appendChild(card);
+            });
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
@@ -228,25 +245,6 @@
         }
 
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
-
-        // Firestick D-Pad Focus Manager
-        document.addEventListener('keydown', (e) => {
-            const focusable = document.querySelectorAll('button:not(.hidden), [tabindex="0"]');
-            const index = Array.from(focusable).indexOf(document.activeElement);
-            
-            if (index === -1) { focusable[0].focus(); return; }
-
-            let nextIndex;
-            if (e.key === 'ArrowRight') nextIndex = index + 1;
-            if (e.key === 'ArrowLeft') nextIndex = index - 1;
-            if (e.key === 'ArrowDown') nextIndex = index + (window.innerWidth > 768 ? 5 : 2);
-            if (e.key === 'ArrowUp') nextIndex = index - (window.innerWidth > 768 ? 5 : 2);
-
-            if (focusable[nextIndex]) {
-                focusable[nextIndex].focus();
-                e.preventDefault();
-            }
-        });
 
         window.onload = () => { 
             setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
