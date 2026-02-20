@@ -6,129 +6,201 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --red: #FF0000; --black: #050505; }
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
+        :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* Loader */
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-        .hero-banner { height: 60vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; }
+
+        /* UI Elements */
+        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.3s; }
-        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
-        .menu-open { transform: translateX(0) !important; }
-        #selector-overlay { display: none; position: fixed; inset: 0; background: var(--black); z-index: 4000; overflow-y: auto; }
-        #details-backdrop { position: fixed; top: 0; width: 100%; height: 100vh; opacity: 0.3; background-size: cover; background-position: center; filter: blur(20px); pointer-events: none; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
+        
+        /* Details Overlay - Matches Screenshots */
+        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
+        #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
+        .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
+        .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
+        
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
+        
+        /* Episode List - Matches Law & Order Screen */
+        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; }
+        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
+        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
+
+        /* Player Overlay */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        #ad-shield { position: absolute; inset: 0; z-index: 6000; background: rgba(0,0,0,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
-    <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
-        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
-        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
-            <button onclick="setFilter('network', 213)">Netflix</button>
-            <button onclick="setFilter('network', 453)">Hulu</button>
-            <button onclick="setFilter('network', 243)">Boomerang</button>
-            <button onclick="setFilter('network', 19)">Nickelodeon</button>
-            <button onclick="setFilter('network', 2739)">Disney+</button>
-            <button onclick="setFilter('network', 34)">Adult Swim</button>
-            <button onclick="setFilter('network', 56)">Cartoon Network</button>
-            <button onclick="setFilter('network', 77)">SyFy</button>
-        </div>
-    </div>
-
     <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none focus:border-gold" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
         <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-center text-[10px] font-bold tracking-widest uppercase">
-            <button onclick="toggleMenu()" class="text-gold text-2xl">☰</button>
-            <button id="btn-trending" onclick="setFilter('trending')" class="active-filter">Trending</button>
-            <button id="btn-27" onclick="setFilter('genre', 27)">Horror</button>
-            <button id="btn-28" onclick="setFilter('genre', 28)">Action</button>
-            <button id="btn-16" onclick="setFilter('genre', 16)">Anime</button>
-            <button id="btn-10751" onclick="setFilter('genre', 10751)">Family</button>
-            <button id="btn-14" onclick="setFilter('genre', 14)">Fantasy</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="text-gold">Trending</button>
+            <button onclick="setFilter('genre', 27)">Horror</button>
+            <button onclick="setFilter('genre', 28)">Action</button>
+            <button onclick="setFilter('genre', 16)">Anime</button>
         </nav>
     </div>
 
-    <main id="movie-grid" class="p-6 grid grid-cols-2 md:grid-cols-5 gap-6"></main>
+    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
-    <div id="selector-overlay">
+    <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
-        <div class="relative max-w-6xl mx-auto p-6 md:p-12 min-h-screen">
-            <button onclick="closeSelector()" class="bg-white/5 text-gold border border-gold/30 px-6 py-2 rounded-full mb-12 font-bold text-xs">✕ BACK</button>
-            <div class="flex flex-col md:flex-row gap-12 items-center md:items-start mb-16">
-                <img id="details-poster" class="w-72 rounded-2xl shadow-2xl border border-white/10">
-                <div class="flex-1 text-center md:text-left">
-                    <h2 id="show-title" class="text-5xl md:text-7xl font-black text-white mb-6 italic tracking-tighter leading-tight font-serif"></h2>
-                    <div class="flex flex-wrap gap-4 mb-8 justify-center md:justify-start">
-                        <span id="show-rating" class="bg-gold text-black px-4 py-1 rounded-full font-black text-sm"></span>
-                        <span id="show-status" class="border border-white/20 px-4 py-1 rounded-full text-zinc-400 text-sm"></span>
+        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
+            <button onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+
+            <div class="flex gap-5 mb-6">
+                <img id="details-poster" class="w-32 rounded-lg shadow-2xl">
+                <div class="flex flex-col justify-end">
+                    <h2 id="show-title" class="text-3xl font-extrabold mb-2 tracking-tighter"></h2>
+                    <div class="flex items-center gap-3">
+                        <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
+                        <span id="show-rating" class="rating-badge"></span>
+                        <span id="media-tag" class="tv-tag">TV</span>
                     </div>
-                    <p id="show-desc" class="text-zinc-300 text-lg max-w-2xl leading-relaxed mb-10"></p>
-                    <div id="movie-action-area" class="hidden"><button onclick="startLuxeStream()" class="bg-gold text-black px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(212,175,55,0.4)]">Watch Now</button></div>
                 </div>
             </div>
-            <div id="tv-action-area" class="hidden border-t border-white/10 pt-10">
-                <div id="season-buttons" class="flex gap-4 overflow-x-auto pb-8 no-scrollbar"></div>
-                <div id="episode-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
+
+            <div id="movie-action-area" class="hidden">
+                <button onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button>
+            </div>
+            <div id="tv-action-area-top" class="hidden">
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="btn-play-red">▶ Play S1 E1</button>
+            </div>
+
+            <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
+
+            <div id="tv-action-area" class="hidden">
+                <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
+                <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
+                <div id="episode-grid" class="flex flex-col"></div>
             </div>
         </div>
     </div>
 
-   <div id="player-overlay" class="fixed inset-0 bg-black z-[5000] hidden">
-    <div class="absolute top-6 left-6 z-[7000] flex gap-4">
-        <button onclick="closePlayer()" class="bg-black/60 hover:bg-red-600 text-white px-5 py-2 rounded-full font-bold text-xs border border-white/20 backdrop-blur-md transition-all">
-            ✕ CLOSE
-        </button>
+    <div id="player-overlay">
+        <button onclick="closePlayer()" class="absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
     </div>
-    
-    <iframe 
-        id="luxe-player-iframe"
-        class="w-full h-full border-0"
-        allowfullscreen="true" 
-        webkitallowfullscreen="true" 
-        mozallowfullscreen="true"
-        sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"
-        src="">
-    </iframe>
-</div>
 
-<script>
-// --- UPDATE THIS FUNCTION IN YOUR SCRIPT SECTION ---
-async function startLuxeStream() {
-    const overlay = document.getElementById('player-overlay');
-    const iframe = document.getElementById('luxe-player-iframe');
-    const { type, id, s, e } = currentMediaContext;
+    <script>
+        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
 
-    overlay.style.display = 'block';
-    
-    // Construct the ad-free direct source URL
-    // vidsrc.to and vidsrc.me are the industry standards for this
-    let streamUrl = "";
-    if (type === 'movie') {
-        streamUrl = `https://vidsrc.to/embed/movie/${id}`;
-    } else {
-        streamUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-    }
+        async function fetchConfig() {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            API_KEY = data.tmdb_key;
+            fetchContent();
+        }
 
-    iframe.src = streamUrl;
-}
+        async function fetchContent() {
+            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}`;
 
-// Ensure the Close button clears the iframe to stop audio
-function closePlayer() {
-    const iframe = document.getElementById('luxe-player-iframe');
-    iframe.src = ""; 
-    document.getElementById('player-overlay').style.display = 'none';
-}
-</script>
+            const res = await fetch(url);
+            const data = await res.json();
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            data.results.forEach(m => {
+                if (!m.poster_path) return;
+                const card = document.createElement('div');
+                card.className = "movie-card";
+                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                grid.appendChild(card);
+            });
+        }
+
+        async function openDetails(id, type) {
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
+            const data = await res.json();
+            currentMedia = { id, type, s: 1, e: 1 };
+            
+            document.getElementById('show-title').innerText = data.name || data.title;
+            document.getElementById('show-desc').innerText = data.overview;
+            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+            document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
+            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            
+            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
+            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
+            
+            if (type === 'tv') renderSeasons(data);
+            document.getElementById('selector-overlay').style.display = 'block';
+        }
+
+        function renderSeasons(data) {
+            const container = document.getElementById('season-buttons');
+            container.innerHTML = '';
+            data.seasons.forEach(s => {
+                if (s.season_number === 0) return;
+                const btn = document.createElement('button');
+                btn.className = "px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
+                btn.innerText = `Season ${s.season_number}`;
+                btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                container.appendChild(btn);
+            });
+            if(container.firstChild) container.firstChild.click();
+        }
+
+        async function loadEpisodes(showId, seasonNum) {
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+            const data = await res.json();
+            const grid = document.getElementById('episode-grid');
+            grid.innerHTML = '';
+            
+            data.episodes.forEach(e => {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row";
+                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                epRow.innerHTML = `
+                    <div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div>
+                    <div class="flex-1">
+                        <div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div>
+                        <div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div>
+                    </div>`;
+                grid.appendChild(epRow);
+            });
+            document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
+        }
+
+        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
+
+        function startLuxeStream() {
+            const { type, id, s, e } = currentMedia;
+            const iframe = document.getElementById('luxe-player');
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            document.getElementById('player-overlay').style.display = 'block';
+        }
+
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
+        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); }
+        function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
+
+        window.onload = () => { 
+            setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
+            fetchConfig();
+        };
+    </script>
 </body>
 </html>
