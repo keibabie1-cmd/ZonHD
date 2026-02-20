@@ -11,14 +11,17 @@
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
         
+        /* Loader */
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
+        /* UI Elements */
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
         
+        /* Details Overlay - Matches Screenshots */
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
@@ -27,10 +30,12 @@
         
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
         
+        /* Episode List - Matches Law & Order Screen */
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
+        /* Player Overlay */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
@@ -43,7 +48,7 @@
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
         <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
         <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-center text-[10px] font-bold tracking-widest uppercase">
-            <button onclick="setFilter('trending')" class="text-gold">Trending</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="text-gold">Trending</button>
             <button onclick="setFilter('genre', 27)">Horror</button>
             <button onclick="setFilter('genre', 28)">Action</button>
             <button onclick="setFilter('genre', 16)">Anime</button>
@@ -66,7 +71,7 @@
                     <div class="flex items-center gap-3">
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
-                        <span class="tv-tag">TV</span>
+                        <span id="media-tag" class="tv-tag">TV</span>
                     </div>
                 </div>
             </div>
@@ -180,27 +185,11 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        async function startLuxeStream() {
-            const overlay = document.getElementById('player-overlay');
-            const iframe = document.getElementById('luxe-player');
+        function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
-
-            overlay.style.display = 'block';
-            
-            try {
-                const res = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
-                const data = await res.json();
-
-                if (data.streamUrl) {
-                    iframe.src = data.streamUrl;
-                } else {
-                    alert("No available sources found.");
-                    closePlayer();
-                }
-            } catch (err) {
-                console.error("Stream failed");
-                closePlayer();
-            }
+            const iframe = document.getElementById('luxe-player');
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            document.getElementById('player-overlay').style.display = 'block';
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
