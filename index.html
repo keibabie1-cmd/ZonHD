@@ -84,147 +84,51 @@
         </div>
     </div>
 
-    <div id="player-overlay">
-        <div id="ad-shield">
-            <div class="loader-medusa" style="width:100px; height:100px; margin-bottom:20px;"></div>
-            <div id="shield-text" class="text-gold font-bold uppercase tracking-widest animate-pulse">Establishing Secure Stream...</div>
-        </div>
-        <div class="flex justify-between p-6 absolute top-0 w-full z-[7000]"><button onclick="closePlayer()" class="bg-black/80 text-white px-6 py-2 rounded-full font-bold text-xs border border-white/20">✕ CLOSE</button></div>
-        <div id="player-container" class="w-full h-full bg-black"></div>
+   <div id="player-overlay" class="fixed inset-0 bg-black z-[5000] hidden">
+    <div class="absolute top-6 left-6 z-[7000] flex gap-4">
+        <button onclick="closePlayer()" class="bg-black/60 hover:bg-red-600 text-white px-5 py-2 rounded-full font-bold text-xs border border-white/20 backdrop-blur-md transition-all">
+            ✕ CLOSE
+        </button>
     </div>
+    
+    <iframe 
+        id="luxe-player-iframe"
+        class="w-full h-full border-0"
+        allowfullscreen="true" 
+        webkitallowfullscreen="true" 
+        mozallowfullscreen="true"
+        sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"
+        src="">
+    </iframe>
+</div>
 
-    <script>
-        let API_KEY = '', page = 1, activeType = 'trending', activeID = '', currentMediaContext = {}, art = null, isFetching = false;
+<script>
+// --- UPDATE THIS FUNCTION IN YOUR SCRIPT SECTION ---
+async function startLuxeStream() {
+    const overlay = document.getElementById('player-overlay');
+    const iframe = document.getElementById('luxe-player-iframe');
+    const { type, id, s, e } = currentMediaContext;
 
-        async function fetchConfig() {
-            const res = await fetch('/api/config');
-            const data = await res.json();
-            API_KEY = data.tmdb_key;
-            fetchContent();
-        }
+    overlay.style.display = 'block';
+    
+    // Construct the ad-free direct source URL
+    // vidsrc.to and vidsrc.me are the industry standards for this
+    let streamUrl = "";
+    if (type === 'movie') {
+        streamUrl = `https://vidsrc.to/embed/movie/${id}`;
+    } else {
+        streamUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+    }
 
-        async function fetchContent(append = false) {
-            if(!API_KEY || isFetching) return;
-            isFetching = true;
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+    iframe.src = streamUrl;
+}
 
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                const grid = document.getElementById('movie-grid');
-                if (!append) grid.innerHTML = '';
-                data.results.forEach(m => {
-                    if (!m.poster_path) return;
-                    const card = document.createElement('div');
-                    card.className = "movie-card";
-                    card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                    card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
-                    grid.appendChild(card);
-                });
-            } finally { isFetching = false; }
-        }
-
-        window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800 && !isFetching) {
-                page++; fetchContent(true); // Restore Infinite Scrolling
-            }
-        };
-
-        async function openDetails(id, type) {
-            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
-            const data = await res.json();
-            currentMediaContext = { id, type, s: 1, e: 1 };
-            document.getElementById('show-title').innerText = data.name || data.title;
-            document.getElementById('show-desc').innerText = data.overview;
-            document.getElementById('show-status').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
-            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
-            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            if (type === 'tv') renderSeasons(data);
-            document.getElementById('selector-overlay').style.display = 'block';
-        }
-
-        function renderSeasons(data) {
-            const container = document.getElementById('season-buttons');
-            container.innerHTML = '';
-            data.seasons.forEach(s => {
-                if (s.season_number === 0) return;
-                const btn = document.createElement('button');
-                btn.className = "px-6 py-2 bg-zinc-900 rounded-lg text-xs font-bold uppercase border border-white/5 whitespace-nowrap";
-                btn.innerText = `Season ${s.season_number}`;
-                btn.onclick = () => {
-                    document.querySelectorAll('#season-buttons button').forEach(b => b.classList.remove('active-season'));
-                    btn.classList.add('active-season');
-                    loadEpisodes(data.id, s.season_number);
-                };
-                container.appendChild(btn);
-            });
-            if(container.firstChild) container.firstChild.click();
-        }
-
-        async function loadEpisodes(showId, seasonNum) {
-            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
-            const data = await res.json();
-            const grid = document.getElementById('episode-grid');
-            grid.innerHTML = '';
-            data.episodes.forEach(e => {
-                const ep = document.createElement('div');
-                ep.className = "bg-white/5 p-4 rounded-xl border border-white/5 cursor-pointer flex items-center gap-4 hover:border-gold";
-                ep.innerHTML = `<div class="text-gold font-black">${e.episode_number}</div><div class="text-xs font-bold">${e.name}</div>`;
-                ep.onclick = () => { currentMediaContext.s = seasonNum; currentMediaContext.e = e.episode_number; startLuxeStream(); };
-                grid.appendChild(ep);
-            });
-        }
-
-        async function startLuxeStream() {
-            document.getElementById('player-overlay').style.display = 'block';
-            document.getElementById('ad-shield').style.display = 'flex';
-            const { type, id, s, e } = currentMediaContext;
-            try {
-                const res = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
-                const data = await res.json();
-                if (data.streamUrl) {
-                    art = new ArtPlayer({ container: '#player-container', url: data.streamUrl, autoplay: true, fullscreen: true, autoSize: true });
-                    art.on('ready', () => document.getElementById('ad-shield').style.display = 'none');
-                } else { throw new Error(); }
-            } catch (err) { document.getElementById('shield-text').innerText = "Streaming Error. Link Failed."; }
-        }
-
-        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
-        function closePlayer() { if(art) art.destroy(); document.getElementById('player-overlay').style.display = 'none'; }
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-
-        function setFilter(type, id = '') {
-            activeType = type; activeID = id; page = 1; 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            const activeBtn = document.getElementById(`btn-${id || type}`);
-            if(activeBtn) activeBtn.classList.add('active-filter');
-            fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open');
-            window.scrollTo(0,0);
-        }
-
-        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); } }
-
-        window.onload = () => { 
-            setTimeout(() => {
-                const loader = document.getElementById('loader');
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 600);
-            }, 1000);
-            fetchConfig();
-
-            // Restore Swipe Interactivity
-            const mc = new Hammer(document.body);
-            mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-            const menuMc = new Hammer(document.getElementById('side-menu'));
-            menuMc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
-        };
-    </script>
+// Ensure the Close button clears the iframe to stop audio
+function closePlayer() {
+    const iframe = document.getElementById('luxe-player-iframe');
+    iframe.src = ""; 
+    document.getElementById('player-overlay').style.display = 'none';
+}
+</script>
 </body>
 </html>
