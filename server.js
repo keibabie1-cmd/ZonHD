@@ -67,3 +67,8 @@ app.get('/get-luxe-stream', async (req, res) => {
 
     } catch (err) { 
         res.status(500).json({ error: "No working links found." }); 
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Cinema Luxe running on port ${PORT}`));
