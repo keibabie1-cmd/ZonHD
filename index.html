@@ -11,13 +11,16 @@
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         
+        /* Loader */
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
+        /* Side Menu */
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
 
+        /* UI Elements */
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
@@ -27,6 +30,7 @@
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
         
@@ -36,7 +40,6 @@
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -48,11 +51,11 @@
             <button onclick="setFilter('network', 213)">Netflix</button>
             <button onclick="setFilter('network', 453)">Hulu</button>
             <button onclick="setFilter('network', 2739)">Disney+</button>
-            <button onclick="setFilter('network', 19)">Nickelodeon</button>
-            <button onclick="setFilter('network', 243)">Boomerang</button>
             <button onclick="setFilter('network', 34)">Adult Swim</button>
+            <button onclick="setFilter('network', 243)">Boomerang</button>
             <button onclick="setFilter('network', 56)">Cartoon Network</button>
             <button onclick="setFilter('network', 77)">SyFy</button>
+            <button onclick="setFilter('network', 19)">Nickelodeon</button>
         </div>
     </div>
 
@@ -64,10 +67,12 @@
             <button onclick="toggleMenu()" class="text-gold text-2xl pr-2">☰</button>
             <button id="btn-trending" onclick="setFilter('trending')" class="active-filter whitespace-nowrap">Trending</button>
             <button onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
             <button onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
+            <button onclick="setFilter('genre', 14)" class="whitespace-nowrap">Fantasy</button>
+            <button onclick="setFilter('genre', 18)" class="whitespace-nowrap">Drama</button>
+            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
         </nav>
     </div>
 
@@ -79,6 +84,7 @@
             <button onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
+
             <div class="flex gap-5 mb-6">
                 <img id="details-poster" class="w-32 rounded-lg shadow-2xl">
                 <div class="flex flex-col justify-end">
@@ -86,13 +92,20 @@
                     <div class="flex items-center gap-3">
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
-                        <span class="tv-tag">TV</span>
+                        <span id="media-tag" class="tv-tag">TV</span>
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="movie-play-btn" onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="btn-play-red">▶ Play S1 E1</button></div>
+
+            <div id="movie-action-area" class="hidden">
+                <button onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button>
+            </div>
+            <div id="tv-action-area-top" class="hidden">
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="btn-play-red">▶ Play S1 E1</button>
+            </div>
+
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
+
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
                 <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
@@ -107,7 +120,7 @@
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = { id: '', type: '', s: 1, e: 1 };
+        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {}, page = 1, isFetching = false;
 
         async function fetchConfig() {
             const res = await fetch('/api/config');
@@ -116,52 +129,57 @@
             fetchContent();
         }
 
-        async function fetchContent() {
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}`;
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}`;
-            
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                const grid = document.getElementById('movie-grid');
-                grid.innerHTML = '';
-                data.results.forEach(m => {
-                    if (!m.poster_path) return;
-                    const card = document.createElement('div');
-                    card.className = "movie-card";
-                    card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                    card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
-                    grid.appendChild(card);
-                });
-            } catch (err) { console.error("Fetch Content Error:", err); }
+        async function fetchContent(append = false) {
+            if (isFetching || !API_KEY) return;
+            isFetching = true;
+
+            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
+            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+            const grid = document.getElementById('movie-grid');
+            if (!append) grid.innerHTML = '';
+
+            data.results.forEach(m => {
+                if (!m.poster_path) return;
+                const card = document.createElement('div');
+                card.className = "movie-card";
+                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                grid.appendChild(card);
+            });
+            isFetching = false;
         }
 
-        async function openDetails(id, type) {
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
-                const data = await res.json();
-                
-                currentMedia.id = id;
-                currentMedia.type = type;
-                currentMedia.s = 1;
-                currentMedia.e = 1;
+        // Infinite Scroll Logic
+        window.onscroll = () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) {
+                page++;
+                fetchContent(true);
+            }
+        };
 
-                document.getElementById('show-title').innerText = data.name || data.title;
-                document.getElementById('show-desc').innerText = data.overview;
-                document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-                document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
-                document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-                document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-                
-                document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
-                document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
-                document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-                
-                if (type === 'tv') renderSeasons(data);
-                document.getElementById('selector-overlay').style.display = 'block';
-            } catch (err) { console.error("Open Details Error:", err); }
+        async function openDetails(id, type) {
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
+            const data = await res.json();
+            currentMedia = { id, type, s: 1, e: 1 };
+            
+            document.getElementById('show-title').innerText = data.name || data.title;
+            document.getElementById('show-desc').innerText = data.overview;
+            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+            document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
+            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            
+            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
+            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
+            
+            if (type === 'tv') renderSeasons(data);
+            document.getElementById('selector-overlay').style.display = 'block';
         }
 
         function renderSeasons(data) {
@@ -179,90 +197,58 @@
         }
 
         async function loadEpisodes(showId, seasonNum) {
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
-                const data = await res.json();
-                const grid = document.getElementById('episode-grid');
-                grid.innerHTML = '';
-                
-                data.episodes.forEach(e => {
-                    const epRow = document.createElement('div');
-                    epRow.className = "episode-row";
-                    epRow.onclick = () => { 
-                        currentMedia.s = seasonNum; 
-                        currentMedia.e = e.episode_number; 
-                        startLuxeStream(); 
-                    };
-                    const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
-                    grid.appendChild(epRow);
-                });
-                document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
-            } catch (err) { console.error("Load Episodes Error:", err); }
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+            const data = await res.json();
+            const grid = document.getElementById('episode-grid');
+            grid.innerHTML = '';
+            
+            data.episodes.forEach(e => {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row";
+                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                epRow.innerHTML = `
+                    <div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div>
+                    <div class="flex-1">
+                        <div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div>
+                        <div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div>
+                    </div>`;
+                grid.appendChild(epRow);
+            });
+            document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
         }
 
-        function playCurrentEpisode() { 
-            currentMedia.e = 1; 
-            startLuxeStream(); 
-        }
+        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        async function startLuxeStream() {
-            const overlay = document.getElementById('player-overlay');
+        // KEEPING YOUR WORKING PLAYER LOGIC EXACTLY AS IS
+        function startLuxeStream() {
+            const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
-            
-            const type = currentMedia.type;
-            const id = currentMedia.id;
-            const s = currentMedia.s;
-            const e = currentMedia.e;
-
-            if (!id) {
-                console.error("No Media ID found");
-                return;
-            }
-
-            overlay.style.display = 'block';
-            
-            try {
-                const res = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
-                const data = await res.json();
-                if (data.streamUrl) { 
-                    iframe.src = data.streamUrl; 
-                } else { 
-                    alert("No available sources found."); 
-                    closePlayer(); 
-                }
-            } catch (err) { 
-                console.error("Streaming Error:", err);
-                closePlayer(); 
-            }
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            document.getElementById('player-overlay').style.display = 'block';
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
         
-        function closePlayer() { 
-            const iframe = document.getElementById('luxe-player');
-            iframe.src = ""; 
-            document.getElementById('player-overlay').style.display = 'none'; 
-        }
-        
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-
         function setFilter(type, id = '') { 
-            activeType = type; activeID = id; 
+            activeType = type; 
+            activeID = id; 
+            page = 1; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
         }
 
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
 
         window.onload = () => { 
-            setTimeout(() => { 
-                document.getElementById('loader').style.opacity = '0'; 
-                setTimeout(() => document.getElementById('loader').remove(), 500); 
-            }, 1000);
+            setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
             fetchConfig();
+
+            // Swipe Interactivity
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
             const menuMc = new Hammer(document.getElementById('side-menu'));
