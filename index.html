@@ -9,19 +9,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         
-        /* Loader */
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
-        /* UI Elements */
+        /* Side Menu */
+        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
+        .menu-open { transform: translateX(0) !important; }
+
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
         
-        /* Details Overlay - Matches Screenshots */
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
@@ -30,28 +31,44 @@
         
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
         
-        /* Episode List - Matches Law & Order Screen */
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
-        /* Player Overlay */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
 </head>
 <body>
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
+    <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
+        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
+        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
+            <button onclick="setFilter('network', 213)">Netflix</button>
+            <button onclick="setFilter('network', 453)">Hulu</button>
+            <button onclick="setFilter('network', 2739)">Disney+</button>
+            <button onclick="setFilter('network', 19)">Nickelodeon</button>
+            <button onclick="setFilter('network', 243)">Boomerang</button>
+            <button onclick="setFilter('network', 34)">Adult Swim</button>
+            <button onclick="setFilter('network', 56)">Cartoon Network</button>
+            <button onclick="setFilter('network', 77)">SyFy</button>
+        </div>
+    </div>
+
     <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
         <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
-        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-center text-[10px] font-bold tracking-widest uppercase">
-            <button id="btn-trending" onclick="setFilter('trending')" class="text-gold">Trending</button>
-            <button onclick="setFilter('genre', 27)">Horror</button>
-            <button onclick="setFilter('genre', 28)">Action</button>
-            <button onclick="setFilter('genre', 16)">Anime</button>
+        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
+            <button onclick="toggleMenu()" class="text-gold text-2xl pr-2">☰</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="active-filter whitespace-nowrap">Trending</button>
+            <button onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
+            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+            <button onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+            <button onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -71,7 +88,7 @@
                     <div class="flex items-center gap-3">
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
-                        <span id="media-tag" class="tv-tag">TV</span>
+                        <span class="tv-tag">TV</span>
                     </div>
                 </div>
             </div>
@@ -99,7 +116,7 @@
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
+        let API_KEY = '', page = 1, activeType = 'trending', activeID = '', currentMedia = {}, isFetching = false;
 
         async function fetchConfig() {
             const res = await fetch('/api/config');
@@ -108,15 +125,19 @@
             fetchContent();
         }
 
-        async function fetchContent() {
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}`;
+        async function fetchContent(append = false) {
+            if(!API_KEY || isFetching) return;
+            isFetching = true;
+            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${page}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${page}`;
+            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${page}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${page}`;
 
             const res = await fetch(url);
             const data = await res.json();
             const grid = document.getElementById('movie-grid');
-            grid.innerHTML = '';
+            if (!append) grid.innerHTML = '';
+            
             data.results.forEach(m => {
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
@@ -125,7 +146,14 @@
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
+            isFetching = false;
         }
+
+        window.onscroll = () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800 && !isFetching) {
+                page++; fetchContent(true);
+            }
+        };
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
@@ -185,21 +213,41 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        function startLuxeStream() {
-            const { type, id, s, e } = currentMedia;
+        async function startLuxeStream() {
+            const overlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            document.getElementById('player-overlay').style.display = 'block';
+            const { type, id, s, e } = currentMedia;
+            overlay.style.display = 'block';
+            try {
+                const res = await fetch(`/get-luxe-stream?type=${type}&id=${id}&s=${s}&e=${e}`);
+                const data = await res.json();
+                if (data.streamUrl) { iframe.src = data.streamUrl; } 
+                else { alert("No available sources found."); closePlayer(); }
+            } catch (err) { closePlayer(); }
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
         function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
-        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+
+        function setFilter(type, id = '') { 
+            activeType = type; activeID = id; page = 1; 
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
+            fetchContent(); 
+            document.getElementById('side-menu').classList.remove('menu-open');
+            window.scrollTo(0,0);
+        }
+
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
 
         window.onload = () => { 
             setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
             fetchConfig();
+            
+            const mc = new Hammer(document.body);
+            mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
+            const menuMc = new Hammer(document.getElementById('side-menu'));
+            menuMc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
         };
     </script>
 </body>
