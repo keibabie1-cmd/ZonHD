@@ -20,17 +20,25 @@
 
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
         
+        /* Remote Focus Style */
+        .movie-card:focus, button:focus, .episode-row:focus, input:focus { 
+            outline: none; 
+            border: 2px solid var(--gold) !important; 
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
         
-        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; }
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 2px solid transparent; }
         
-        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; }
+        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 2px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
@@ -81,7 +89,7 @@
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
         <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <button onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+            <button id="close-details-btn" onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
             <div class="flex gap-5 mb-6">
@@ -107,7 +115,7 @@
     </div>
 
     <div id="player-overlay">
-        <button onclick="closePlayer()" class="absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        <button id="close-player-btn" onclick="closePlayer()" class="absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
     </div>
 
@@ -136,7 +144,9 @@
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
                 card.className = "movie-card";
+                card.tabIndex = 0; // Make focusable for remote
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                card.onkeydown = (e) => { if(e.key === 'Enter') card.onclick(); };
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
@@ -160,6 +170,12 @@
             
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
+            
+            // Auto-focus the play button for remote users
+            setTimeout(() => {
+                const playBtn = type === 'movie' ? document.querySelector('#movie-action-area button') : document.getElementById('main-tv-btn');
+                playBtn.focus();
+            }, 100);
         }
 
         function renderSeasons(data) {
@@ -184,7 +200,9 @@
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row";
+                epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                epRow.onkeydown = (ev) => { if(ev.key === 'Enter') epRow.onclick(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
@@ -196,17 +214,18 @@
 
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster); // Save progress
+            saveToHistory(id, type, s, e, title, poster);
             const iframe = document.getElementById('luxe-player');
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
+            document.getElementById('close-player-btn').focus();
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id); // Remove old entry
-            history.unshift({ id, type, s, e, title, poster }); // Add to front
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10))); // Keep last 10
+            history = history.filter(item => item.id !== id);
+            history.unshift({ id, type, s, e, title, poster });
+            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
             renderContinueWatching();
         }
 
@@ -219,8 +238,10 @@
             grid.innerHTML = '';
             history.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer";
+                card.className = "min-w-[120px] max-w-[120px] cursor-pointer movie-card";
+                card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
+                card.onkeydown = (e) => { if(e.key === 'Enter') card.onclick(); };
                 card.innerHTML = `
                     <div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2">
                         <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
@@ -254,6 +275,31 @@
             const menuMc = new Hammer(document.getElementById('side-menu'));
             menuMc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
         };
+
+        // --- NEW REMOTE CONTROL NAVIGATION ---
+        document.addEventListener('keydown', (e) => {
+            const focusable = Array.from(document.querySelectorAll('button, input, .movie-card, .episode-row')).filter(el => el.offsetParent !== null);
+            let index = focusable.indexOf(document.activeElement);
+
+            if (e.key === 'ArrowRight') {
+                index = (index + 1) % focusable.length;
+                focusable[index].focus();
+            } else if (e.key === 'ArrowLeft') {
+                index = (index - 1 + focusable.length) % focusable.length;
+                focusable[index].focus();
+            } else if (e.key === 'ArrowDown') {
+                // Approximate "down" by skipping some elements in the grid
+                index = Math.min(index + 2, focusable.length - 1);
+                focusable[index].focus();
+            } else if (e.key === 'ArrowUp') {
+                index = Math.max(index - 2, 0);
+                focusable[index].focus();
+            } else if (e.key === 'Backspace' || e.key === 'Escape') {
+                // Firestick Back button
+                if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
+                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
+            }
+        });
     </script>
 </body>
 </html>
