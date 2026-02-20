@@ -22,14 +22,13 @@
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
         
-        /* THE "CINEMA" FOCUS STYLE */
+        /* FOCUS STYLE */
         .focusable:focus {
             outline: none;
             border-color: var(--gold) !important;
             transform: scale(1.08);
             box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
             z-index: 50;
-            background: rgba(255, 255, 255, 0.1);
         }
 
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
@@ -175,7 +174,7 @@
             setTimeout(() => {
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(playBtn) playBtn.focus();
-            }, 200);
+            }, 300);
         }
 
         function renderSeasons(data) {
@@ -218,7 +217,7 @@
             const iframe = document.getElementById('luxe-player');
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
-            document.getElementById('close-player-btn').focus();
+            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -260,8 +259,8 @@
             menu.classList.toggle('menu-open'); 
             if(menu.classList.contains('menu-open')) {
                 setTimeout(() => {
-                    const firstNetwork = document.querySelector('#nav-networks .focusable');
-                    if(firstNetwork) firstNetwork.focus();
+                    const firstNet = document.querySelector('#nav-networks .focusable');
+                    if(firstNet) firstNet.focus();
                 }, 300);
             }
         }
@@ -284,42 +283,43 @@
             mc.on("swiperight", () => toggleMenu());
         };
 
-        // ==========================================
-        // IMPROVED REMOTE CONTROL LOGIC
-        // ==========================================
+        // --- REMOTE CONTROL ENGINE ---
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
-            // Get all focusables currently visible
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => {
-                return el.offsetParent !== null && window.getComputedStyle(el).visibility !== 'hidden';
-            });
+            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
-            if (e.key === 'Enter' || e.keyCode === 13) {
-                if (current && current.classList.contains('focusable')) {
-                    current.click();
-                }
+            // MENU BUTTON (Three Lines)
+            if (e.key === 'ContextMenu' || e.keyCode === 224 || e.keyCode === 462) {
+                e.preventDefault();
+                toggleMenu();
                 return;
             }
 
-            // Firestick Back/Esc keys
-            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009 || e.key === 'Escape') {
+            // BACK BUTTON (Literal Go Back)
+            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
                 else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
-                else toggleMenu();
                 return;
             }
 
-            let direction = '';
-            if (e.key === 'ArrowUp') direction = 'up';
-            if (e.key === 'ArrowDown') direction = 'down';
-            if (e.key === 'ArrowLeft') direction = 'left';
-            if (e.key === 'ArrowRight') direction = 'right';
+            // ENTER / OK
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                if (current && current.classList.contains('focusable')) current.click();
+                return;
+            }
 
-            if (direction) {
+            // NAVIGATION
+            let dir = '';
+            if (e.key === 'ArrowUp') dir = 'up';
+            if (e.key === 'ArrowDown') dir = 'down';
+            if (e.key === 'ArrowLeft') dir = 'left';
+            if (e.key === 'ArrowRight') dir = 'right';
+
+            if (dir) {
                 e.preventDefault();
-                const next = getNextFocus(current, focusables, direction);
+                const next = findNext(current, focusables, dir);
                 if (next) {
                     next.focus();
                     next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
@@ -327,37 +327,24 @@
             }
         });
 
-        function getNextFocus(current, targets, dir) {
-            if (!current || current === document.body || !current.classList.contains('focusable')) return targets[0];
-            
-            const r1 = current.getBoundingClientRect();
+        function findNext(cur, targets, dir) {
+            if (!cur || cur === document.body) return targets[0];
+            const r1 = cur.getBoundingClientRect();
             const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+            let best = null, min = Infinity;
 
-            let bestMatch = null;
-            let minDistance = Infinity;
-
-            targets.forEach(target => {
-                if (target === current) return;
-                const r2 = target.getBoundingClientRect();
+            targets.forEach(t => {
+                if (t === cur) return;
+                const r2 = t.getBoundingClientRect();
                 const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-
-                // Directional Filter
                 if (dir === 'up' && c2.y >= c1.y) return;
                 if (dir === 'down' && c2.y <= c1.y) return;
                 if (dir === 'left' && c2.x >= c1.x) return;
                 if (dir === 'right' && c2.x <= c1.x) return;
-
-                // Weighted distance (favoring items in the same row/column)
-                const dx = Math.abs(c2.x - c1.x);
-                const dy = Math.abs(c2.y - c1.y);
-                const dist = (dir === 'left' || dir === 'right') ? dx + (dy * 2) : dy + (dx * 2);
-
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    bestMatch = target;
-                }
+                const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
+                if (d < min) { min = d; best = t; }
             });
-            return bestMatch;
+            return best;
         }
     </script>
 </body>
