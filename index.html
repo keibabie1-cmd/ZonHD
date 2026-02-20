@@ -20,14 +20,16 @@
 
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
         
-        /* Remote Focus Style */
-        .movie-card:focus, button:focus, .episode-row:focus, input:focus { 
-            outline: none; 
-            border: 2px solid var(--gold) !important; 
-            transform: scale(1.05);
-            box-shadow: 0 0 15px var(--gold);
+        /* THE "CINEMA" FOCUS STYLE */
+        .focusable:focus {
+            outline: none;
+            border-color: var(--gold) !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
@@ -36,9 +38,9 @@
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
         
-        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 2px solid transparent; }
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
         
-        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 2px solid transparent; }
+        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
@@ -52,30 +54,30 @@
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
-        <div class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
-            <button onclick="setFilter('network', 213)">Netflix</button>
-            <button onclick="setFilter('network', 453)">Hulu</button>
-            <button onclick="setFilter('network', 2739)">Disney+</button>
-            <button onclick="setFilter('network', 19)">Nickelodeon</button>
-            <button onclick="setFilter('network', 243)">Boomerang</button>
-            <button onclick="setFilter('network', 34)">Adult Swim</button>
-            <button onclick="setFilter('network', 56)">Cartoon Network</button>
-            <button onclick="setFilter('network', 77)">SyFy</button>
+        <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
+            <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
+            <button class="focusable" onclick="setFilter('network', 453)">Hulu</button>
+            <button class="focusable" onclick="setFilter('network', 2739)">Disney+</button>
+            <button class="focusable" onclick="setFilter('network', 19)">Nickelodeon</button>
+            <button class="focusable" onclick="setFilter('network', 243)">Boomerang</button>
+            <button class="focusable" onclick="setFilter('network', 34)">Adult Swim</button>
+            <button class="focusable" onclick="setFilter('network', 56)">Cartoon Network</button>
+            <button class="focusable" onclick="setFilter('network', 77)">SyFy</button>
         </div>
     </div>
 
     <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
     <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-        <input type="text" id="search-input" class="w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
-        <nav class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
-            <button onclick="toggleMenu()" class="text-gold text-2xl pr-2">☰</button>
-            <button id="btn-trending" onclick="setFilter('trending')" class="active-filter whitespace-nowrap">Trending</button>
-            <button onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-            <button onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-            <button onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
-            <button onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
+        <input type="text" id="search-input" class="focusable w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+        <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
+            <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
+            <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
+            <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+            <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+            <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+            <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -89,7 +91,7 @@
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
         <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <button id="close-details-btn" onclick="closeSelector()" class="mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
             <div class="flex gap-5 mb-6">
@@ -103,8 +105,8 @@
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button onclick="startLuxeStream()" class="btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="btn-play-red">▶ Play S1 E1</button></div>
+            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
+            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
@@ -115,7 +117,7 @@
     </div>
 
     <div id="player-overlay">
-        <button id="close-player-btn" onclick="closePlayer()" class="absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        <button id="close-player-btn" onclick="closePlayer()" class="focusable absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
     </div>
 
@@ -143,10 +145,9 @@
             data.results.forEach(m => {
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
-                card.className = "movie-card";
-                card.tabIndex = 0; // Make focusable for remote
+                card.className = "movie-card focusable";
+                card.tabIndex = 0;
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                card.onkeydown = (e) => { if(e.key === 'Enter') card.onclick(); };
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
@@ -170,12 +171,11 @@
             
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
-            
-            // Auto-focus the play button for remote users
+
             setTimeout(() => {
-                const playBtn = type === 'movie' ? document.querySelector('#movie-action-area button') : document.getElementById('main-tv-btn');
-                playBtn.focus();
-            }, 100);
+                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
+                if(playBtn) playBtn.focus();
+            }, 200);
         }
 
         function renderSeasons(data) {
@@ -184,8 +184,9 @@
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
-                btn.className = "px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
+                btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`;
+                btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
@@ -199,10 +200,9 @@
             grid.innerHTML = '';
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
-                epRow.className = "episode-row";
+                epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                epRow.onkeydown = (ev) => { if(ev.key === 'Enter') epRow.onclick(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
@@ -214,7 +214,7 @@
 
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster);
+            saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
@@ -238,10 +238,9 @@
             grid.innerHTML = '';
             history.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer movie-card";
+                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
                 card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
-                card.onkeydown = (e) => { if(e.key === 'Enter') card.onclick(); };
                 card.innerHTML = `
                     <div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2">
                         <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
@@ -253,9 +252,19 @@
             });
         }
 
-        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
-        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
+        
+        function toggleMenu() { 
+            const menu = document.getElementById('side-menu');
+            menu.classList.toggle('menu-open'); 
+            if(menu.classList.contains('menu-open')) {
+                setTimeout(() => {
+                    const firstNetwork = document.querySelector('#nav-networks .focusable');
+                    if(firstNetwork) firstNetwork.focus();
+                }, 300);
+            }
+        }
 
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
@@ -263,6 +272,7 @@
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
+            document.getElementById('btn-trending').focus();
         }
 
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
@@ -271,35 +281,84 @@
             setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
             fetchConfig();
             const mc = new Hammer(document.body);
-            mc.on("swiperight", () => document.getElementById('side-menu').classList.add('menu-open'));
-            const menuMc = new Hammer(document.getElementById('side-menu'));
-            menuMc.on("swipeleft", () => document.getElementById('side-menu').classList.remove('menu-open'));
+            mc.on("swiperight", () => toggleMenu());
         };
 
-        // --- NEW REMOTE CONTROL NAVIGATION ---
-        document.addEventListener('keydown', (e) => {
-            const focusable = Array.from(document.querySelectorAll('button, input, .movie-card, .episode-row')).filter(el => el.offsetParent !== null);
-            let index = focusable.indexOf(document.activeElement);
+        // ==========================================
+        // IMPROVED REMOTE CONTROL LOGIC
+        // ==========================================
+        document.addEventListener('keydown', function(e) {
+            const current = document.activeElement;
+            // Get all focusables currently visible
+            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => {
+                return el.offsetParent !== null && window.getComputedStyle(el).visibility !== 'hidden';
+            });
+            
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                if (current && current.classList.contains('focusable')) {
+                    current.click();
+                }
+                return;
+            }
 
-            if (e.key === 'ArrowRight') {
-                index = (index + 1) % focusable.length;
-                focusable[index].focus();
-            } else if (e.key === 'ArrowLeft') {
-                index = (index - 1 + focusable.length) % focusable.length;
-                focusable[index].focus();
-            } else if (e.key === 'ArrowDown') {
-                // Approximate "down" by skipping some elements in the grid
-                index = Math.min(index + 2, focusable.length - 1);
-                focusable[index].focus();
-            } else if (e.key === 'ArrowUp') {
-                index = Math.max(index - 2, 0);
-                focusable[index].focus();
-            } else if (e.key === 'Backspace' || e.key === 'Escape') {
-                // Firestick Back button
+            // Firestick Back/Esc keys
+            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009 || e.key === 'Escape') {
+                e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
+                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
+                else toggleMenu();
+                return;
+            }
+
+            let direction = '';
+            if (e.key === 'ArrowUp') direction = 'up';
+            if (e.key === 'ArrowDown') direction = 'down';
+            if (e.key === 'ArrowLeft') direction = 'left';
+            if (e.key === 'ArrowRight') direction = 'right';
+
+            if (direction) {
+                e.preventDefault();
+                const next = getNextFocus(current, focusables, direction);
+                if (next) {
+                    next.focus();
+                    next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                }
             }
         });
+
+        function getNextFocus(current, targets, dir) {
+            if (!current || current === document.body || !current.classList.contains('focusable')) return targets[0];
+            
+            const r1 = current.getBoundingClientRect();
+            const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+
+            let bestMatch = null;
+            let minDistance = Infinity;
+
+            targets.forEach(target => {
+                if (target === current) return;
+                const r2 = target.getBoundingClientRect();
+                const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
+
+                // Directional Filter
+                if (dir === 'up' && c2.y >= c1.y) return;
+                if (dir === 'down' && c2.y <= c1.y) return;
+                if (dir === 'left' && c2.x >= c1.x) return;
+                if (dir === 'right' && c2.x <= c1.x) return;
+
+                // Weighted distance (favoring items in the same row/column)
+                const dx = Math.abs(c2.x - c1.x);
+                const dy = Math.abs(c2.y - c1.y);
+                const dist = (dir === 'left' || dir === 'right') ? dx + (dy * 2) : dy + (dx * 2);
+
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestMatch = target;
+                }
+            });
+            return bestMatch;
+        }
     </script>
 </body>
 </html>
