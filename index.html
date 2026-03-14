@@ -103,6 +103,12 @@
                     </div>
                 </div>
             </div>
+
+            <div class="flex items-center gap-3 mb-4 bg-white/5 p-3 rounded-lg w-fit border border-white/10">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">English Subs</span>
+                <input type="checkbox" id="sub-toggle" class="focusable w-5 h-5 accent-red-600">
+            </div>
+
             <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
             <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -121,11 +127,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        
-        // --- INFINITE SCROLL STATE ---
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMore = true;
+        let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
             try {
@@ -140,28 +142,16 @@
         async function fetchContent(append = false) {
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
-
-            if (!append) {
-                currentPage = 1;
-                hasMore = true;
-                document.getElementById('movie-grid').innerHTML = '';
-            }
-
+            if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
-                    currentPage++;
-                    hasMore = currentPage <= data.total_pages;
-                } else {
-                    hasMore = false;
-                }
+                if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; }
+                else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } 
             finally { isLoading = false; }
         }
@@ -179,32 +169,25 @@
             });
         }
 
-        // SCROLL DETECTOR
         window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) {
-                fetchContent(true);
-            }
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true);
         });
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
-            
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
             document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-            
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
-
             setTimeout(() => {
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(playBtn) playBtn.focus();
@@ -245,11 +228,19 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
+        // UPDATED: Added Subtitle Logic
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
+            const subOn = document.getElementById('sub-toggle').checked;
+            const subParam = subOn ? "&sub_language=en" : "";
+            
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            
+            iframe.src = type === 'movie' 
+                ? `https://vidsrc.cc/v2/embed/movie/${id}?${subParam}` 
+                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?${subParam}`;
+            
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
@@ -302,8 +293,8 @@
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            const clickedBtn = event ? event.target : null;
-            if(clickedBtn && clickedBtn.tagName === 'BUTTON') clickedBtn.classList.add('active-filter');
+            const clickedBtn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
+            if(clickedBtn) clickedBtn.classList.add('active-filter');
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
@@ -324,17 +315,10 @@
             mc.on("swiperight", () => toggleMenu());
         };
 
-        // --- REMOTE CONTROL ENGINE ---
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            
-            if (e.key === 'ContextMenu' || e.keyCode === 224 || e.keyCode === 462) {
-                e.preventDefault();
-                toggleMenu();
-                return;
-            }
-
+            if (e.key === 'ContextMenu' || e.keyCode === 224 || e.keyCode === 462) { e.preventDefault(); toggleMenu(); return; }
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
@@ -342,25 +326,16 @@
                 else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
                 return;
             }
-
-            if (e.key === 'Enter' || e.keyCode === 13) {
-                if (current && current.classList.contains('focusable')) current.click();
-                return;
-            }
-
+            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable')) current.click(); return; }
             let dir = '';
             if (e.key === 'ArrowUp') dir = 'up';
             if (e.key === 'ArrowDown') dir = 'down';
             if (e.key === 'ArrowLeft') dir = 'left';
             if (e.key === 'ArrowRight') dir = 'right';
-
             if (dir) {
                 e.preventDefault();
                 const next = findNext(current, focusables, dir);
-                if (next) {
-                    next.focus();
-                    next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                }
+                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
             }
         });
 
@@ -369,7 +344,6 @@
             const r1 = cur.getBoundingClientRect();
             const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
             let best = null, min = Infinity;
-
             targets.forEach(t => {
                 if (t === cur) return;
                 const r2 = t.getBoundingClientRect();
