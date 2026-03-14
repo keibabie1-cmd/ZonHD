@@ -100,15 +100,13 @@
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
                         <span class="tv-tag">TV</span>
+                        <div class="flex items-center gap-2 ml-2">
+                             <input type="checkbox" id="sub-toggle" class="focusable w-4 h-4 accent-red-600">
+                             <span class="text-[9px] font-bold text-zinc-500 uppercase">ENG SUBS</span>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div class="flex items-center gap-3 mb-4 bg-white/5 p-3 rounded-lg w-fit border border-white/10">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">English Subs</span>
-                <input type="checkbox" id="sub-toggle" class="focusable w-5 h-5 accent-red-600">
-            </div>
-
             <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
             <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -127,7 +125,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        let currentPage = 1, isLoading = false, hasMore = true;
+        let currentPage = 1; let isLoading = false; let hasMore = true;
 
         async function fetchConfig() {
             try {
@@ -150,9 +148,12 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; }
-                else { hasMore = false; }
-            } catch (err) { console.error("Fetch failed", err); } 
+                if (data.results && data.results.length > 0) {
+                    renderGrid(data.results);
+                    currentPage++;
+                    hasMore = currentPage <= data.total_pages;
+                } else { hasMore = false; }
+            } catch (err) { console.error("Fetch failed", err); }
             finally { isLoading = false; }
         }
 
@@ -228,19 +229,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // UPDATED: Added Subtitle Logic
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
+            // CHECK THE TOGGLE STATE
             const subOn = document.getElementById('sub-toggle').checked;
             const subParam = subOn ? "&sub_language=en" : "";
-            
+
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            
-            iframe.src = type === 'movie' 
-                ? `https://vidsrc.cc/v2/embed/movie/${id}?${subParam}` 
-                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?${subParam}`;
-            
+            // ADD SUBTITLE PARAMETER TO THE STREAM URL
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?${subParam}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?${subParam}`;
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
