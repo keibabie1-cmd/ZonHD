@@ -142,27 +142,36 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
 
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            
-            // LOGIC FOR ASIAN-ONLY ANIME
-            if (activeType === 'genre') {
-                if (activeID == 16) {
-                    // Filter Genre 16 for Original Language: Japanese, Korean, or Chinese
-                    url = `https://api.themoviedb.org/3/discover/multi?api_key=${API_KEY}&with_genres=16&with_original_language=ja|ko|zh&page=${currentPage}`;
-                } else {
-                    url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
-                }
-            }
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-
             try {
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
+                let results = [];
+                if (activeType === 'genre' && activeID == 16) {
+                    // Fetch both Movies and TV shows for Asian Anime
+                    const [movieRes, tvRes] = await Promise.all([
+                        fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=16&with_original_language=ja|ko|zh&page=${currentPage}`),
+                        fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja|ko|zh&page=${currentPage}`)
+                    ]);
+                    const movieData = await movieRes.json();
+                    const tvData = await tvRes.json();
+                    
+                    results = [...(movieData.results || []), ...(tvData.results || [])];
+                    // Sort by popularity so the best stuff stays at the top
+                    results.sort((a, b) => b.popularity - a.popularity);
+                    hasMore = currentPage < Math.max(movieData.total_pages || 0, tvData.total_pages || 0);
+                } else {
+                    let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
+                    if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+                    if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
+                    if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+                    
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    results = data.results || [];
+                    hasMore = currentPage < data.total_pages;
+                }
+
+                if (results.length > 0) {
+                    renderGrid(results);
                     currentPage++;
-                    hasMore = currentPage <= data.total_pages;
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); }
             finally { isLoading = false; }
@@ -175,7 +184,9 @@
                 const card = document.createElement('div');
                 card.className = "movie-card focusable";
                 card.tabIndex = 0;
-                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                // Important: for mixed results, we determine type by checking properties
+                const mediaType = m.media_type || (m.first_air_date ? 'tv' : 'movie');
+                card.onclick = () => openDetails(m.id, mediaType);
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
