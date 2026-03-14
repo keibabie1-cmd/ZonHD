@@ -75,7 +75,7 @@
             <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
             <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('asian')" class="whitespace-nowrap">Asian</button>
+            <button class="focusable" onclick="setFilter('asian')" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -151,9 +151,9 @@
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
             
-            // NEW ASIAN CONTENT FILTER LOGIC
+            // UPDATED ASIAN FILTER LOGIC
             if (activeType === 'asian') {
-                url = `https://api.themoviedb.org/3/discover/multi?api_key=${API_KEY}&with_origin_country=JP|KR|CN|HK|TW|TH&page=${currentPage}&sort_by=popularity.desc`;
+                url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_origin_country=JP|KR|CN|HK|TW|TH&page=${currentPage}&sort_by=popularity.desc`;
             }
             
             try {
