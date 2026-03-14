@@ -125,7 +125,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        let currentPage = 1; let isLoading = false; let hasMore = true;
+        let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
             try {
@@ -141,10 +141,21 @@
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
+
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            
+            // LOGIC FOR ASIAN-ONLY ANIME
+            if (activeType === 'genre') {
+                if (activeID == 16) {
+                    // Filter Genre 16 for Original Language: Japanese, Korean, or Chinese
+                    url = `https://api.themoviedb.org/3/discover/multi?api_key=${API_KEY}&with_genres=16&with_original_language=ja|ko|zh&page=${currentPage}`;
+                } else {
+                    url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+                }
+            }
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -230,14 +241,10 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         function startLuxeStream() {
-            const { type, id, s, e, title, poster } = currentMedia;
-            // CHECK THE TOGGLE STATE
+            const { type, id, s, e } = currentMedia;
             const subOn = document.getElementById('sub-toggle').checked;
             const subParam = subOn ? "&sub_language=en" : "";
-
-            saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            // ADD SUBTITLE PARAMETER TO THE STREAM URL
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?${subParam}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?${subParam}`;
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
@@ -263,30 +270,14 @@
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
                 card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
-                card.innerHTML = `
-                    <div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2">
-                        <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
-                    </div>
-                    <p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p>
-                    <p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>
-                `;
+                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
         function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
-        
-        function toggleMenu() { 
-            const menu = document.getElementById('side-menu');
-            menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) {
-                setTimeout(() => {
-                    const firstNet = document.querySelector('#nav-networks .focusable');
-                    if(firstNet) firstNet.focus();
-                }, 300);
-            }
-        }
+        function toggleMenu() { const menu = document.getElementById('side-menu'); menu.classList.toggle('menu-open'); }
 
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
@@ -301,13 +292,7 @@
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
 
         window.onload = () => { 
-            setTimeout(() => { 
-                const loader = document.getElementById('loader');
-                if(loader) {
-                    loader.style.opacity = '0'; 
-                    setTimeout(() => loader.remove(), 500); 
-                }
-            }, 1000);
+            setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
@@ -316,24 +301,20 @@
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'ContextMenu' || e.keyCode === 224 || e.keyCode === 462) { e.preventDefault(); toggleMenu(); return; }
-            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                e.preventDefault();
+            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable')) current.click(); return; }
+            if (e.key === 'Backspace' || e.keyCode === 8) {
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
-                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
                 return;
             }
-            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable')) current.click(); return; }
             let dir = '';
             if (e.key === 'ArrowUp') dir = 'up';
             if (e.key === 'ArrowDown') dir = 'down';
             if (e.key === 'ArrowLeft') dir = 'left';
             if (e.key === 'ArrowRight') dir = 'right';
             if (dir) {
-                e.preventDefault();
                 const next = findNext(current, focusables, dir);
-                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
+                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             }
         });
 
