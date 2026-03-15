@@ -121,10 +121,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMore = true;
+        let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
             try {
@@ -146,26 +143,38 @@
                 document.getElementById('movie-grid').innerHTML = '';
             }
 
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            
-            // LOGIC FOR ASIAN CARTOONS (ANIME) ONLY
-            if (activeType === 'genre' && activeID == 16) {
-                // Filters for Japanese (JP), South Korean (KR), and Chinese (ZH) animation
-                url = `https://api.themoviedb.org/3/discover/multi?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|ZH&sort_by=popularity.desc&page=${currentPage}`;
-            } else if (activeType === 'genre') {
-                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
-            }
-            
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            
             try {
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
+                let results = [];
+                // ONLY ASIAN CARTOONS (ANIME) LOGIC
+                if (activeType === 'genre' && activeID == 16) {
+                    const countries = 'JP|KR|ZH';
+                    const [tvRes, movieRes] = await Promise.all([
+                        fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=${countries}&page=${currentPage}`),
+                        fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=16&with_origin_country=${countries}&page=${currentPage}`)
+                    ]);
+                    const tvData = await tvRes.json();
+                    const movieData = await movieRes.json();
+                    
+                    const tvs = (tvData.results || []).map(item => ({ ...item, media_type: 'tv' }));
+                    const movies = (movieData.results || []).map(item => ({ ...item, media_type: 'movie' }));
+                    
+                    results = [...tvs, ...movies].sort((a, b) => b.popularity - a.popularity);
+                    hasMore = currentPage < Math.max(tvData.total_pages || 0, movieData.total_pages || 0);
+                } else {
+                    let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
+                    if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+                    if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
+                    if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+                    
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    results = data.results || [];
+                    hasMore = currentPage < data.total_pages;
+                }
+
+                if (results.length > 0) {
+                    renderGrid(results);
                     currentPage++;
-                    hasMore = currentPage <= data.total_pages;
                 } else {
                     hasMore = false;
                 }
