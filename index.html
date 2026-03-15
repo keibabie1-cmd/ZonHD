@@ -204,11 +204,10 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // THE NEW SOURCE (vidsrc.pm) 
-            // This source has NO initial pop-ups and plays instantly unmuted.
+            // BACK TO BASICS: The source you know works, with basic play/mute triggers
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.pm/embed/movie/${id}` : 
-                `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
+                `https://vidsrc.xyz/embed/movie/${id}?autoplay=1` : 
+                `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}?autoplay=1`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
@@ -238,7 +237,7 @@
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; fetchContent(); 
-            document.getElementById('side-menu').classList.remove('remove-open'); 
+            document.getElementById('side-menu').classList.remove('menu-open'); 
             window.scrollTo(0,0); 
         }
 
