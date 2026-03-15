@@ -120,6 +120,7 @@
             <div class="flex gap-2">
                 <button onclick="switchServer('vidsrc')" id="btn-vidsrc" class="focusable bg-red-600 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 1</button>
                 <button onclick="switchServer('torrent')" id="btn-torrent" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 2</button>
+                <button onclick="switchServer('anime')" id="btn-anime" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 3 (ANIME)</button>
             </div>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
@@ -143,13 +144,10 @@
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
-            
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            
-            // UPDATED LOGIC FOR ASIAN ANIME ONLY
             if (activeType === 'anime') {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&page=${currentPage}`;
             }
@@ -246,17 +244,24 @@
         function switchServer(server) {
             const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
-            const btn1 = document.getElementById('btn-vidsrc');
-            const btn2 = document.getElementById('btn-torrent');
+            const btns = ['btn-vidsrc', 'btn-torrent', 'btn-anime'];
             
+            // Reset all buttons
+            btns.forEach(b => {
+                const el = document.getElementById(b);
+                el.classList.replace('bg-red-600', 'bg-black/60');
+            });
+
             if (server === 'vidsrc') {
                 iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-                btn1.classList.replace('bg-black/60', 'bg-red-600');
-                btn2.classList.replace('bg-red-600', 'bg-black/60');
-            } else {
+                document.getElementById('btn-vidsrc').classList.replace('bg-black/60', 'bg-red-600');
+            } else if (server === 'torrent') {
                 iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-                btn2.classList.replace('bg-black/60', 'bg-red-600');
-                btn1.classList.replace('bg-red-600', 'bg-black/60');
+                document.getElementById('btn-torrent').classList.replace('bg-black/60', 'bg-red-600');
+            } else {
+                // SERVER 3: High compatibility for Asian content
+                iframe.src = type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
+                document.getElementById('btn-anime').classList.replace('bg-black/60', 'bg-red-600');
             }
         }
 
