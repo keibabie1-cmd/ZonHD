@@ -46,7 +46,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
 
-        /* Fix for TV Scrolling cutoff */
+        /* TV Scrolling fix */
         #tv-action-area { overflow-y: visible !important; height: auto !important; }
     </style>
 </head>
@@ -119,7 +119,7 @@
 
     <div id="player-overlay">
         <button id="close-player-btn" onclick="closePlayer()" class="focusable absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-to-custom-handlers"></iframe>
     </div>
 
     <script>
@@ -143,7 +143,7 @@
 
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             
-            // Anime Logic (Strictly Asian, Non-Americanized)
+            // Anime Tab: Strictly Asian Productions
             if (activeType === 'genre' && activeID === 16) {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
             } else if (activeType === 'genre') {
@@ -169,17 +169,14 @@
             results.forEach(m => {
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
-                card.className = "movie-card focusable";
-                card.tabIndex = 0;
+                card.className = "movie-card focusable"; card.tabIndex = 0;
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
 
-        window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true);
-        });
+        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
@@ -196,10 +193,7 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
-            setTimeout(() => {
-                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) playBtn.focus();
-            }, 300);
+            setTimeout(() => { const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(playBtn) playBtn.focus(); }, 300);
         }
 
         function renderSeasons(data) {
@@ -209,8 +203,7 @@
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
-                btn.innerText = `Season ${s.season_number}`;
-                btn.tabIndex = 0;
+                btn.innerText = `Season ${s.season_number}`; btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
@@ -224,8 +217,7 @@
             grid.innerHTML = '';
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable";
-                epRow.tabIndex = 0;
+                epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
@@ -236,8 +228,8 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         function startLuxeStream() {
-            const { type, id, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster); 
+            const { type, id, s, e } = currentMedia;
+            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const iframe = document.getElementById('luxe-player');
             iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
@@ -260,8 +252,7 @@
             section.classList.remove('hidden'); grid.innerHTML = '';
             history.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
-                card.tabIndex = 0; card.onclick = () => openDetails(item.id, item.type);
+                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card"; card.tabIndex = 0; card.onclick = () => openDetails(item.id, item.type);
                 card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
@@ -273,12 +264,7 @@
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
             menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) {
-                setTimeout(() => {
-                    const firstNet = document.querySelector('#nav-networks .focusable');
-                    if(firstNet) firstNet.focus();
-                }, 300);
-            }
+            if(menu.classList.contains('menu-open')) { setTimeout(() => { const firstNet = document.querySelector('#nav-networks .focusable'); if(firstNet) firstNet.focus(); }, 300); }
         }
 
         function setFilter(type, id = '') { 
@@ -286,46 +272,21 @@
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
             const clickedBtn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
             if(clickedBtn) clickedBtn.classList.add('active-filter');
-            fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open');
-            window.scrollTo(0,0);
+            fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0);
         }
 
-        // Updated Search Handler for TV/Firestick remotes
-        function handleSearch(e) { 
-            // Trigger search on "Enter" (13) or "Done" button from TV keyboard
-            if (e.key === 'Enter' || e.keyCode === 13) { 
-                setFilter('search', e.target.value); 
-                e.target.blur(); // Closes the TV keyboard
-            } 
-        }
+        function handleSearch(e) { if (e.key === 'Enter' || e.keyCode === 13) { setFilter('search', e.target.value); e.target.blur(); } }
 
         window.onload = () => { 
-            setTimeout(() => { 
-                const loader = document.getElementById('loader');
-                if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
-            }, 1000);
-            fetchConfig();
-            
-            // Hammer adjusted for better TV remote vertical scrolling
-            const mc = new Hammer(document.body, { touchAction: 'pan-y' });
-            mc.on("swiperight", () => toggleMenu());
+            setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
+            fetchConfig(); const mc = new Hammer(document.body, { touchAction: 'pan-y' }); mc.on("swiperight", () => toggleMenu());
         };
 
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
-            if (e.key === 'Enter' || e.keyCode === 13) {
-                if (current && current.classList.contains('focusable')) {
-                    // Prevent double triggering if search input is focused
-                    if (current.id !== 'search-input') {
-                        current.click();
-                        return;
-                    }
-                }
-            }
-
+            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable') && current.id !== 'search-input') { current.click(); return; } }
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
@@ -335,34 +296,23 @@
             }
 
             let dir = '';
-            if (e.key === 'ArrowUp') dir = 'up';
-            if (e.key === 'ArrowDown') dir = 'down';
-            if (e.key === 'ArrowLeft') dir = 'left';
-            if (e.key === 'ArrowRight') dir = 'right';
+            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
 
             if (dir) {
                 const next = findNext(current, focusables, dir);
-                if (next) {
-                    e.preventDefault();
-                    next.focus();
-                    next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                }
+                if (next) { e.preventDefault(); next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
             }
         });
 
         function findNext(cur, targets, dir) {
             if (!cur || cur === document.body) return targets[0];
-            const r1 = cur.getBoundingClientRect();
-            const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+            const r1 = cur.getBoundingClientRect(); const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
             let best = null, min = Infinity;
             targets.forEach(t => {
                 if (t === cur) return;
-                const r2 = t.getBoundingClientRect();
-                const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return;
-                if (dir === 'down' && c2.y <= c1.y) return;
-                if (dir === 'left' && c2.x >= c1.x) return;
-                if (dir === 'right' && c2.x <= c1.x) return;
+                const r2 = t.getBoundingClientRect(); const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
+                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return;
+                if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
                 const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
                 if (d < min) { min = d; best = t; }
             });
