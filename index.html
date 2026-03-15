@@ -117,11 +117,6 @@
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-            <div class="flex gap-2">
-                <button onclick="switchServer('vidsrc')" id="btn-vidsrc" class="focusable bg-red-600 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 1</button>
-                <button onclick="switchServer('torrent')" id="btn-torrent" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 2</button>
-                <button onclick="switchServer('anime')" id="btn-anime" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 3 (FIX)</button>
-            </div>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
@@ -236,27 +231,14 @@
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            switchServer('vidsrc');
-            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
-        }
-
-        function switchServer(server) {
-            const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
-            const btns = ['btn-vidsrc', 'btn-torrent', 'btn-anime'];
-            btns.forEach(b => document.getElementById(b).classList.replace('bg-red-600', 'bg-black/60'));
+            
+            // Updated Server 1: Ultra Gateway with Auto-Play and Sound
+            iframe.src = type === 'movie' 
+                ? `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=1` 
+                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoPlay=1`;
 
-            if (server === 'vidsrc') {
-                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-                document.getElementById('btn-vidsrc').classList.replace('bg-black/60', 'bg-red-600');
-            } else if (server === 'torrent') {
-                iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-                document.getElementById('btn-torrent').classList.replace('bg-black/60', 'bg-red-600');
-            } else {
-                // SERVER 3: Updated to Asian-primary scraper (2026 optimized)
-                iframe.src = type === 'movie' ? `https://vidsrc.in/embed/movie/${id}` : `https://vidsrc.in/embed/tv/${id}/${s}/${e}`;
-                document.getElementById('btn-anime').classList.replace('bg-black/60', 'bg-red-600');
-            }
+            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
