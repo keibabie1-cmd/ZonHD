@@ -101,7 +101,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -204,11 +204,10 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // Reverting to the source that actually loads video
-            // Added autoplay and muted params to help bypass initial click-wall
+            // Fixed Parameters for One-Click Play & Sound
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1` : 
-                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1`;
+                `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1&muted=0` : 
+                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1&muted=0`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
