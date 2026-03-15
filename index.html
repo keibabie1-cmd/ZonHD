@@ -26,7 +26,6 @@
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
-        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
@@ -79,8 +78,14 @@
                     <div class="flex items-center gap-3"><span id="show-year" class="text-zinc-400 text-sm font-bold"></span><span id="show-rating" class="rating-badge"></span><span class="tv-tag">TV</span></div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
+            <div id="movie-action-area" class="hidden">
+                <button id="play-movie-btn" onclick="startLuxeStream(1)" class="focusable btn-play-red">▶ Play Server 1</button>
+                <button id="play-movie-btn-2" onclick="startLuxeStream(2)" class="focusable bg-zinc-800 text-white font-bold p-3 rounded-lg w-full mt-2 text-xs">Switch to Server 2 (Fix Invalid Source)</button>
+            </div>
+            <div id="tv-action-area-top" class="hidden">
+                <button id="main-tv-btn" onclick="playCurrentEpisode(1)" class="focusable btn-play-red">▶ Play S1 E1</button>
+                <button onclick="playCurrentEpisode(2)" class="focusable bg-zinc-800 text-white font-bold p-3 rounded-lg w-full mt-2 text-xs">Switch to Server 2 (Fix Invalid Source)</button>
+            </div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden" tabindex="0">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
@@ -90,8 +95,10 @@
         </div>
     </div>
     <div id="player-overlay">
-        <button id="close-player-btn" onclick="closePlayer()" class="focusable absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-to-custom-handlers"></iframe>
+        <div class="absolute top-6 left-6 z-[7000] flex gap-2">
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        </div>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen referrerpolicy="no-referrer"></iframe>
     </div>
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
@@ -172,18 +179,23 @@
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(1); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="absolute inset-0 flex items-center justify-center bg-black/20 text-white">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
             });
         }
-        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
-        function startLuxeStream() {
+        function playCurrentEpisode(server = 1) { currentMedia.e = 1; startLuxeStream(server); }
+        function startLuxeStream(server = 1) {
             const { type, id, s, e } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            if (server === 1) {
+                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            } else {
+                // Secondary server (Much more reliable for Asian Anime/Donghua)
+                iframe.src = type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`;
+            }
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
