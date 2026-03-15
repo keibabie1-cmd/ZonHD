@@ -102,7 +102,7 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" 
-                allow="autoplay; fullscreen; picture-in-picture" 
+                allow="autoplay; fullscreen" 
                 allowfullscreen 
                 referrerpolicy="no-referrer"></iframe>
     </div>
@@ -158,9 +158,10 @@
             });
         }
 
-        window.addEventListener('scroll', () => {
+        // Infinite Scroll Restored
+        window.onscroll = () => {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) { fetchContent(true); }
-        });
+        };
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
@@ -214,10 +215,11 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // IMMACULATE SOURCE (Vidsrc.xyz) - Prioritizes direct video path
+            // AUTOMATIC AD-SHIELD SOURCE (Embedded-Core)
+            // autoplay=1 starts it instantly; muted=0 unmasks sound immediately.
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.xyz/embed/movie/${id}` : 
-                `https://vidsrc.xyz/embed/tv/${id}/${s}-${e}`;
+                `https://vidsrc.icu/embed/movie/${id}?autoplay=1&muted=0` : 
+                `https://vidsrc.icu/embed/tv/${id}/${s}/${e}?autoplay=1&muted=0`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
