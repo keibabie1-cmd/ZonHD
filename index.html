@@ -10,38 +10,23 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
-        
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
-
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
-        
-        .focusable:focus {
-            outline: none;
-            border-color: var(--gold) !important;
-            transform: scale(1.08);
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
-            z-index: 50;
-        }
-
+        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); z-index: 50; }
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
-        
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
-        
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
-        
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
-
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
@@ -103,14 +88,8 @@
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden">
-                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button>
-                <button onclick="startLuxeStream('alt')" class="focusable text-[10px] text-zinc-500 mt-2 underline">Switch Server (If Video Fails)</button>
-            </div>
-            <div id="tv-action-area-top" class="hidden">
-                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button>
-                <button onclick="playCurrentEpisode('alt')" class="focusable text-[10px] text-zinc-500 mt-2 underline">Switch Server (If Video Fails)</button>
-            </div>
+            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
+            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
@@ -136,7 +115,7 @@
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
                 fetchContent();
-            } catch (err) { console.error("Config load failed", err); }
+            } catch (err) { console.error("Config failed", err); }
         }
 
         async function fetchContent(append = false) {
@@ -145,30 +124,28 @@
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
 
             try {
-                let results = [];
-                // ASIAN ANIME FILTERING
+                let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
+                
+                // STRICT ASIAN CARTOON FILTER
                 if (activeType === 'genre' && activeID == 16) {
-                    const countries = 'JP|KR|ZH';
-                    const [tvRes, movieRes] = await Promise.all([
-                        fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=${countries}&page=${currentPage}`),
-                        fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=16&with_origin_country=${countries}&page=${currentPage}`)
-                    ]);
-                    const tvData = await tvRes.json();
-                    const movieData = await movieRes.json();
-                    results = [...(tvData.results || []).map(i => ({...i, media_type: 'tv'})), ...(movieData.results || []).map(i => ({...i, media_type: 'movie'}))].sort((a,b) => b.popularity - a.popularity);
-                    hasMore = currentPage < Math.max(tvData.total_pages || 0, movieData.total_pages || 0);
-                } else {
-                    let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-                    if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
-                    if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
-                    if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-                    const res = await fetch(url);
-                    const data = await res.json();
-                    results = data.results || [];
-                    hasMore = currentPage < data.total_pages;
+                    url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&sort_by=popularity.desc&page=${currentPage}`;
+                } else if (activeType === 'genre') {
+                    url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+                } else if (activeType === 'network') {
+                    url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
+                } else if (activeType === 'search') {
+                    url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
                 }
-                if (results.length > 0) { renderGrid(results); currentPage++; } else { hasMore = false; }
-            } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.results) {
+                    renderGrid(data.results);
+                    currentPage++;
+                    hasMore = currentPage <= data.total_pages;
+                }
+            } catch (err) { console.error("Fetch failed", err); } 
+            finally { isLoading = false; }
         }
 
         function renderGrid(results) {
@@ -183,12 +160,13 @@
             });
         }
 
-        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
-
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
+            // Determine if it's Asian Anime to use better player
+            const isAnime = data.genres && data.genres.some(g => g.id === 16);
+            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime };
+            
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
@@ -200,7 +178,21 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
-            setTimeout(() => { const b = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(b) b.focus(); }, 300);
+        }
+
+        function startLuxeStream() {
+            const { type, id, s, e, title, poster, isAnime } = currentMedia;
+            saveToHistory(id, type, s, e, title, poster);
+            const iframe = document.getElementById('luxe-player');
+            
+            // USE STABLE ANIME SOURCE FOR ANIME TO AVOID 224002 ERROR
+            if (isAnime) {
+                iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+            } else {
+                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            }
+            
+            document.getElementById('player-overlay').style.display = 'block';
         }
 
         function renderSeasons(data) {
@@ -221,107 +213,38 @@
             const grid = document.getElementById('episode-grid'); grid.innerHTML = '';
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
+                epRow.className = "episode-row focusable";
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
             });
-            document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
         }
 
-        function playCurrentEpisode(mode = 'primary') { currentMedia.e = 1; startLuxeStream(mode); }
-
-        function startLuxeStream(mode = 'primary') {
-            const { type, id, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster); 
-            const iframe = document.getElementById('luxe-player');
-            
-            // DUAL SOURCE LOGIC TO PREVENT 224002 ERROR
-            if (mode === 'alt') {
-                iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-            } else {
-                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            }
-            
-            document.getElementById('player-overlay').style.display = 'block';
-            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
-        }
-
+        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
         function saveToHistory(id, type, s, e, title, poster) {
             let h = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             h = h.filter(i => i.id !== id); h.unshift({ id, type, s, e, title, poster });
             localStorage.setItem('zonhd_history', JSON.stringify(h.slice(0, 10))); renderContinueWatching();
         }
-
         function renderContinueWatching() {
             const h = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             const s = document.getElementById('continue-section'); const g = document.getElementById('continue-grid');
-            if (h.length === 0) { s.classList.add('hidden'); return; }
-            s.classList.remove('hidden'); g.innerHTML = '';
+            if (h.length === 0) return; s.classList.remove('hidden'); g.innerHTML = '';
             h.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card"; card.tabIndex = 0;
+                card.className = "min-w-[120px] max-w-[120px] movie-card";
                 card.onclick = () => openDetails(item.id, item.type);
-                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
+                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p>`;
                 g.appendChild(card);
             });
         }
-
-        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
-        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
-        
-        function toggleMenu() { 
-            const m = document.getElementById('side-menu'); m.classList.toggle('menu-open'); 
-            if(m.classList.contains('menu-open')) setTimeout(() => { const f = document.querySelector('#nav-networks .focusable'); if(f) f.focus(); }, 300);
-        }
-
-        function setFilter(type, id = '') { 
-            activeType = type; activeID = id; 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            const c = event ? (event.target.closest('button') || event.target) : null;
-            if(c && c.tagName === 'BUTTON') c.classList.add('active-filter');
-            fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0);
-        }
-
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
-
-        window.onload = () => { 
-            setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000);
-            fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu());
-        };
-
-        document.addEventListener('keydown', function(e) {
-            const current = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                e.preventDefault();
-                if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
-                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
-                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
-                return;
-            }
-            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable')) current.click(); return; }
-            let dir = '';
-            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
-            if (dir) {
-                e.preventDefault(); const n = findNext(current, focusables, dir);
-                if (n) { n.focus(); n.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
-            }
-        });
-
-        function findNext(cur, targets, dir) {
-            if (!cur || cur === document.body) return targets[0];
-            const r1 = cur.getBoundingClientRect(); const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
-            let best = null, min = Infinity;
-            targets.forEach(t => {
-                if (t === cur) return;
-                const r2 = t.getBoundingClientRect(); const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return; if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
-                const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2)); if (d < min) { min = d; best = t; }
-            });
-            return best;
-        }
+        window.onload = () => { setTimeout(() => document.getElementById('loader').remove(), 1000); fetchConfig(); };
     </script>
 </body>
 </html>
