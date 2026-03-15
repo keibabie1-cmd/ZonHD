@@ -101,7 +101,10 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" 
+                allow="autoplay; fullscreen; picture-in-picture" 
+                allowfullscreen 
+                referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -114,7 +117,7 @@
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
                 renderContinueWatching(); fetchContent();
-            } catch (err) { console.error("Config load failed", err); }
+            } catch (err) { console.error("Config failed", err); }
         }
 
         async function fetchContent(append = false) {
@@ -124,7 +127,6 @@
             
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             
-            // Restored the high-quality Anime filter
             if (activeType === 'genre' && activeID === 16) {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
             } else if (activeType === 'genre') {
@@ -141,7 +143,7 @@
                     currentPage++;
                     hasMore = currentPage <= data.total_pages;
                 } else { hasMore = false; }
-            } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+            } catch (err) { console.error(err); } finally { isLoading = false; }
         }
 
         function renderGrid(results) {
@@ -156,11 +158,8 @@
             });
         }
 
-        // Restored Infinite Scrolling
         window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
-                fetchContent(true);
-            }
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) { fetchContent(true); }
         });
 
         async function openDetails(id, type) {
@@ -215,10 +214,10 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // Restored original vidsrc.me source with optimized parameters
+            // IMMACULATE SOURCE (Vidsrc.xyz) - Prioritizes direct video path
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.me/embed/movie?tmdb=${id}` : 
-                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`;
+                `https://vidsrc.xyz/embed/movie/${id}` : 
+                `https://vidsrc.xyz/embed/tv/${id}/${s}-${e}`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
