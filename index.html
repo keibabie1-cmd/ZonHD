@@ -62,11 +62,6 @@
         </nav>
     </div>
 
-    <section id="continue-section" class="hidden px-4 pt-6">
-        <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
-        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
-    </section>
-
     <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
     <div id="selector-overlay" class="no-scrollbar">
@@ -101,7 +96,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -113,7 +108,7 @@
                 const res = await fetch('/api/config');
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
-                renderContinueWatching(); fetchContent();
+                fetchContent();
             } catch (err) { console.error("Config failed"); }
         }
 
@@ -122,19 +117,14 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre' && activeID === 16) {
-                url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
-            } else if (activeType === 'genre') {
-                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
-            }
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; } 
-                else { hasMore = false; }
+                if (data.results) { renderGrid(data.results); currentPage++; }
             } catch (err) { console.error(err); } finally { isLoading = false; }
         }
 
@@ -150,12 +140,10 @@
             });
         }
 
-        window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) { fetchContent(true); } };
-
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
+            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title };
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
@@ -199,56 +187,30 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE ULTIMATE SHARK PLAY
+        // THE SHARK SOURCE: vidsrc.pro
+        // This source allows direct playback and bypasses the "initial click" ad layer.
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
-            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // Bypass the ad-wrapper by forcing autoplay on the underlying mirror
+            // vidsrc.pro is much cleaner and supports instant autoplay
             const src = type === 'movie' ? 
-                `https://vidsrc.xyz/embed/movie/${id}?autoplay=1&muted=0` : 
-                `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}?autoplay=1&muted=0`;
+                `https://vidsrc.pro/embed/movie/${id}` : 
+                `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
 
             iframe.src = src;
             document.getElementById('player-overlay').style.display = 'block';
         }
 
-        function saveToHistory(id, type, s, e, title, poster) {
-            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, s, e, title, poster });
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
-            renderContinueWatching();
-        }
-
-        function renderContinueWatching() {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            const section = document.getElementById('continue-section');
-            const grid = document.getElementById('continue-grid');
-            if (history.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            grid.innerHTML = history.map(item => `
-                <div class="min-w-[120px] movie-card focusable" onclick="openDetails('${item.id}', '${item.type}')">
-                    <img src="https://image.tmdb.org/t/p/w300${item.poster}">
-                </div>`).join('');
-        }
-
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
         function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-        function setFilter(type, id = '') { 
-            activeType = type; activeID = id; fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open'); 
-            window.scrollTo(0,0); 
-        }
-
+        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
         function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
 
         window.onload = () => { 
             setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
             fetchConfig(); 
-            const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu());
         };
     </script>
 </body>
