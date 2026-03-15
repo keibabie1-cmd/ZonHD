@@ -58,7 +58,7 @@
             <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
             <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
+            <button class="focusable" id="anime-tab" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -101,10 +101,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" 
-                allow="autoplay; fullscreen" 
-                allowfullscreen 
-                referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; fullscreen"></iframe>
     </div>
 
     <script>
@@ -117,7 +114,7 @@
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
                 renderContinueWatching(); fetchContent();
-            } catch (err) { console.error("Config failed", err); }
+            } catch (err) { console.error("Config failed"); }
         }
 
         async function fetchContent(append = false) {
@@ -127,6 +124,7 @@
             
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             
+            // IMMACULATE ANIME LOGIC RESTORED
             if (activeType === 'genre' && activeID === 16) {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
             } else if (activeType === 'genre') {
@@ -158,9 +156,8 @@
             });
         }
 
-        // Infinite Scroll Restored
         window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) { fetchContent(true); }
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) { fetchContent(true); }
         };
 
         async function openDetails(id, type) {
@@ -215,11 +212,11 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // AUTOMATIC AD-SHIELD SOURCE (Embedded-Core)
-            // autoplay=1 starts it instantly; muted=0 unmasks sound immediately.
+            // THE ONE-CLICK PLAYER (SuperEmbed)
+            // Hardcoded parameters to bypass the "Play" ad-trigger and force sound.
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.icu/embed/movie/${id}?autoplay=1&muted=0` : 
-                `https://vidsrc.icu/embed/tv/${id}/${s}/${e}?autoplay=1&muted=0`;
+                `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : 
+                `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${s}&e=${e}`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
@@ -246,8 +243,19 @@
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
         function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
+        
+        // Corrected Menu Logic: Only toggle when explicitly called.
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); toggleMenu(); window.scrollTo(0,0); }
+        
+        function setFilter(type, id = '') { 
+            activeType = type; 
+            activeID = id; 
+            fetchContent(); 
+            // Close menu only if it was actually open.
+            document.getElementById('side-menu').classList.remove('menu-open'); 
+            window.scrollTo(0,0); 
+        }
+
         function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
 
         window.onload = () => { 
