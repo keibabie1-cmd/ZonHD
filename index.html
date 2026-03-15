@@ -101,7 +101,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -199,16 +199,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE ONLY CERTAIN WAY: Vidsrc PRO Engine
+        // THE ULTIMATE SHARK PLAY
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // This specific URL format forces the .pro engine to play immediately
+            // Bypass the ad-wrapper by forcing autoplay on the underlying mirror
             const src = type === 'movie' ? 
-                `https://vidsrc.pro/embed/movie/${id}?autoplay=1` : 
-                `https://vidsrc.pro/embed/tv/${id}/${s}/${e}?autoplay=1`;
+                `https://vidsrc.xyz/embed/movie/${id}?autoplay=1&muted=0` : 
+                `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}?autoplay=1&muted=0`;
 
             iframe.src = src;
             document.getElementById('player-overlay').style.display = 'block';
