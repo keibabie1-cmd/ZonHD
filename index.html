@@ -22,7 +22,6 @@
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
         
-        /* FIRESTICK FOCUS INDICATOR */
         .focusable:focus {
             outline: none;
             border: 3px solid var(--gold) !important;
@@ -32,7 +31,8 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
 
-        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
+        /* FIXED SCROLLING FOR TV */
+        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4500; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -41,7 +41,7 @@
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
         
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
-        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
+        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; background-color: #111; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
         
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
@@ -90,7 +90,7 @@
 
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
-        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
+        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto pb-20">
             <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
@@ -185,8 +185,8 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
+            document.getElementById('selector-overlay').scrollTo(0,0);
             
-            // AUTO FOCUS FOR FIRESTICK
             setTimeout(() => {
                 const primaryBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(primaryBtn) primaryBtn.focus();
@@ -200,7 +200,7 @@
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`; 
-                btn.tabIndex = 0; // ENSURE FIRESTICK CAN TAB TO IT
+                btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
@@ -228,7 +228,9 @@
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            // ADDED SUBTITLE PARAMETER
+            const base = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+            iframe.src = `${base}?ds_lang=en`;
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
@@ -254,25 +256,21 @@
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
-        
-        function closePlayer() { 
-            document.getElementById('luxe-player').src = ""; 
-            document.getElementById('player-overlay').style.display = 'none'; 
-            document.getElementById('close-sel-btn').focus();
-        }
-        
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
-        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); document.activeElement.blur(); } }
+        
+        // TRIGGER SEARCH ON ENTER
+        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
+
         window.onload = () => { setTimeout(() => document.getElementById('loader').remove(), 1000); fetchConfig(); };
 
-        // IMPROVED REMOTE ENGINE FOR FIRESTICK
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable, input')).filter(el => el.offsetParent !== null);
             
             if (e.key === 'Enter' || e.keyCode === 13) {
-                if (current.tagName === 'INPUT') return; // Allow keyboard to handle input
+                if (current.tagName === 'INPUT') return; 
                 if (current && current.classList.contains('focusable')) {
                     e.preventDefault();
                     current.click();
