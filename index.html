@@ -120,7 +120,7 @@
             <div class="flex gap-2">
                 <button onclick="switchServer('vidsrc')" id="btn-vidsrc" class="focusable bg-red-600 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 1</button>
                 <button onclick="switchServer('torrent')" id="btn-torrent" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 2</button>
-                <button onclick="switchServer('anime')" id="btn-anime" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 3 (ANIME)</button>
+                <button onclick="switchServer('anime')" id="btn-anime" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 3 (FIX)</button>
             </div>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
@@ -151,7 +151,6 @@
             if (activeType === 'anime') {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&page=${currentPage}`;
             }
-
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -245,12 +244,7 @@
             const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
             const btns = ['btn-vidsrc', 'btn-torrent', 'btn-anime'];
-            
-            // Reset all buttons
-            btns.forEach(b => {
-                const el = document.getElementById(b);
-                el.classList.replace('bg-red-600', 'bg-black/60');
-            });
+            btns.forEach(b => document.getElementById(b).classList.replace('bg-red-600', 'bg-black/60'));
 
             if (server === 'vidsrc') {
                 iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
@@ -259,8 +253,8 @@
                 iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
                 document.getElementById('btn-torrent').classList.replace('bg-black/60', 'bg-red-600');
             } else {
-                // SERVER 3: High compatibility for Asian content
-                iframe.src = type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
+                // SERVER 3: Updated to Asian-primary scraper (2026 optimized)
+                iframe.src = type === 'movie' ? `https://vidsrc.in/embed/movie/${id}` : `https://vidsrc.in/embed/tv/${id}/${s}/${e}`;
                 document.getElementById('btn-anime').classList.replace('bg-black/60', 'bg-red-600');
             }
         }
@@ -285,12 +279,7 @@
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
                 card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
-                card.innerHTML = `
-                    <div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2">
-                        <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
-                    </div>
-                    <p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p>
-                    <p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
+                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
         }
