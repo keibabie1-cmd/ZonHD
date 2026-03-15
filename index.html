@@ -115,14 +115,18 @@
     </div>
 
     <div id="player-overlay">
-        <button id="close-player-btn" onclick="closePlayer()" class="focusable absolute top-6 left-6 z-[7000] bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+            <div class="flex gap-2">
+                <button onclick="switchServer('vidsrc')" id="btn-vidsrc" class="focusable bg-red-600 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 1</button>
+                <button onclick="switchServer('torrent')" id="btn-torrent" class="focusable bg-black/60 text-white px-3 py-1.5 rounded-md text-[10px] font-bold border border-white/20">SERVER 2</button>
+            </div>
+        </div>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMore = true;
+        let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
             try {
@@ -137,11 +141,7 @@
         async function fetchContent(append = false) {
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
-            if (!append) {
-                currentPage = 1;
-                hasMore = true;
-                document.getElementById('movie-grid').innerHTML = '';
-            }
+            if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
@@ -154,8 +154,7 @@
                     currentPage++;
                     hasMore = currentPage <= data.total_pages;
                 } else { hasMore = false; }
-            } catch (err) { console.error("Fetch failed", err); } 
-            finally { isLoading = false; }
+            } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
         function renderGrid(results) {
@@ -171,11 +170,7 @@
             });
         }
 
-        window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) {
-                fetchContent(true);
-            }
-        });
+        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
@@ -232,16 +227,32 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // START OF APPLIED PLAYER SOURCE LOGIC
+        // --- START OF UPDATED PLAYER LOGIC ---
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
-            const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
+            switchServer('vidsrc'); // Start with default
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
-        // END OF APPLIED PLAYER SOURCE LOGIC
+
+        function switchServer(server) {
+            const { type, id, s, e } = currentMedia;
+            const iframe = document.getElementById('luxe-player');
+            const btn1 = document.getElementById('btn-vidsrc');
+            const btn2 = document.getElementById('btn-torrent');
+            
+            if (server === 'vidsrc') {
+                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+                btn1.classList.replace('bg-black/60', 'bg-red-600');
+                btn2.classList.replace('bg-red-600', 'bg-black/60');
+            } else {
+                iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+                btn2.classList.replace('bg-black/60', 'bg-red-600');
+                btn1.classList.replace('bg-red-600', 'bg-black/60');
+            }
+        }
+        // --- END OF UPDATED PLAYER LOGIC ---
 
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
@@ -268,8 +279,7 @@
                         <img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover">
                     </div>
                     <p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p>
-                    <p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>
-                `;
+                    <p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
         }
@@ -280,12 +290,7 @@
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
             menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) {
-                setTimeout(() => {
-                    const firstNet = document.querySelector('#nav-networks .focusable');
-                    if(firstNet) firstNet.focus();
-                }, 300);
-            }
+            if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#nav-networks .focusable'); if(firstNet) firstNet.focus(); }, 300);
         }
 
         function setFilter(type, id = '') { 
@@ -301,13 +306,7 @@
         function handleSearch(e) { if (e.key === 'Enter') setFilter('search', e.target.value); }
 
         window.onload = () => { 
-            setTimeout(() => { 
-                const loader = document.getElementById('loader');
-                if(loader) {
-                    loader.style.opacity = '0'; 
-                    setTimeout(() => loader.remove(), 500); 
-                }
-            }, 1000);
+            setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
@@ -326,33 +325,22 @@
             }
             if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.classList.contains('focusable')) current.click(); return; }
             let dir = '';
-            if (e.key === 'ArrowUp') dir = 'up';
-            if (e.key === 'ArrowDown') dir = 'down';
-            if (e.key === 'ArrowLeft') dir = 'left';
-            if (e.key === 'ArrowRight') dir = 'right';
+            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
             if (dir) {
                 e.preventDefault();
                 const next = findNext(current, focusables, dir);
-                if (next) {
-                    next.focus();
-                    next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                }
+                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
             }
         });
 
         function findNext(cur, targets, dir) {
             if (!cur || cur === document.body) return targets[0];
-            const r1 = cur.getBoundingClientRect();
-            const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+            const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
             let best = null, min = Infinity;
             targets.forEach(t => {
                 if (t === cur) return;
-                const r2 = t.getBoundingClientRect();
-                const c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return;
-                if (dir === 'down' && c2.y <= c1.y) return;
-                if (dir === 'left' && c2.x >= c1.x) return;
-                if (dir === 'right' && c2.x <= c1.x) return;
+                const r2 = t.getBoundingClientRect(), c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
+                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return; if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
                 const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
                 if (d < min) { min = d; best = t; }
             });
