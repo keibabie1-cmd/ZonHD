@@ -118,11 +118,7 @@
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" 
-                allowfullscreen 
-                allow="autoplay; encrypted-media" 
-                referrerpolicy="no-referrer"
-                sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -237,10 +233,10 @@
             document.getElementById('player-overlay').style.display = 'block';
             const iframe = document.getElementById('luxe-player');
             
-            // Updated to vidsrc.to - more reliable for sandbox mode
+            // Reverted to original Vidsrc.cc source
             iframe.src = type === 'movie' 
-                ? `https://vidsrc.to/embed/movie/${id}` 
-                : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+                ? `https://vidsrc.cc/v2/embed/movie/${id}` 
+                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
 
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
