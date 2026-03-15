@@ -101,7 +101,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -204,10 +204,11 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // Fixed Parameters for One-Click Play & Sound
+            // THE NEW SOURCE (vidsrc.pm) 
+            // This source has NO initial pop-ups and plays instantly unmuted.
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1&muted=0` : 
-                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1&muted=0`;
+                `https://vidsrc.pm/embed/movie/${id}` : 
+                `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
 
             document.getElementById('player-overlay').style.display = 'block';
         }
@@ -237,7 +238,7 @@
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open'); 
+            document.getElementById('side-menu').classList.remove('remove-open'); 
             window.scrollTo(0,0); 
         }
 
