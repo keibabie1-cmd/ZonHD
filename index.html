@@ -31,7 +31,6 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
 
-        /* FIXED SCROLLING FOR TV */
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4500; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
@@ -228,9 +227,8 @@
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            // ADDED SUBTITLE PARAMETER
-            const base = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            iframe.src = `${base}?ds_lang=en`;
+            // Reverted to your original exact logic
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
@@ -260,7 +258,6 @@
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
         
-        // TRIGGER SEARCH ON ENTER
         function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
 
         window.onload = () => { setTimeout(() => document.getElementById('loader').remove(), 1000); fetchConfig(); };
