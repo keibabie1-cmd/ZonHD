@@ -31,7 +31,9 @@
         }
 
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
-        #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
+        /* MODIFIED: Removed blur, set opacity to 1, and kept pointer-events none */
+        #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 1; background-size: cover; background-position: center; pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
@@ -181,7 +183,10 @@
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
             document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            
+            // MODIFIED: Added linear-gradient to ensure text remains readable and swapped blur for high-res clear image
+            document.getElementById('details-backdrop').style.backgroundImage = `linear-gradient(to bottom, rgba(5,5,5,0.6), var(--black)), url(https://image.tmdb.org/t/p/original${data.backdrop_path || data.poster_path})`;
+            
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
