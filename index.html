@@ -27,7 +27,6 @@
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -50,12 +49,10 @@
         <input type="text" id="search-input" class="focusable w-[90%] mx-auto block bg-white/5 border border-gold/20 rounded-full py-2 px-6 my-4 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
         <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
             <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
-            <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
+            <button id="btn-trending" onclick="setFilter('trending')" class="focusable whitespace-nowrap">Trending</button>
+            <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
             <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
             <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-            <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
-            <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
     <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
@@ -150,8 +147,8 @@
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
-            // VIDSRC.PRO - CLEAN, NO-ADS FEEL, WORKING ANIME LIBRARY
-            iframe.src = type === 'movie' ? `https://vidsrc.pro/embed/movie/${id}` : `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
+            // VIDSRC.ICU - THE NEW CLEAN ENGINE (INSTANT PLAY, HIGH ANIME SUCCESS)
+            iframe.src = type === 'movie' ? `https://vidsrc.icu/embed/movie/${id}` : `https://vidsrc.icu/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
         }
 
@@ -175,8 +172,7 @@
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail"></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
             });
         }
