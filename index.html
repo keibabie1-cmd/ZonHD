@@ -79,12 +79,10 @@
                 </div>
             </div>
             <div id="movie-action-area" class="hidden">
-                <button id="play-movie-btn" onclick="startLuxeStream(1)" class="focusable btn-play-red">▶ Play Server 1</button>
-                <button id="play-movie-btn-2" onclick="startLuxeStream(2)" class="focusable bg-zinc-800 text-white font-bold p-3 rounded-lg w-full mt-2 text-xs">Switch to Server 2 (Fix Invalid Source)</button>
+                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Movie</button>
             </div>
             <div id="tv-action-area-top" class="hidden">
-                <button id="main-tv-btn" onclick="playCurrentEpisode(1)" class="focusable btn-play-red">▶ Play S1 E1</button>
-                <button onclick="playCurrentEpisode(2)" class="focusable bg-zinc-800 text-white font-bold p-3 rounded-lg w-full mt-2 text-xs">Switch to Server 2 (Fix Invalid Source)</button>
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button>
             </div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden" tabindex="0">
@@ -100,9 +98,11 @@
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen referrerpolicy="no-referrer"></iframe>
     </div>
+
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
+
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/config');
@@ -111,12 +111,14 @@
                 renderContinueWatching(); fetchContent();
             } catch (err) { console.error("Config load failed", err); }
         }
+
         async function fetchContent(append = false) {
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre' && activeID === 16) {
+                // Constraints: Only JP, CN, KR origin, non-English original language
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
             } else if (activeType === 'genre') {
                 url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
@@ -129,6 +131,7 @@
                 if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
+
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
             results.forEach(m => {
@@ -140,7 +143,9 @@
                 grid.appendChild(card);
             });
         }
+
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
+
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
@@ -158,6 +163,7 @@
             document.getElementById('selector-overlay').style.display = 'block';
             setTimeout(() => { const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(playBtn) playBtn.focus(); }, 300);
         }
+
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
@@ -171,6 +177,7 @@
             });
             if(container.firstChild) container.firstChild.click();
         }
+
         async function loadEpisodes(showId, seasonNum) {
             const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
             const data = await res.json();
@@ -179,26 +186,30 @@
             data.episodes.forEach(e => {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(1); };
+                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="absolute inset-0 flex items-center justify-center bg-black/20 text-white">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                 grid.appendChild(epRow);
             });
         }
-        function playCurrentEpisode(server = 1) { currentMedia.e = 1; startLuxeStream(server); }
-        function startLuxeStream(server = 1) {
+
+        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
+
+        function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const iframe = document.getElementById('luxe-player');
-            if (server === 1) {
-                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            } else {
-                // Secondary server (Much more reliable for Asian Anime/Donghua)
-                iframe.src = type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`;
-            }
+            
+            // Primary Reliable Server for Asian Content (vidsrc.me)
+            // Includes built-in CC/Subtitle toggle in the player bar.
+            iframe.src = type === 'movie' ? 
+                `https://vidsrc.me/embed/movie?tmdb=${id}` : 
+                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`;
+
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
+
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             history = history.filter(item => item.id !== id);
@@ -206,6 +217,7 @@
             localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
             renderContinueWatching();
         }
+
         function renderContinueWatching() {
             const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             const section = document.getElementById('continue-section');
@@ -219,13 +231,16 @@
                 grid.appendChild(card);
             });
         }
+
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
         function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
+        
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
             menu.classList.toggle('menu-open'); 
             if(menu.classList.contains('menu-open')) { setTimeout(() => { const firstNet = document.querySelector('#nav-networks .focusable'); if(firstNet) firstNet.focus(); }, 300); }
         }
+
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
@@ -233,11 +248,14 @@
             if(clickedBtn) clickedBtn.classList.add('active-filter');
             fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0);
         }
+
         function handleSearch(e) { if (e.key === 'Enter' || e.keyCode === 13) { setFilter('search', e.target.value); e.target.blur(); } }
+
         window.onload = () => { 
             setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
             fetchConfig(); const mc = new Hammer(document.body, { touchAction: 'pan-y' }); mc.on("swiperight", () => toggleMenu());
         };
+
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
@@ -256,6 +274,7 @@
                 if (next) { e.preventDefault(); next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
             }
         });
+
         function findNext(cur, targets, dir) {
             if (!cur || cur === document.body) return targets[0];
             const r1 = cur.getBoundingClientRect(); const c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
