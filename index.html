@@ -187,16 +187,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE SHARK SOURCE: vidsrc.pro
-        // This source allows direct playback and bypasses the "initial click" ad layer.
+        // THE FINAL SHARK METHOD: Direct bypass
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
             
-            // vidsrc.pro is much cleaner and supports instant autoplay
+            // This specific source (vidsrc.me) is currently the only one allowing instant play via URL parameter
+            // without needing an initial interaction inside the frame.
             const src = type === 'movie' ? 
-                `https://vidsrc.pro/embed/movie/${id}` : 
-                `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
+                `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1` : 
+                `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}&autoplay=1`;
 
             iframe.src = src;
             document.getElementById('player-overlay').style.display = 'block';
