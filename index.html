@@ -10,23 +10,38 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
+        
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
+
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
-        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); z-index: 50; }
+        
+        .focusable:focus {
+            outline: none;
+            border-color: var(--gold) !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
+            z-index: 50;
+        }
+
         #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
+        
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
+        
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
+
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
@@ -115,7 +130,7 @@
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
                 fetchContent();
-            } catch (err) { console.error("Config failed", err); }
+            } catch (err) { console.error("Config load failed", err); }
         }
 
         async function fetchContent(append = false) {
@@ -126,7 +141,7 @@
             try {
                 let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
                 
-                // STRICT ASIAN CARTOON FILTER
+                // ASIAN CARTOON FILTER FOR ANIME TAB
                 if (activeType === 'genre' && activeID == 16) {
                     url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&sort_by=popularity.desc&page=${currentPage}`;
                 } else if (activeType === 'genre') {
@@ -163,9 +178,7 @@
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            // Determine if it's Asian Anime to use better player
-            const isAnime = data.genres && data.genres.some(g => g.id === 16);
-            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime };
+            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
             
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
@@ -181,16 +194,12 @@
         }
 
         function startLuxeStream() {
-            const { type, id, s, e, title, poster, isAnime } = currentMedia;
+            const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster);
             const iframe = document.getElementById('luxe-player');
             
-            // USE STABLE ANIME SOURCE FOR ANIME TO AVOID 224002 ERROR
-            if (isAnime) {
-                iframe.src = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-            } else {
-                iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            }
+            // USING ORIGINAL PLAYER ONLY
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             
             document.getElementById('player-overlay').style.display = 'block';
         }
