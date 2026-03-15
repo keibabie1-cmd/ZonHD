@@ -199,21 +199,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE SHARK DIRECT PLAY LOGIC
+        // THE ONLY CERTAIN WAY: Vidsrc PRO Engine
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
             
-            // Forced Autoplay Flags
+            // This specific URL format forces the .pro engine to play immediately
             const src = type === 'movie' ? 
-                `https://vidsrc.xyz/embed/movie/${id}?autoplay=1&auto_play=true` : 
-                `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}?autoplay=1&auto_play=true`;
-
-            // Kill all outgoing pop-ups for 3 seconds upon click
-            const blocker = window.open;
-            window.open = function() { return null; };
-            setTimeout(() => { window.open = blocker; }, 3000);
+                `https://vidsrc.pro/embed/movie/${id}?autoplay=1` : 
+                `https://vidsrc.pro/embed/tv/${id}/${s}/${e}?autoplay=1`;
 
             iframe.src = src;
             document.getElementById('player-overlay').style.display = 'block';
