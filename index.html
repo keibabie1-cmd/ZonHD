@@ -101,9 +101,7 @@
         <div class="absolute top-6 left-6 z-[7000] flex gap-2">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" 
-                sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" 
-                allowfullscreen referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -116,23 +114,34 @@
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
                 renderContinueWatching(); fetchContent();
-            } catch (err) { console.error("Config missing"); }
+            } catch (err) { console.error("Config load failed", err); }
         }
 
         async function fetchContent(append = false) {
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
+            
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            
+            // Restored the high-quality Anime filter
+            if (activeType === 'genre' && activeID === 16) {
+                url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|CN|KR&without_original_language=en&sort_by=popularity.desc&page=${currentPage}`;
+            } else if (activeType === 'genre') {
+                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            }
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            
+
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results) { renderGrid(data.results); currentPage++; }
-            } catch (err) { console.error(err); } finally { isLoading = false; }
+                if (data.results && data.results.length > 0) {
+                    renderGrid(data.results);
+                    currentPage++;
+                    hasMore = currentPage <= data.total_pages;
+                } else { hasMore = false; }
+            } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
         function renderGrid(results) {
@@ -146,6 +155,13 @@
                 grid.appendChild(card);
             });
         }
+
+        // Restored Infinite Scrolling
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+                fetchContent(true);
+            }
+        });
 
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
@@ -196,30 +212,42 @@
 
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
+            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster);
             const iframe = document.getElementById('luxe-player');
-            // This source is optimized for cross-platform (Phone/TV) and includes CC.
+            
+            // Restored original vidsrc.me source with optimized parameters
             iframe.src = type === 'movie' ? 
-                `https://vidsrc.pro/embed/movie/${id}` : 
-                `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
+                `https://vidsrc.me/embed/movie?tmdb=${id}` : 
+                `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`;
+
             document.getElementById('player-overlay').style.display = 'block';
         }
 
-        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
-        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
-        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); }
-        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
+        function saveToHistory(id, type, s, e, title, poster) {
+            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            history.unshift({ id, type, s, e, title, poster });
+            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
+            renderContinueWatching();
+        }
 
         function renderContinueWatching() {
             const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            if (history.length === 0) return;
-            document.getElementById('continue-section').classList.remove('hidden');
+            const section = document.getElementById('continue-section');
             const grid = document.getElementById('continue-grid');
+            if (history.length === 0) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
             grid.innerHTML = history.map(item => `
                 <div class="min-w-[120px] movie-card focusable" onclick="openDetails('${item.id}', '${item.type}')">
                     <img src="https://image.tmdb.org/t/p/w300${item.poster}">
                 </div>`).join('');
         }
+
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; fetchContent(); toggleMenu(); window.scrollTo(0,0); }
+        function handleSearch(e) { if (e.key === 'Enter') { setFilter('search', e.target.value); e.target.blur(); } }
 
         window.onload = () => { 
             setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').remove(), 500); }, 1000);
