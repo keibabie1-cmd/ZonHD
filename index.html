@@ -75,7 +75,7 @@
             <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
             <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('anime_tab')" class="whitespace-nowrap">Anime</button>
+            <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -121,6 +121,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
+        
         let currentPage = 1;
         let isLoading = false;
         let hasMore = true;
@@ -146,14 +147,17 @@
             }
 
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            
+            // LOGIC FOR ASIAN CARTOONS (ANIME) ONLY
+            if (activeType === 'genre' && activeID == 16) {
+                // Filters for Japanese (JP), South Korean (KR), and Chinese (ZH) animation
+                url = `https://api.themoviedb.org/3/discover/multi?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|ZH&sort_by=popularity.desc&page=${currentPage}`;
+            } else if (activeType === 'genre') {
+                url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            }
+            
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            
-            // ANIME TAB: Strictly Animation (16) from Asian origins
-            if (activeType === 'anime_tab') {
-                url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&page=${currentPage}&sort_by=popularity.desc`;
-            }
             
             try {
                 const res = await fetch(url);
@@ -247,17 +251,11 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // REVERTED PLAYER LOGIC TO YOUR ORIGINAL STRUCTURE
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
-            
-            // Back to your original provider for maximum reliability across all tabs
-            iframe.src = type === 'movie' 
-                ? `https://vidsrc.cc/v2/embed/movie/${id}` 
-                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
-            
+            iframe.src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
@@ -310,7 +308,7 @@
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            const clickedBtn = event ? event.target : null;
+            const clickedBtn = event ? (event.target.closest('button') || event.target) : null;
             if(clickedBtn && clickedBtn.tagName === 'BUTTON') clickedBtn.classList.add('active-filter');
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
