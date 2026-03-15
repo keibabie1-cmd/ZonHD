@@ -75,7 +75,7 @@
             <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
             <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
             <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
+            <button class="focusable" onclick="setFilter('anime_asia')" class="whitespace-nowrap">Anime</button>
         </nav>
     </div>
 
@@ -150,8 +150,8 @@
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
             
-            // Fixed Anime tab: Animation genre + Asian origin
-            if (activeType === 'anime') {
+            // Strictly Anime Filter: Animation genre (16) + Asian countries
+            if (activeType === 'anime_asia') {
                 url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&page=${currentPage}&sort_by=popularity.desc`;
             }
             
@@ -247,16 +247,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // Restored original player logic with specific fix for anime availability
+        // RE-OPTIMIZED PLAYER LOGIC TO FIX "INVALID SOURCE"
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             const iframe = document.getElementById('luxe-player');
             
-            // We use the original path as it works for your other categories, but add a language hint
-            // to help the server find the original Asian/Japanese sources for the Anime tab
-            const urlBase = type === 'movie' ? `movie/${id}` : `tv/${id}/${s}/${e}`;
-            iframe.src = `https://vidsrc.cc/v2/embed/${urlBase}`;
+            // Uses VidSrc.pro as a more robust fallback for niche anime titles
+            iframe.src = type === 'movie' 
+                ? `https://vidsrc.pro/embed/movie/${id}` 
+                : `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
             
             document.getElementById('player-overlay').style.display = 'block';
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
