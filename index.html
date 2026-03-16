@@ -43,6 +43,9 @@
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        .server-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.2); color: #888; padding: 6px 12px; border-radius: 4px; font-size: 10px; font-weight: bold; transition: 0.3s; }
+        .server-btn:focus, .server-btn.active { background: var(--gold); color: black; border-color: white; }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
@@ -116,13 +119,18 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
+            <div id="server-list" class="flex gap-2">
+                <button class="server-btn focusable active" onclick="switchServer('vidsrc')">Server 1 (CC)</button>
+                <button class="server-btn focusable" onclick="switchServer('godrive')">Server 2 (GD)</button>
+                <button class="server-btn focusable" onclick="switchServer('embedsu')">Server 3 (SU)</button>
+            </div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
+        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {}, currentServer = 'vidsrc';
         let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
@@ -231,15 +239,31 @@
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            const iframe = document.getElementById('luxe-player');
-            
-            // Using Vidsrc.to for pop-up free, direct streaming optimized for TV
-            const baseUrl = 'https://vidsrc.to/embed';
-            iframe.src = type === 'movie' 
-                ? `${baseUrl}/movie/${id}?autoplay=1` 
-                : `${baseUrl}/tv/${id}/${s}/${e}?autoplay=1`;
-
+            updateIframeSrc();
             setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
+        }
+
+        function switchServer(server) {
+            currentServer = server;
+            document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            updateIframeSrc();
+        }
+
+        function updateIframeSrc() {
+            const { type, id, s, e } = currentMedia;
+            const iframe = document.getElementById('luxe-player');
+            let src = '';
+            
+            if (currentServer === 'vidsrc') {
+                src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
+            } else if (currentServer === 'godrive') {
+                src = type === 'movie' ? `https://godriveplayer.com/embed/movie/${id}?autoplay=1` : `https://godriveplayer.com/embed/tv/${id}/${s}/${e}?autoplay=1`;
+            } else if (currentServer === 'embedsu') {
+                src = type === 'movie' ? `https://embed.su/embed/movie/${id}?autoplay=1` : `https://embed.su/embed/tv/${id}/${s}/${e}?autoplay=1`;
+            }
+            
+            iframe.src = src;
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -268,7 +292,12 @@
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
-        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
+        function closePlayer() { 
+            const player = document.getElementById('luxe-player');
+            player.src = ""; // Flush buffer
+            document.getElementById('player-overlay').style.display = 'none'; 
+            document.getElementById('close-sel-btn').focus(); 
+        }
         
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
