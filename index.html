@@ -43,9 +43,6 @@
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        .server-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.2); color: #888; padding: 6px 12px; border-radius: 4px; font-size: 10px; font-weight: bold; transition: 0.3s; }
-        .server-btn:focus, .server-btn.active { background: var(--gold); color: black; border-color: white; }
-
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
     </style>
@@ -54,6 +51,12 @@
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
+        <h2 class="text-gold font-bold mb-4 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Luxe Vaults</h2>
+        <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '24|463|380')">African American Vault</button>
+            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
+        </div>
+
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
         <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
@@ -118,19 +121,14 @@
     </div>
 
     <div id="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div id="server-list" class="flex gap-2">
-                <button class="server-btn focusable active" onclick="switchServer('vidsrc')">Server 1 (CC)</button>
-                <button class="server-btn focusable" onclick="switchServer('godrive')">Server 2 (GD)</button>
-                <button class="server-btn focusable" onclick="switchServer('embedsu')">Server 3 (SU)</button>
-            </div>
+        <div class="absolute top-6 left-6 right-6 flex justify-end items-center z-[7000]">
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {}, currentServer = 'vidsrc';
+        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
 
         async function fetchConfig() {
@@ -239,31 +237,11 @@
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            updateIframeSrc();
-            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
-        }
-
-        function switchServer(server) {
-            currentServer = server;
-            document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            updateIframeSrc();
-        }
-
-        function updateIframeSrc() {
-            const { type, id, s, e } = currentMedia;
             const iframe = document.getElementById('luxe-player');
-            let src = '';
-            
-            if (currentServer === 'vidsrc') {
-                src = type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
-            } else if (currentServer === 'godrive') {
-                src = type === 'movie' ? `https://godriveplayer.com/embed/movie/${id}?autoplay=1` : `https://godriveplayer.com/embed/tv/${id}/${s}/${e}?autoplay=1`;
-            } else if (currentServer === 'embedsu') {
-                src = type === 'movie' ? `https://embed.su/embed/movie/${id}?autoplay=1` : `https://embed.su/embed/tv/${id}/${s}/${e}?autoplay=1`;
-            }
-            
-            iframe.src = src;
+            iframe.src = type === 'movie' 
+                ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` 
+                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
+            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -293,8 +271,7 @@
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
         function closePlayer() { 
-            const player = document.getElementById('luxe-player');
-            player.src = ""; // Flush buffer
+            document.getElementById('luxe-player').src = "";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
         }
@@ -302,7 +279,7 @@
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
             menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#nav-networks .focusable'); if(firstNet) firstNet.focus(); }, 300);
+            if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#side-menu .focusable'); if(firstNet) firstNet.focus(); }, 300);
         }
 
         function setFilter(type, id = '') { 
