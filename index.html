@@ -121,15 +121,17 @@
     </div>
 
     <div id="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-end items-center z-[7000]">
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
+            <button id="switch-server-btn" onclick="toggleServer()" class="focusable bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Server 1</button>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
+        let currentServer = 1; // 1: Vidsrc.me, 2: Vidsrc.cc
 
         async function fetchConfig() {
             try {
@@ -233,15 +235,41 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
+        function toggleServer() {
+            currentServer = currentServer === 1 ? 2 : 1;
+            document.getElementById('switch-server-btn').innerText = `Server ${currentServer}`;
+            startLuxeStream();
+        }
+
         function startLuxeStream() {
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
-            document.getElementById('player-overlay').style.display = 'block';
+            
+            const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            iframe.src = type === 'movie' 
-                ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` 
-                : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
-            setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
+            
+            playerOverlay.style.display = 'block';
+            
+            // Optimization for Firestick: Reset src to flush memory before loading new stream
+            iframe.src = "about:blank"; 
+            
+            let streamUrl = "";
+            if (currentServer === 1) {
+                // High-bandwidth CDN Mirror
+                streamUrl = type === 'movie' 
+                    ? `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1` 
+                    : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1`;
+            } else {
+                // Legacy Reliability Mirror
+                streamUrl = type === 'movie' 
+                    ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` 
+                    : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
+            }
+
+            setTimeout(() => {
+                iframe.src = streamUrl;
+                setTimeout(() => document.getElementById('close-player-btn').focus(), 500);
+            }, 100);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -271,7 +299,7 @@
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('btn-trending').focus(); }
         function closePlayer() { 
-            document.getElementById('luxe-player').src = "";
+            document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
         }
