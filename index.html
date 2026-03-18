@@ -20,7 +20,7 @@
 
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; position: relative; }
         
         .focusable:focus {
             outline: none;
@@ -45,6 +45,8 @@
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
+        
+        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -105,7 +107,7 @@
                     <div class="flex items-center gap-3">
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
-                        <span class="tv-tag">TV</span>
+                        <span id="media-type-tag" class="tv-tag">TV</span>
                     </div>
                 </div>
             </div>
@@ -131,7 +133,7 @@
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
-        let currentServer = 1; // 1: Vidsrc.me, 2: Vidsrc.cc
+        let currentServer = 1; 
 
         async function fetchConfig() {
             try {
@@ -147,13 +149,20 @@
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
+            
+            // ANILIST LOGIC FOR ALL ASIAN ANIMATION
+            if (activeType === 'anime') {
+                await fetchAniList(append);
+                isLoading = false;
+                return;
+            }
+
+            // STANDARD TMDB LOGIC
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            if (activeType === 'anime') {
-                url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=16&with_origin_country=JP|KR|CN&page=${currentPage}`;
-            }
+
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -163,6 +172,48 @@
                     hasMore = currentPage <= data.total_pages;
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+        }
+
+        async function fetchAniList(append) {
+            const query = `
+            query ($page: Int) {
+              Page(page: $page, perPage: 20) {
+                pageInfo { hasNextPage }
+                media(type: ANIME, sort: TRENDING_DESC) {
+                  id
+                  title { english romaji native }
+                  coverImage { extraLarge }
+                  countryOfOrigin
+                  averageScore
+                }
+              }
+            }`;
+            
+            try {
+                const response = await fetch('https://graphql.anilist.co', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, variables: { page: currentPage } })
+                });
+                const json = await response.json();
+                const results = json.data.Page.media;
+                
+                const grid = document.getElementById('movie-grid');
+                results.forEach(m => {
+                    const card = document.createElement('div');
+                    card.className = "movie-card focusable";
+                    card.tabIndex = 0;
+                    const searchTitle = m.title.english || m.title.romaji;
+                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
+                    card.innerHTML = `
+                        <img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover">
+                        <div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
+                    grid.appendChild(card);
+                });
+                
+                currentPage++;
+                hasMore = json.data.Page.pageInfo.hasNextPage;
+            } catch (err) { console.error("AniList Error", err); }
         }
 
         function renderGrid(results) {
@@ -178,21 +229,35 @@
             });
         }
 
-        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
+        async function openDetails(id, type, isAniList = false, searchTitle = '') {
+            let finalId = id;
 
-        async function openDetails(id, type) {
-            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
+            // Mapping AniList result to TMDb ID so the player works
+            if (isAniList) {
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
+                const searchData = await searchRes.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    finalId = searchData.results[0].id;
+                    type = searchData.results[0].media_type || 'tv';
+                }
+            }
+
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
+            
+            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
             document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerText = data.overview;
+            document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average.toFixed(1)}`;
-            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
+            document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
             document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            document.getElementById('media-type-tag').innerText = type.toUpperCase();
+            
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
+            
             if (type === 'tv') renderSeasons(data);
             document.getElementById('selector-overlay').style.display = 'block';
             setTimeout(() => {
@@ -204,6 +269,7 @@
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
+            if(!data.seasons) return;
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
@@ -221,15 +287,17 @@
             const data = await res.json();
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
-            data.episodes.forEach(e => {
-                const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable";
-                epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
-                grid.appendChild(epRow);
-            });
+            if(data.episodes) {
+                data.episodes.forEach(e => {
+                    const epRow = document.createElement('div');
+                    epRow.className = "episode-row focusable";
+                    epRow.tabIndex = 0;
+                    epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                    const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
+                    grid.appendChild(epRow);
+                });
+            }
             document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
         }
 
@@ -242,29 +310,16 @@
         }
 
         function startLuxeStream() {
-            const { type, id, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster); 
-            
+            const { type, id, s, e } = currentMedia;
+            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            
             playerOverlay.style.display = 'block';
-            
-            // Optimization for Firestick: Reset src to flush memory before loading new stream
             iframe.src = "about:blank"; 
             
-            let streamUrl = "";
-            if (currentServer === 1) {
-                // High-bandwidth CDN Mirror
-                streamUrl = type === 'movie' 
-                    ? `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1` 
-                    : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1`;
-            } else {
-                // Legacy Reliability Mirror
-                streamUrl = type === 'movie' 
-                    ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` 
-                    : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`;
-            }
+            let streamUrl = (currentServer === 1)
+                ? (type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}&autoplay=1` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}&autoplay=1`)
+                : (type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`);
 
             setTimeout(() => {
                 iframe.src = streamUrl;
@@ -313,8 +368,7 @@
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            const clickedBtn = event ? event.target : null;
-            if(clickedBtn && clickedBtn.tagName === 'BUTTON') clickedBtn.classList.add('active-filter');
+            if (event && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
@@ -329,10 +383,11 @@
             mc.on("swiperight", () => toggleMenu());
         };
 
+        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
+
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'ContextMenu' || e.keyCode === 224 || e.keyCode === 462) { e.preventDefault(); toggleMenu(); return; }
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
