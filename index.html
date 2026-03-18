@@ -150,14 +150,12 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            // ANILIST LOGIC FOR ALL ASIAN ANIMATION
             if (activeType === 'anime') {
                 await fetchAniList(append);
                 isLoading = false;
                 return;
             }
 
-            // STANDARD TMDB LOGIC
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
@@ -179,12 +177,11 @@
             query ($page: Int) {
               Page(page: $page, perPage: 20) {
                 pageInfo { hasNextPage }
-                media(type: ANIME, sort: TRENDING_DESC) {
+                media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC]) {
                   id
                   title { english romaji native }
                   coverImage { extraLarge }
                   countryOfOrigin
-                  averageScore
                 }
               }
             }`;
@@ -203,7 +200,8 @@
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    const searchTitle = m.title.english || m.title.romaji;
+                    // Support for raw native titles (Non-Americanized)
+                    const searchTitle = m.title.english || m.title.romaji || m.title.native;
                     card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
                     card.innerHTML = `
                         <img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover">
@@ -232,7 +230,6 @@
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             let finalId = id;
 
-            // Mapping AniList result to TMDb ID so the player works
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const searchData = await searchRes.json();
