@@ -30,7 +30,7 @@
             z-index: 50;
         }
 
-        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; }
+        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; scroll-behavior: smooth; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -47,6 +47,19 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* TV & LARGE SCREEN OPTIMIZATION */
+        @media screen and (min-width: 1024px) {
+            .hero-banner { height: 40vh; }
+            #selector-overlay .max-w-4xl { 
+                max-width: 90%; 
+                padding-left: 5%; 
+                padding-right: 5%;
+                padding-bottom: 150px; /* Overscan protection */
+            }
+            #details-poster { width: 220px; }
+            .episode-row { padding: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -236,10 +249,17 @@
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
-            document.getElementById('selector-overlay').style.display = 'block';
+            
+            const overlay = document.getElementById('selector-overlay');
+            overlay.style.display = 'block';
+            overlay.scrollTop = 0; // Reset scroll for new selection
+
             setTimeout(() => {
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) playBtn.focus();
+                if(playBtn) {
+                    playBtn.focus();
+                    playBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }, 300);
         }
 
@@ -280,7 +300,6 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // START LUXE STREAM: THE ULTIMATE "RACE" LOGIC
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -289,39 +308,20 @@
             playerOverlay.style.display = 'block';
             iframe.src = "about:blank"; 
 
-            // Primary Global Source (vidsrc.cc)
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}?autoplay=1` : `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}?autoplay=1`);
-            
-            // Secondary Anime Source (Consumet Instance)
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
-            // AUTOMATIC DECISION LOGIC
             if (isAnime) {
-                // For Anime, we try to ping the specialized Asian source first
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout for the "race"
-                    
+                    const timeoutId = setTimeout(() => controller.abort(), 1500);
                     const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
                     clearTimeout(timeoutId);
+                    if (response.ok) { iframe.src = consumetUrl; } else { iframe.src = vidsrcUrl; }
+                } catch (err) { iframe.src = vidsrcUrl; }
+            } else { iframe.src = vidsrcUrl; }
 
-                    if (response.ok) {
-                        iframe.src = consumetUrl;
-                    } else {
-                        iframe.src = vidsrcUrl;
-                    }
-                } catch (err) {
-                    // Fallback to VidSrc instantly if Consumet is slow or down
-                    iframe.src = vidsrcUrl;
-                }
-            } else {
-                // For all other Movies/TV, use VidSrc directly
-                iframe.src = vidsrcUrl;
-            }
-
-            setTimeout(() => {
-                if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus();
-            }, 500);
+            setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 500);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -400,14 +400,8 @@
             }
 
             if (e.key === 'Enter' || e.keyCode === 13) { 
-                if (current && current.id === 'search-input') {
-                    triggerSearch();
-                    return;
-                }
-                if (current && current.classList.contains('focusable')) {
-                    current.click(); 
-                    return;
-                }
+                if (current && current.id === 'search-input') { triggerSearch(); return; }
+                if (current && current.classList.contains('focusable')) { current.click(); return; }
             }
 
             let dir = '';
