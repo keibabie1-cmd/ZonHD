@@ -10,8 +10,7 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
-        body.modal-open { overflow: hidden; } /* Prevents double scrolling */
-
+        
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
@@ -31,15 +30,8 @@
             z-index: 50;
         }
 
-        /* RE-ENGINEERED OVERLAY FOR TV COMPATIBILITY */
-        #selector-overlay { 
-            display: none; 
-            position: absolute; /* Changed from Fixed to Absolute to allow page-level scrolling */
-            top: 0; left: 0; width: 100%; min-height: 100vh;
-            background: #000; 
-            z-index: 4000; 
-            padding-bottom: 100px;
-        }
+        /* STRUCTURAL FIX: Integrated detail view instead of a fixed overlay */
+        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -56,11 +48,6 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
-
-        @media screen and (min-width: 1024px) {
-            .hero-banner { height: 40vh; }
-            .episode-row { padding: 20px; }
-        }
     </style>
 </head>
 <body>
@@ -86,30 +73,32 @@
         </div>
     </div>
 
-    <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
+    <div id="main-app-wrapper">
+        <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
-    <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-        <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-            <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
-            <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
+        <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
+            <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
+                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+                <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
+            </div>
+            <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
+                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
+                <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
+                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
+                <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+                <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
+            </nav>
         </div>
-        <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
-            <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
-            <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-            <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-            <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-            <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
-            <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-            <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
-        </nav>
+
+        <section id="continue-section" class="hidden px-4 pt-6">
+            <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
+            <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
+        </section>
+
+        <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
-
-    <section id="continue-section" class="hidden px-4 pt-6">
-        <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
-        <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
-    </section>
-
-    <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
 
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
@@ -251,19 +240,15 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             
-            // TV LOCK: Lock body scroll to make remote work on overlay
-            document.body.classList.add('modal-open');
-            window.scrollTo(0,0); 
-
+            // TV NATIVE FIX: Hide main grid, show details as page
+            document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
+            window.scrollTo(0, 0);
 
             setTimeout(() => {
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) {
-                    playBtn.focus();
-                    playBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 500);
+                if(playBtn) playBtn.focus();
+            }, 300);
         }
 
         function renderSeasons(data) {
@@ -317,7 +302,7 @@
             if (isAnime) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500);
+                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
                     const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
                     clearTimeout(timeoutId);
                     if (response.ok) { iframe.src = consumetUrl; } else { iframe.src = vidsrcUrl; }
@@ -354,7 +339,7 @@
 
         function closeSelector() { 
             document.getElementById('selector-overlay').style.display = 'none'; 
-            document.body.classList.remove('modal-open');
+            document.getElementById('main-app-wrapper').style.display = 'block';
             document.getElementById('btn-trending').focus(); 
         }
 
@@ -417,10 +402,7 @@
             if (dir) {
                 e.preventDefault();
                 const next = findNext(current, focusables, dir);
-                if (next) { 
-                    next.focus(); 
-                    next.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                }
+                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             }
         });
 
