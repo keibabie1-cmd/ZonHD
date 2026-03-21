@@ -30,7 +30,16 @@
             z-index: 50;
         }
 
-        #selector-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow-y: auto; scroll-behavior: smooth; }
+        /* FIXED SELECTOR OVERLAY FOR TV */
+        #selector-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: #000; 
+            z-index: 4000; 
+            overflow-y: scroll; /* Force scroll capability */
+            -webkit-overflow-scrolling: touch;
+        }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 100%; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -48,17 +57,11 @@
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
 
-        /* TV & LARGE SCREEN OPTIMIZATION */
+        /* TV ENHANCEMENTS: PREVENTS THE "CUT OFF" */
         @media screen and (min-width: 1024px) {
-            .hero-banner { height: 40vh; }
-            #selector-overlay .max-w-4xl { 
-                max-width: 90%; 
-                padding-left: 5%; 
-                padding-right: 5%;
-                padding-bottom: 150px; /* Overscan protection */
-            }
-            #details-poster { width: 220px; }
-            .episode-row { padding: 20px; }
+            .hero-banner { height: 35vh; }
+            #selector-overlay .max-w-4xl { padding-bottom: 200px !important; } /* Huge bottom padding to ensure scroll */
+            #show-desc { max-height: 80px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
         }
     </style>
 </head>
@@ -250,17 +253,16 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             
-            const overlay = document.getElementById('selector-overlay');
-            overlay.style.display = 'block';
-            overlay.scrollTop = 0; // Reset scroll for new selection
+            document.getElementById('selector-overlay').style.display = 'block';
+            document.getElementById('selector-overlay').scrollTop = 0;
 
             setTimeout(() => {
-                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) {
-                    playBtn.focus();
-                    playBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const focusTarget = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
+                if(focusTarget) {
+                    focusTarget.focus();
+                    focusTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-            }, 300);
+            }, 500);
         }
 
         function renderSeasons(data) {
@@ -273,7 +275,10 @@
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`;
                 btn.tabIndex = 0;
-                btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    loadEpisodes(data.id, s.season_number);
+                };
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
@@ -409,7 +414,16 @@
             if (dir) {
                 e.preventDefault();
                 const next = findNext(current, focusables, dir);
-                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); }
+                if (next) { 
+                    next.focus(); 
+                    // CRITICAL FIX: Smooth scroll specifically for the overlay container
+                    const overlay = document.getElementById('selector-overlay');
+                    if (overlay.style.display === 'block') {
+                        next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             }
         });
 
