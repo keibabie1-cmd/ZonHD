@@ -30,7 +30,6 @@
             z-index: 50;
         }
 
-        /* STRUCTURAL FIX: Integrated detail view instead of a fixed overlay */
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
@@ -78,7 +77,12 @@
 
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+                <input type="search" id="search-input" 
+                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
+                       placeholder="Search Master Library..." 
+                       enterkeyhint="search"
+                       onsearch="triggerSearch()"
+                       onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -240,7 +244,6 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             
-            // TV NATIVE FIX: Hide main grid, show details as page
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
@@ -358,15 +361,25 @@
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            if (event && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
+            if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
         }
 
+        // IMPROVED TRIGGER SEARCH FOR FIRESTICK
         function triggerSearch() {
-            const query = document.getElementById('search-input').value;
-            if(query) setFilter('search', query);
+            const input = document.getElementById('search-input');
+            const query = input.value;
+            if(query) {
+                setFilter('search', query);
+                input.blur(); // Dismisses keyboard on TV
+                setTimeout(() => {
+                    // Force focus to the first item in the grid after search
+                    const firstResult = document.querySelector('#movie-grid .focusable');
+                    if(firstResult) firstResult.focus();
+                }, 800);
+            }
         }
 
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
