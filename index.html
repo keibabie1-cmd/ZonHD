@@ -234,7 +234,6 @@
                     const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
                     data = await res.json();
                 } else if (aniListData) {
-                    // Logic fix: Explicitly flag as Niche when TMDB doesn't have it
                     isNiche = true;
                     data = {
                         name: aniListData.title.english || aniListData.title.romaji,
@@ -252,6 +251,10 @@
 
             if (!data) return;
 
+            // DETECT ANIME CATEGORY: If metadata is Anime, we flag it here
+            const genreAnime = (data.genres && data.genres.some(g => g.id === 16));
+            const originJP = (data.origin_country && data.origin_country.includes('JP'));
+
             currentMedia = { 
                 id: finalId, 
                 type, 
@@ -259,8 +262,8 @@
                 e: 1, 
                 title: data.name || data.title, 
                 poster: data.poster_path, 
-                isAnime: (isAniList || activeType === 'anime'),
-                isNiche: isNiche // Crucial for direct player selection
+                isAnime: (isAniList || activeType === 'anime' || genreAnime || originJP),
+                isNiche: isNiche
             };
 
             document.getElementById('show-title').innerText = currentMedia.title;
@@ -311,13 +314,12 @@
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
             
-            // Logic fix: Don't call TMDB if we are dealing with a niche title
             if (currentMedia.isNiche) {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = 1; currentMedia.e = 1; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Direct Anime Server Link.</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Primary Anime Stream.</div></div>`;
                 grid.appendChild(epRow);
                 document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
                 return;
@@ -351,31 +353,21 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, isNiche, title } = currentMedia;
+            const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-            const animeServerUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
-
             iframe.src = "about:blank"; 
             
-            // Logic fix: If explicitly niche, jump straight to the anime server, bypassing vidsrc entirely
-            if (isNiche) {
-                iframe.src = animeServerUrl;
-            } else if (isAnime) {
-                // For TMDB-known anime, try anime server first, fallback to vidsrc
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
-                    const response = await fetch(animeServerUrl, { method: 'HEAD', signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    iframe.src = response.ok ? animeServerUrl : vidsrcUrl;
-                } catch (err) { iframe.src = vidsrcUrl; }
+            // FORCED LOGIC: If it's flagged as Anime, use ONLY the Anime server. 
+            // We use vidplus.to which handles AniList and TMDB anime content natively without redirects.
+            if (isAnime) {
+                iframe.src = `https://player.vidplus.to/embed/anime/${id}/${e}`;
             } else {
-                iframe.src = vidsrcUrl;
+                // Non-anime content stays on vidsrc
+                iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
 
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
