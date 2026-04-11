@@ -88,11 +88,11 @@
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-                <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
-                <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-                <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
+                <button class="focusable" onclick="setFilter('genre', 27)">Horror</button>
+                <button class="focusable" onclick="setFilter('genre', 28)">Action</button>
+                <button class="focusable" onclick="setFilter('genre', 53)">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
+                <button class="focusable" onclick="setFilter('anime')">Anime</button>
             </nav>
         </div>
 
@@ -197,7 +197,6 @@
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
                     const searchTitle = m.title.english || m.title.romaji;
-                    // Pass the full Anilist data object as a 5th argument to handle non-TMDB titles
                     card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
@@ -223,6 +222,7 @@
         async function openDetails(id, type, isAniList = false, searchTitle = '', aniListData = null) {
             let finalId = id;
             let data = null;
+            let isNiche = false;
 
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
@@ -234,14 +234,15 @@
                     const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
                     data = await res.json();
                 } else if (aniListData) {
-                    // FALLBACK: Use Anilist data directly if TMDB has no record
+                    // TMDB FAIL Logic: Treat as Niche for direct Anime server playback
+                    isNiche = true;
                     data = {
                         name: aniListData.title.english || aniListData.title.romaji,
                         overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Niche Anime Title.",
                         poster_path: aniListData.coverImage.extraLarge,
                         vote_average: aniListData.averageScore / 10,
                         backdrop_path: aniListData.coverImage.extraLarge,
-                        seasons: [{season_number: 1}] // Default for niche anime
+                        seasons: [{season_number: 1}]
                     };
                 }
             } else {
@@ -251,13 +252,22 @@
 
             if (!data) return;
 
-            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
+            currentMedia = { 
+                id: finalId, 
+                type, 
+                s: 1, 
+                e: 1, 
+                title: data.name || data.title, 
+                poster: data.poster_path, 
+                isAnime: (isAniList || activeType === 'anime'),
+                isNiche: isNiche
+            };
+
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || 'N/A').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             
-            // Poster logic for both TMDB and direct Anilist URLs
             const posterUrl = data.poster_path.startsWith('http') ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             document.getElementById('details-poster').src = data.poster_path ? posterUrl : 'IMG_8035.jpeg';
             
@@ -301,6 +311,17 @@
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
             
+            if (currentMedia.isNiche) {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable";
+                epRow.tabIndex = 0;
+                epRow.onclick = () => { currentMedia.s = 1; currentMedia.e = 1; startLuxeStream(); };
+                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Direct Stream (AniList Match)</div></div>`;
+                grid.appendChild(epRow);
+                document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
+                return;
+            }
+
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
                 const data = await res.json();
@@ -316,7 +337,6 @@
                     });
                 }
             } catch (e) {
-                // For non-TMDB anime, show a default Episode 1 row
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
@@ -330,18 +350,22 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
+            const { type, id, s, e, isAnime, isNiche, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // Your loved player bridge (vidsrc.pm)
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
-            if (isAnime) {
+            
+            if (isNiche) {
+                // Direct jump to anime server for niche non-TMDB titles
+                iframe.src = consumetUrl;
+            } else if (isAnime) {
+                // Smart Check for TMDB anime
                 try {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 1500); 
@@ -349,7 +373,9 @@
                     clearTimeout(timeoutId);
                     iframe.src = response.ok ? consumetUrl : vidsrcUrl;
                 } catch (err) { iframe.src = vidsrcUrl; }
-            } else { iframe.src = vidsrcUrl; }
+            } else {
+                iframe.src = vidsrcUrl;
+            }
 
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
