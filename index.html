@@ -10,29 +10,43 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
+        
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
+
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; position: relative; }
-        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); z-index: 50; }
+        
+        .focusable:focus {
+            outline: none;
+            border-color: var(--gold) !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
+            z-index: 50;
+        }
+
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
+        
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
+        
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
-        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
 
-        /* PLAYER OVERLAYS */
-        .player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 9000; }
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
+        
+        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -44,6 +58,7 @@
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '24|463|380')">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
         </div>
+
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
         <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
@@ -59,9 +74,15 @@
 
     <div id="main-app-wrapper">
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
+
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="if(event.key==='Enter')triggerSearch()">
+                <input type="search" id="search-input" 
+                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
+                       placeholder="Search Master Library..." 
+                       enterkeyhint="search"
+                       onsearch="triggerSearch()"
+                       onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -74,10 +95,12 @@
                 <button class="focusable whitespace-nowrap" onclick="setFilter('anime')">Anime</button>
             </nav>
         </div>
+
         <section id="continue-section" class="hidden px-4 pt-6">
             <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
             <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
         </section>
+
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
 
@@ -98,9 +121,8 @@
                     </div>
                 </div>
             </div>
-            
-            <div id="player-trigger-area">
-                <button id="master-play-btn" onclick="masterPlayerRouter()" class="focusable btn-play-red">▶ Play Now</button>
+            <div id="play-container">
+                <button id="master-play-btn" onclick="triggerSmartPlayer()" class="focusable btn-play-red">▶ Play Now</button>
             </div>
             
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -112,20 +134,12 @@
         </div>
     </div>
 
-    <div id="cinema-player" class="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[9999]">
-            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-            <button onclick="stopCinema()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+    <div id="player-overlay">
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
+            <div id="player-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="cinema-iframe" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;"></iframe>
-    </div>
-
-    <div id="anime-player" class="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[9999]">
-            <div class="bg-red-900/40 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Anime Luxe Player</div>
-            <button onclick="stopAnime()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-        </div>
-        <iframe id="anime-iframe" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -139,7 +153,7 @@
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
                 fetchContent();
-            } catch (err) { console.error("Config fail", err); }
+            } catch (err) { console.error("Config failed", err); }
         }
 
         async function fetchContent(append = false) {
@@ -167,7 +181,8 @@
                 results.forEach(m => {
                     const card = document.createElement('div');
                     card.className = "movie-card focusable"; card.tabIndex = 0;
-                    card.onclick = () => openDetails(m.id, 'tv', true, m.title.english || m.title.romaji, m);
+                    const searchTitle = m.title.english || m.title.romaji;
+                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     document.getElementById('movie-grid').appendChild(card);
                 });
@@ -187,9 +202,9 @@
         }
 
         async function openDetails(id, type, isAni = false, title = '', aniObj = null) {
-            let metaId = id; let data = null; let anilistMapping = null;
+            let metaId = id; let data = null; let anilistId = null;
             if (isAni) {
-                anilistMapping = id;
+                anilistId = id;
                 const sRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
                 const sData = await sRes.json();
                 if (sData.results && sData.results.length > 0) {
@@ -200,18 +215,17 @@
                 }
             } else {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`); data = await res.json();
-                // FUNDAMENTAL CHANGE: Background Translate TMDB -> Anilist for Anime titles
+                // Check if this TMDB entry is an Anime to fetch its Anilist mapping
                 if (data.genres && data.genres.some(g => g.id === 16)) {
                     try {
-                        const mapRes = await fetch(`https://api.malsync.moe/mal/anime/tmdb:${id}`);
-                        const mapData = await mapRes.json();
-                        if (mapData && mapData.anilistId) anilistMapping = mapData.anilistId;
-                    } catch (e) { console.log("Mapping bridge silent"); }
+                        const map = await fetch(`https://api.malsync.moe/mal/anime/tmdb:${id}`).then(r => r.json());
+                        if (map && map.anilistId) anilistId = map.anilistId;
+                    } catch (e) {}
                 }
             }
             if (!data) return;
 
-            currentMedia = { id: metaId, aId: anilistMapping, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
+            currentMedia = { id: metaId, aId: anilistId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path };
             
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
@@ -250,7 +264,7 @@
             if(data.episodes) {
                 data.episodes.forEach(e => {
                     const row = document.createElement('div'); row.className = "episode-row focusable"; row.tabIndex = 0;
-                    row.onclick = () => { currentMedia.s = sn; currentMedia.e = e.episode_number; masterPlayerRouter(); };
+                    row.onclick = () => { currentMedia.s = sn; currentMedia.e = e.episode_number; triggerSmartPlayer(); };
                     const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                     row.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                     grid.appendChild(row);
@@ -258,24 +272,39 @@
             }
         }
 
-        /* MASTER BRAIN: DECIDES WHICH ROOM TO OPEN */
-        function masterPlayerRouter() {
-            const { id, aId, type, s, e, title, poster } = currentMedia;
-            saveToHistory(id, type, s, e, title, poster);
-
-            if (aId) {
-                // RUN ANIME ENGINE
-                document.getElementById('anime-player').style.display = 'block';
-                document.getElementById('anime-iframe').src = `https://vidlink.pro/embed/anime/${aId}/${e}`;
+        // ONE-CLICK MASTER SWITCH
+        function triggerSmartPlayer() {
+            if (currentMedia.aId) {
+                startAnimeLuxePlayer();
             } else {
-                // RUN CINEMA ENGINE
-                document.getElementById('cinema-player').style.display = 'block';
-                document.getElementById('cinema-iframe').src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+                startLuxeStream();
             }
         }
 
-        function stopCinema() { document.getElementById('cinema-iframe').src = ""; document.getElementById('cinema-player').style.display = 'none'; }
-        function stopAnime() { document.getElementById('anime-iframe').src = ""; document.getElementById('anime-player').style.display = 'none'; }
+        // ORIGINAL PLAYER (RETAINED EXACTLY)
+        function startLuxeStream() {
+            const { type, id, s, e, title, poster } = currentMedia;
+            saveToHistory(id, type, s, e, title, poster); 
+            const overlay = document.getElementById('player-overlay');
+            const iframe = document.getElementById('luxe-player');
+            document.getElementById('player-tag').innerText = "Cinema Luxe Player";
+            overlay.style.display = 'block';
+            iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+            setTimeout(() => document.getElementById('close-player-btn').focus(), 400);
+        }
+
+        // ADDED PLAYER (THE ANILIST BRIDGE)
+        function startAnimeLuxePlayer() {
+            const { id, aId, title, poster, e } = currentMedia;
+            saveToHistory(id, 'tv', 1, e, title, poster);
+            const overlay = document.getElementById('player-overlay');
+            const iframe = document.getElementById('luxe-player');
+            document.getElementById('player-tag').innerText = "Anime Luxe Player";
+            overlay.style.display = 'block';
+            // Routes to Anime Engine using mapped Anilist ID
+            iframe.src = `https://vidlink.pro/embed/anime/${aId}/${e}`;
+            setTimeout(() => document.getElementById('close-player-btn').focus(), 400);
+        }
 
         function saveToHistory(id, type, s, e, title, poster) {
             let h = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
@@ -301,34 +330,25 @@
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; document.getElementById('btn-trending').focus(); }
-        function toggleMenu() { const m = document.getElementById('side-menu'); m.classList.toggle('menu-open'); }
+        function closePlayer() { document.getElementById('luxe-player').src = ""; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(t, i = '') { activeType = t; activeID = i; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event?.target?.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
         function triggerSearch() { const i = document.getElementById('search-input'); if(i.value) { setFilter('search', i.value); i.blur(); } }
         
-        window.onload = () => { setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000); fetchConfig(); };
+        window.onload = () => { setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000); fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu()); };
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
-
         document.addEventListener('keydown', function(e) {
-            const current = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'Backspace' || e.keyCode === 8) {
-                e.preventDefault();
-                if (document.getElementById('cinema-player').style.display === 'block') stopCinema();
-                else if (document.getElementById('anime-player').style.display === 'block') stopAnime();
-                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
-                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
-            }
-            if (e.key === 'Enter') { if (current.classList.contains('focusable')) current.click(); }
+            const c = document.activeElement; const f = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
+            if (e.key === 'Backspace' || e.keyCode === 8) { e.preventDefault(); if (document.getElementById('player-overlay').style.display === 'block') closePlayer(); else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector(); else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu(); return; }
+            if (e.key === 'Enter') { if (c.classList.contains('focusable')) c.click(); }
             let dir = ''; if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
             if (dir) {
                 e.preventDefault();
-                const next = findNext(current, focusables, dir);
+                const next = findNext(c, f, dir);
                 if (next) next.focus();
             }
         });
-
         function findNext(cur, targets, dir) {
-            if (!cur || cur === document.body) return targets[0];
             const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
             let best = null, min = Infinity;
             targets.forEach(t => {
