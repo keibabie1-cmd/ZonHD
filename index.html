@@ -27,7 +27,9 @@
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
-        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        
+        /* TWO DISTINCT PLAYER OVERLAYS */
+        .full-player { display: none; position: fixed; inset: 0; background: #000; z-index: 8000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
@@ -59,7 +61,7 @@
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." enterkeyhint="search" onsearch="triggerSearch()" onkeyup="handleSearch(event)">
+                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="if(event.key==='Enter')triggerSearch()">
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -97,12 +99,12 @@
                 </div>
             </div>
             
-            <div id="cinema-btns" class="hidden">
-                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Cinema Luxe</button>
-                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red hidden">▶ Play Cinema S1 E1</button>
+            <div id="cinema-brain" class="hidden">
+                <button id="play-movie-btn" onclick="startLuxeCinemaStream()" class="focusable btn-play-red">▶ Play Cinema Luxe</button>
+                <button id="main-tv-btn" onclick="playCurrentCinemaEpisode()" class="focusable btn-play-red hidden">▶ Play Cinema S1 E1</button>
             </div>
-            <div id="anime-btns" class="hidden">
-                <button id="play-anime-btn" onclick="startAnimeEngine()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #800000)">★ Launch Anime Luxe</button>
+            <div id="anime-brain" class="hidden">
+                <button id="play-anime-btn" onclick="startAnimeLuxeStream()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #800000)">★ Launch Anime Luxe</button>
             </div>
             
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -114,12 +116,20 @@
         </div>
     </div>
 
-    <div id="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div id="player-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Player</div>
-            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+    <div id="cinema-player-overlay" class="full-player">
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[9000]">
+            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <button onclick="closeCinemaPlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
+        <iframe id="cinema-iframe" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;"></iframe>
+    </div>
+
+    <div id="anime-player-overlay" class="full-player">
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[9000]">
+            <div class="bg-red-900/40 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Anime Luxe Player</div>
+            <button onclick="closeAnimePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        </div>
+        <iframe id="anime-iframe" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;"></iframe>
     </div>
 
     <script>
@@ -189,7 +199,7 @@
                     metaId = sData.results[0].id; type = sData.results[0].media_type || 'tv';
                     const res = await fetch(`https://api.themoviedb.org/3/${type}/${metaId}?api_key=${API_KEY}`); data = await res.json();
                 } else if (aniObj) {
-                    data = { name: aniObj.title.english || aniObj.title.romaji, overview: aniObj.description?.replace(/<[^>]*>?/gm, '') || "Pure Anime Meta.", poster_path: aniObj.coverImage.extraLarge, vote_average: aniObj.averageScore / 10, backdrop_path: aniObj.coverImage.extraLarge, seasons: [{season_number: 1}] };
+                    data = { name: aniObj.title.english || aniObj.title.romaji, overview: aniObj.description?.replace(/<[^>]*>?/gm, '') || "Pure Anime Content.", poster_path: aniObj.coverImage.extraLarge, vote_average: aniObj.averageScore / 10, backdrop_path: aniObj.coverImage.extraLarge, seasons: [{season_number: 1}] };
                 }
             } else {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`); data = await res.json();
@@ -203,15 +213,14 @@
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average?.toFixed(1) || 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path.startsWith('http') ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path?.startsWith('http') ? `url(${data.backdrop_path})` : `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            document.getElementById('details-backdrop').style.backgroundImage = `url(${data.backdrop_path?.startsWith('http') ? data.backdrop_path : 'https://image.tmdb.org/t/p/original'+data.backdrop_path})`;
             
-            // LOGIC SPLIT: Toggle specific player UI
-            document.getElementById('cinema-btns').classList.toggle('hidden', isAni);
-            document.getElementById('anime-btns').classList.toggle('hidden', !isAni);
+            // SEPARATE BRAIN ACTIVATION
+            document.getElementById('cinema-brain').classList.toggle('hidden', isAni);
+            document.getElementById('anime-brain').classList.toggle('hidden', !isAni);
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv' || isAni);
-            document.getElementById('main-tv-btn').classList.toggle('hidden', type !== 'tv' || isAni);
             
-            if (type === 'tv' && !isAni) renderSeasons(data);
+            if (type === 'tv' && !isAni) renderCinemaSeasons(data);
             
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
@@ -219,7 +228,7 @@
             setTimeout(() => { (isAni ? document.getElementById('play-anime-btn') : (type==='movie'?document.getElementById('play-movie-btn'):document.getElementById('main-tv-btn'))).focus(); }, 300);
         }
 
-        function renderSeasons(data) {
+        function renderCinemaSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = ''; if(!data.seasons) return;
             data.seasons.forEach(s => {
@@ -227,52 +236,61 @@
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`; btn.tabIndex = 0;
-                btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                btn.onclick = () => loadCinemaEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
         }
 
-        async function loadEpisodes(sid, sn) {
+        async function loadCinemaEpisodes(sid, sn) {
             const res = await fetch(`https://api.themoviedb.org/3/tv/${sid}/season/${sn}?api_key=${API_KEY}`);
             const data = await res.json();
             const grid = document.getElementById('episode-grid'); grid.innerHTML = '';
             if(data.episodes) {
                 data.episodes.forEach(e => {
                     const row = document.createElement('div'); row.className = "episode-row focusable"; row.tabIndex = 0;
-                    row.onclick = () => { currentMedia.s = sn; currentMedia.e = e.episode_number; startLuxeStream(); };
+                    row.onclick = () => { currentMedia.s = sn; currentMedia.e = e.episode_number; startLuxeCinemaStream(); };
                     const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
                     row.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
                     grid.appendChild(row);
                 });
             }
-            document.getElementById('main-tv-btn').innerText = `▶ Play S${sn} E1`;
+            const mainTvBtn = document.getElementById('main-tv-btn');
+            mainTvBtn.innerText = `▶ Play Cinema S${sn} E1`;
+            mainTvBtn.classList.remove('hidden');
         }
 
-        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
+        function playCurrentCinemaEpisode() { currentMedia.e = 1; startLuxeCinemaStream(); }
 
-        // BRAIN 1: THE ORIGINAL CINEMA LUXE PLAYER (Hollywood Logic)
-        function startLuxeStream() {
+        // --- PLAYER 1: ORIGINAL CINEMA ENGINE ---
+        function startLuxeCinemaStream() {
             const { type, id, s, e, title, poster } = currentMedia;
             saveToHistory(id, type, s, e, title, poster); 
-            const frame = document.getElementById('luxe-player');
-            document.getElementById('player-tag').innerText = "Cinema Luxe Player";
-            document.getElementById('player-overlay').style.display = 'block';
-            frame.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-            setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
+            const overlay = document.getElementById('cinema-player-overlay');
+            const iframe = document.getElementById('cinema-iframe');
+            overlay.style.display = 'block';
+            iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
         }
 
-        // BRAIN 2: THE ANIME LUXE ENGINE (Asia Logic - No TMDB)
-        function startAnimeEngine() {
+        function closeCinemaPlayer() {
+            document.getElementById('cinema-iframe').src = "";
+            document.getElementById('cinema-player-overlay').style.display = 'none';
+        }
+
+        // --- PLAYER 2: NEW SEPARATE ANIME ENGINE ---
+        function startAnimeLuxeStream() {
             const { aId, title, poster, e } = currentMedia;
-            // The Anime Engine uses its own history and logic branch
             saveToHistory(currentMedia.id, 'tv', 1, e, title, poster);
-            const frame = document.getElementById('luxe-player');
-            document.getElementById('player-tag').innerText = "Anime Luxe Player";
-            document.getElementById('player-overlay').style.display = 'block';
-            // DIFFERENT WORLD: Uses specialized Asia-centric embedder that accepts Anilist ID
-            frame.src = `https://vidlink.pro/embed/anime/${aId}/${e}`;
-            setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
+            const overlay = document.getElementById('anime-player-overlay');
+            const iframe = document.getElementById('anime-iframe');
+            overlay.style.display = 'block';
+            // PURE ASIA LOGIC: No TMDB, uses specialized Anime Aggregator via Anilist ID
+            iframe.src = `https://vidlink.pro/embed/anime/${aId}/${e}`;
+        }
+
+        function closeAnimePlayer() {
+            document.getElementById('anime-iframe').src = "";
+            document.getElementById('anime-player-overlay').style.display = 'none';
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -299,22 +317,36 @@
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; document.getElementById('btn-trending').focus(); }
-        function closePlayer() { document.getElementById('luxe-player').src = "about:blank"; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
-        function toggleMenu() { const m = document.getElementById('side-menu'); m.classList.toggle('menu-open'); if(m.classList.contains('menu-open')) setTimeout(() => { const f = document.querySelector('#side-menu .focusable'); if(f) f.focus(); }, 300); }
+        function closePlayer() { closeCinemaPlayer(); closeAnimePlayer(); }
+        function toggleMenu() { const m = document.getElementById('side-menu'); m.classList.toggle('menu-open'); }
         function setFilter(t, i = '') { activeType = t; activeID = i; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event?.target?.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
-        function triggerSearch() { const i = document.getElementById('search-input'); if(i.value) { setFilter('search', i.value); i.blur(); setTimeout(() => { const f = document.querySelector('#movie-grid .focusable'); if(f) f.focus(); }, 800); } }
-        function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
-        window.onload = () => { setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000); fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu()); };
+        function triggerSearch() { const i = document.getElementById('search-input'); if(i.value) { setFilter('search', i.value); i.blur(); } }
+        
+        window.onload = () => { setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000); fetchConfig(); };
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
+
+        // UNIVERSAL D-PAD NAVIGATION
         document.addEventListener('keydown', function(e) {
-            const c = document.activeElement; const f = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) { e.preventDefault(); if (document.getElementById('player-overlay').style.display === 'block') closePlayer(); else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector(); else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu(); return; }
-            if (e.key === 'Enter' || e.keyCode === 13) { if (c.id === 'search-input') { triggerSearch(); return; } if (c.classList.contains('focusable')) { c.click(); return; } }
-            let dir = ''; if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
-            if (dir) { e.preventDefault(); const next = findNext(c, f, dir); if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+            const current = document.activeElement;
+            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                e.preventDefault();
+                if (document.getElementById('cinema-player-overlay').style.display === 'block') closeCinemaPlayer();
+                else if (document.getElementById('anime-player-overlay').style.display === 'block') closeAnimePlayer();
+                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
+                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
+            }
+            if (e.key === 'Enter') { if (current.classList.contains('focusable')) current.click(); }
+            let dir = ''; 
+            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
+            if (dir) {
+                e.preventDefault();
+                const next = findNext(current, focusables, dir);
+                if (next) next.focus();
+            }
         });
+
         function findNext(cur, targets, dir) {
-            if (!cur || cur === document.body) return targets[0];
             const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
             let best = null, min = Infinity;
             targets.forEach(t => {
