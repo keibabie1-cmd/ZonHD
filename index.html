@@ -291,6 +291,7 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
+        // UPDATED LOGIC FOR FIRST-CLICK PLAYBACK
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -298,9 +299,8 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // To prevent the "Circle Icon" and force a 1-click start:
-            // We use the direct vidsrc.xyz architecture which has higher auto-buffer rates.
-            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.xyz/embed/movie?tmdb=${id}` : `https://vidsrc.xyz/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`);
+            // vidsrc.icu is optimized for direct-buffer autoplay bypass
+            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.icu/embed/movie/${id}` : `https://vidsrc.icu/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
