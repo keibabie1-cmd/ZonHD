@@ -182,7 +182,7 @@
         }
 
         async function fetchAniList(append) {
-            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore description } } }`;
+            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore } } }`;
             try {
                 const response = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
@@ -197,8 +197,7 @@
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
                     const searchTitle = m.title.english || m.title.romaji;
-                    // Pass the full Anilist data object as a 5th argument to handle non-TMDB titles
-                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m);
+                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
                 });
@@ -220,55 +219,29 @@
             });
         }
 
-        async function openDetails(id, type, isAniList = false, searchTitle = '', aniListData = null) {
+        async function openDetails(id, type, isAniList = false, searchTitle = '') {
             let finalId = id;
-            let data = null;
-
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const searchData = await searchRes.json();
-                
                 if (searchData.results && searchData.results.length > 0) {
                     finalId = searchData.results[0].id;
                     type = searchData.results[0].media_type || 'tv';
-                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
-                    data = await res.json();
-                } else if (aniListData) {
-                    // FALLBACK: Use Anilist data directly if TMDB has no record
-                    data = {
-                        name: aniListData.title.english || aniListData.title.romaji,
-                        overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Niche Anime Title.",
-                        poster_path: aniListData.coverImage.extraLarge,
-                        vote_average: aniListData.averageScore / 10,
-                        backdrop_path: aniListData.coverImage.extraLarge,
-                        seasons: [{season_number: 1}] // Default for niche anime
-                    };
                 }
-            } else {
-                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
-                data = await res.json();
             }
-
-            if (!data) return;
-
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
+            const data = await res.json();
             currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || 'N/A').split('-')[0];
+            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
-            
-            // Poster logic for both TMDB and direct Anilist URLs
-            const posterUrl = data.poster_path.startsWith('http') ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-poster').src = data.poster_path ? posterUrl : 'IMG_8035.jpeg';
-            
-            const backdropUrl = data.backdrop_path && !data.backdrop_path.startsWith('http') ? `url(https://image.tmdb.org/t/p/original${data.backdrop_path})` : `url(${data.backdrop_path})`;
-            document.getElementById('details-backdrop').style.backgroundImage = backdropUrl;
-            
+            document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
+            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
             document.getElementById('media-type-tag').innerText = type.toUpperCase();
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            
             if (type === 'tv') renderSeasons(data);
             
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -286,49 +259,39 @@
             container.innerHTML = '';
             if(!data.seasons) return;
             data.seasons.forEach(s => {
-                if (s.season_number === 0 && data.seasons.length > 1) return;
+                if (s.season_number === 0) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
-                btn.innerText = `Season ${s.season_number || 1}`;
+                btn.innerText = `Season ${s.season_number}`;
                 btn.tabIndex = 0;
-                btn.onclick = () => loadEpisodes(currentMedia.id, s.season_number || 1);
+                btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
         }
 
         async function loadEpisodes(showId, seasonNum) {
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+            const data = await res.json();
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
-            
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
-                const data = await res.json();
-                if(data.episodes) {
-                    data.episodes.forEach(e => {
-                        const epRow = document.createElement('div');
-                        epRow.className = "episode-row focusable";
-                        epRow.tabIndex = 0;
-                        epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                        const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                        epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
-                        grid.appendChild(epRow);
-                    });
-                }
-            } catch (e) {
-                // For non-TMDB anime, show a default Episode 1 row
-                const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable";
-                epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.s = 1; currentMedia.e = 1; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Standard Stream.</div></div>`;
-                grid.appendChild(epRow);
+            if(data.episodes) {
+                data.episodes.forEach(e => {
+                    const epRow = document.createElement('div');
+                    epRow.className = "episode-row focusable";
+                    epRow.tabIndex = 0;
+                    epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                    const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
+                    grid.appendChild(epRow);
+                });
             }
             document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
         }
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
+        // UPDATED LOGIC FOR EFFORTLESS ONE-CLICK PLAYBACK
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -336,7 +299,8 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // Your loved player bridge (vidsrc.pm)
+            // vidsrc.pm is a direct-bridge provider. 
+            // It provides a single large play button that has 100% sound/fullscreen compatibility.
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
@@ -344,7 +308,7 @@
             if (isAnime) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
+                    const timeoutId = setTimeout(() => controller.abort(), 1200); 
                     const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
                     clearTimeout(timeoutId);
                     iframe.src = response.ok ? consumetUrl : vidsrcUrl;
@@ -374,8 +338,7 @@
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
                 card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
-                const posterUrl = item.poster.startsWith('http') ? item.poster : `https://image.tmdb.org/t/p/w300${item.poster}`;
-                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="${posterUrl}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
+                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
         }
