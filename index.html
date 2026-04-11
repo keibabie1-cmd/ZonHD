@@ -75,7 +75,7 @@
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." onkeyup="handleSearch(event)">
+                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library Master..." onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -128,7 +128,7 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -265,32 +265,29 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        async function startLuxeStream() {
+        function startLuxeStream() {
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             
-            // 1. Force visual confirmation: Show overlay immediately
+            // Show overlay
             playerOverlay.style.display = 'block';
-            iframe.src = "about:blank";
 
-            // 2. Data Retrieval
             const { type, id, s, e, title, hasTmdb } = currentMedia;
             saveToHistory(id, type, s, e, title, currentMedia.poster); 
 
-            // 3. The Core Player Logic (vidsrc.pm focused)
             let finalUrl = "";
-            if (hasTmdb) {
-                // Use your preferred vidsrc.pm ID-based server
+            if (hasTmdb || !currentMedia.isAnime) {
+                // vidsrc.pm logic exactly as provided
                 finalUrl = (type === 'movie') 
                     ? `https://vidsrc.pm/embed/movie/${id}` 
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
             } else {
-                // Fallback for Niche Anime (String Search slug)
+                // Niche Anime search string
                 const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
                 finalUrl = `https://vidsrc.xyz/embed/anime/${slug}/${e}`;
             }
 
-            // 4. Inject and focus
+            // Set source and focus close button for navigation
             iframe.src = finalUrl;
             setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 500);
         }
