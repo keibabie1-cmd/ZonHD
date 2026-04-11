@@ -96,12 +96,13 @@
                     </div>
                 </div>
             </div>
-            <div id="cinema-action-area" class="hidden">
-                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button>
-                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red hidden">▶ Play S1 E1</button>
+            
+            <div id="cinema-btns" class="hidden">
+                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Cinema Luxe</button>
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red hidden">▶ Play Cinema S1 E1</button>
             </div>
-            <div id="anime-action-area" class="hidden">
-                <button id="play-anime-btn" onclick="startAnimeLuxePlayer()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #E50914)">★ Launch Anime Luxe</button>
+            <div id="anime-btns" class="hidden">
+                <button id="play-anime-btn" onclick="startAnimeEngine()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #800000)">★ Launch Anime Luxe</button>
             </div>
             
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -115,7 +116,7 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div id="player-header-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Luxe Player</div>
+            <div id="player-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
@@ -132,7 +133,7 @@
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
                 fetchContent();
-            } catch (err) { console.error("Config load failed", err); }
+            } catch (err) { console.error("Config failed", err); }
         }
 
         async function fetchContent(append = false) {
@@ -147,7 +148,7 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; } else { hasMore = false; }
+                if (data.results) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
@@ -157,72 +158,65 @@
                 const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { page: currentPage } }) });
                 const json = await response.json();
                 const results = json.data.Page.media;
-                const grid = document.getElementById('movie-grid');
                 results.forEach(m => {
                     const card = document.createElement('div');
                     card.className = "movie-card focusable"; card.tabIndex = 0;
-                    const searchTitle = m.title.english || m.title.romaji;
-                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m);
+                    card.onclick = () => openDetails(m.id, 'tv', true, m.title.english || m.title.romaji, m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
-                    grid.appendChild(card);
+                    document.getElementById('movie-grid').appendChild(card);
                 });
                 currentPage++; hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) { console.error("AniList Error", err); }
         }
 
         function renderGrid(results) {
-            const grid = document.getElementById('movie-grid');
             results.forEach(m => {
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
                 card.className = "movie-card focusable"; card.tabIndex = 0;
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
-                grid.appendChild(card);
+                document.getElementById('movie-grid').appendChild(card);
             });
         }
 
-        async function openDetails(id, type, isAniList = false, searchTitle = '', aniListData = null) {
-            let finalId = id; let data = null;
-            if (isAniList) {
-                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
-                const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    finalId = searchData.results[0].id; type = searchData.results[0].media_type || 'tv';
-                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`); data = await res.json();
-                } else if (aniListData) {
-                    data = { name: aniListData.title.english || aniListData.title.romaji, overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Niche Asian Content.", poster_path: aniListData.coverImage.extraLarge, vote_average: aniListData.averageScore / 10, backdrop_path: aniListData.coverImage.extraLarge, seasons: [{season_number: 1}] };
+        async function openDetails(id, type, isAni = false, title = '', aniObj = null) {
+            let metaId = id; let data = null;
+            if (isAni) {
+                const sRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
+                const sData = await sRes.json();
+                if (sData.results && sData.results.length > 0) {
+                    metaId = sData.results[0].id; type = sData.results[0].media_type || 'tv';
+                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${metaId}?api_key=${API_KEY}`); data = await res.json();
+                } else if (aniObj) {
+                    data = { name: aniObj.title.english || aniObj.title.romaji, overview: aniObj.description?.replace(/<[^>]*>?/gm, '') || "Pure Anime Meta.", poster_path: aniObj.coverImage.extraLarge, vote_average: aniObj.averageScore / 10, backdrop_path: aniObj.coverImage.extraLarge, seasons: [{season_number: 1}] };
                 }
             } else {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`); data = await res.json();
             }
             if (!data) return;
 
-            currentMedia = { id: finalId, animeStreamId: isAniList ? id : null, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
+            currentMedia = { id: metaId, aId: isAni ? id : null, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAni };
             
             document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerText = data.overview || "No description available.";
+            document.getElementById('show-desc').innerText = data.overview;
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
+            document.getElementById('show-rating').innerText = `★ ${data.vote_average?.toFixed(1) || 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path.startsWith('http') ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path ? (data.backdrop_path.startsWith('http') ? `url(${data.backdrop_path})` : `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`) : '';
+            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path?.startsWith('http') ? `url(${data.backdrop_path})` : `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
             
-            // UI Player Routing
-            document.getElementById('cinema-action-area').classList.toggle('hidden', isAniList);
-            document.getElementById('anime-action-area').classList.toggle('hidden', !isAniList);
-            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv' || isAniList);
-            document.getElementById('main-tv-btn').classList.toggle('hidden', type !== 'tv' || isAniList);
-            document.getElementById('play-movie-btn').classList.toggle('hidden', type !== 'movie' || isAniList);
+            // LOGIC SPLIT: Toggle specific player UI
+            document.getElementById('cinema-btns').classList.toggle('hidden', isAni);
+            document.getElementById('anime-btns').classList.toggle('hidden', !isAni);
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv' || isAni);
+            document.getElementById('main-tv-btn').classList.toggle('hidden', type !== 'tv' || isAni);
             
-            if (type === 'tv' && !isAniList) renderSeasons(data);
+            if (type === 'tv' && !isAni) renderSeasons(data);
             
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-            setTimeout(() => { 
-                const btn = isAniList ? document.getElementById('play-anime-btn') : (type === 'movie' ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'));
-                if(btn) btn.focus();
-            }, 300);
+            setTimeout(() => { (isAni ? document.getElementById('play-anime-btn') : (type==='movie'?document.getElementById('play-movie-btn'):document.getElementById('main-tv-btn'))).focus(); }, 300);
         }
 
         function renderSeasons(data) {
@@ -239,92 +233,85 @@
             if(container.firstChild) container.firstChild.click();
         }
 
-        async function loadEpisodes(showId, seasonNum) {
-            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+        async function loadEpisodes(sid, sn) {
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${sid}/season/${sn}?api_key=${API_KEY}`);
             const data = await res.json();
-            const grid = document.getElementById('episode-grid');
-            grid.innerHTML = '';
+            const grid = document.getElementById('episode-grid'); grid.innerHTML = '';
             if(data.episodes) {
                 data.episodes.forEach(e => {
-                    const epRow = document.createElement('div');
-                    epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
-                    epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                    const row = document.createElement('div'); row.className = "episode-row focusable"; row.tabIndex = 0;
+                    row.onclick = () => { currentMedia.s = sn; currentMedia.e = e.episode_number; startLuxeStream(); };
                     const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
-                    grid.appendChild(epRow);
+                    row.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
+                    grid.appendChild(row);
                 });
             }
-            document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
+            document.getElementById('main-tv-btn').innerText = `▶ Play S${sn} E1`;
         }
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // --- THE TWO ENTIRELY SEPARATE PLAYERS ---
-
-        // PLAYER 1: ORIGINAL CINEMA LUXE PLAYER (Hollywood)
+        // BRAIN 1: THE ORIGINAL CINEMA LUXE PLAYER (Hollywood Logic)
         function startLuxeStream() {
-            const { type, id, s, e } = currentMedia;
-            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
-            const overlay = document.getElementById('player-overlay');
-            const iframe = document.getElementById('luxe-player');
-            document.getElementById('player-header-tag').innerText = "Cinema Luxe Player";
-            overlay.style.display = 'block';
-            iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+            const { type, id, s, e, title, poster } = currentMedia;
+            saveToHistory(id, type, s, e, title, poster); 
+            const frame = document.getElementById('luxe-player');
+            document.getElementById('player-tag').innerText = "Cinema Luxe Player";
+            document.getElementById('player-overlay').style.display = 'block';
+            frame.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
         }
 
-        // PLAYER 2: ANIME LUXE PLAYER (Asia - No TMDB)
-        function startAnimeLuxePlayer() {
-            const { animeStreamId, title, e } = currentMedia;
-            saveToHistory(currentMedia.id, 'tv', 1, e, title, currentMedia.poster);
-            const overlay = document.getElementById('player-overlay');
-            const iframe = document.getElementById('luxe-player');
-            document.getElementById('player-header-tag').innerText = "Anime Luxe Player";
-            overlay.style.display = 'block';
-            // Dedicated Anime Engine - Bypasses TMDB Servers completely
-            iframe.src = `https://vidlink.pro/embed/anime/${animeStreamId}/${e}`;
+        // BRAIN 2: THE ANIME LUXE ENGINE (Asia Logic - No TMDB)
+        function startAnimeEngine() {
+            const { aId, title, poster, e } = currentMedia;
+            // The Anime Engine uses its own history and logic branch
+            saveToHistory(currentMedia.id, 'tv', 1, e, title, poster);
+            const frame = document.getElementById('luxe-player');
+            document.getElementById('player-tag').innerText = "Anime Luxe Player";
+            document.getElementById('player-overlay').style.display = 'block';
+            // DIFFERENT WORLD: Uses specialized Asia-centric embedder that accepts Anilist ID
+            frame.src = `https://vidlink.pro/embed/anime/${aId}/${e}`;
             setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
-            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, s, e, title, poster });
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
+            let h = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            h = h.filter(i => i.id !== id); h.unshift({ id, type, s, e, title, poster });
+            localStorage.setItem('zonhd_history', JSON.stringify(h.slice(0, 10)));
             renderContinueWatching();
         }
 
         function renderContinueWatching() {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            const section = document.getElementById('continue-section');
-            const grid = document.getElementById('continue-grid');
-            if (history.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden'); grid.innerHTML = '';
-            history.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card"; card.tabIndex = 0;
-                card.onclick = () => openDetails(item.id, item.type);
-                const pUrl = item.poster && item.poster.startsWith('http') ? item.poster : `https://image.tmdb.org/t/p/w300${item.poster}`;
-                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="${pUrl}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
-                grid.appendChild(card);
+            const h = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
+            const s = document.getElementById('continue-section');
+            const g = document.getElementById('continue-grid');
+            if (h.length === 0) { s.classList.add('hidden'); return; }
+            s.classList.remove('hidden'); g.innerHTML = '';
+            h.forEach(i => {
+                const c = document.createElement('div');
+                c.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card"; c.tabIndex = 0;
+                c.onclick = () => openDetails(i.id, i.type);
+                const p = i.poster.startsWith('http') ? i.poster : `https://image.tmdb.org/t/p/w300${i.poster}`;
+                c.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="${p}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${i.title}</p><p class="text-[8px] text-gold font-bold">${i.type === 'tv' ? `S${i.s} E${i.e}` : 'MOVIE'}</p>`;
+                g.appendChild(c);
             });
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; document.getElementById('btn-trending').focus(); }
         function closePlayer() { document.getElementById('luxe-player').src = "about:blank"; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
-        function toggleMenu() { const menu = document.getElementById('side-menu'); menu.classList.toggle('menu-open'); if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#side-menu .focusable'); if(firstNet) firstNet.focus(); }, 300); }
-        function setFilter(type, id = '') { activeType = type; activeID = id; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
-        function triggerSearch() { const input = document.getElementById('search-input'); const query = input.value; if(query) { setFilter('search', query); input.blur(); setTimeout(() => { const firstResult = document.querySelector('#movie-grid .focusable'); if(firstResult) firstResult.focus(); }, 800); } }
+        function toggleMenu() { const m = document.getElementById('side-menu'); m.classList.toggle('menu-open'); if(m.classList.contains('menu-open')) setTimeout(() => { const f = document.querySelector('#side-menu .focusable'); if(f) f.focus(); }, 300); }
+        function setFilter(t, i = '') { activeType = t; activeID = i; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event?.target?.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
+        function triggerSearch() { const i = document.getElementById('search-input'); if(i.value) { setFilter('search', i.value); i.blur(); setTimeout(() => { const f = document.querySelector('#movie-grid .focusable'); if(f) f.focus(); }, 800); } }
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
-        window.onload = () => { setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000); fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu()); };
+        window.onload = () => { setTimeout(() => { const l = document.getElementById('loader'); if(l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 500); } }, 1000); fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu()); };
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
         document.addEventListener('keydown', function(e) {
-            const current = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
+            const c = document.activeElement; const f = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) { e.preventDefault(); if (document.getElementById('player-overlay').style.display === 'block') closePlayer(); else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector(); else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu(); return; }
-            if (e.key === 'Enter' || e.keyCode === 13) { if (current && current.id === 'search-input') { triggerSearch(); return; } if (current && current.classList.contains('focusable')) { current.click(); return; } }
+            if (e.key === 'Enter' || e.keyCode === 13) { if (c.id === 'search-input') { triggerSearch(); return; } if (c.classList.contains('focusable')) { c.click(); return; } }
             let dir = ''; if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
-            if (dir) { e.preventDefault(); const next = findNext(current, focusables, dir); if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+            if (dir) { e.preventDefault(); const next = findNext(c, f, dir); if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
         });
         function findNext(cur, targets, dir) {
             if (!cur || cur === document.body) return targets[0];
