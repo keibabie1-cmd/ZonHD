@@ -30,7 +30,7 @@
             z-index: 50;
         }
 
-        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
+        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; overflow-y: auto; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -88,11 +88,11 @@
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="setFilter('genre', 27)">Horror</button>
-                <button class="focusable" onclick="setFilter('genre', 28)">Action</button>
-                <button class="focusable" onclick="setFilter('genre', 53)">Thriller</button>
-                <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
-                <button class="focusable" onclick="setFilter('anime')">Anime</button>
+                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
+                <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
+                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+                <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
             </nav>
         </div>
 
@@ -221,59 +221,69 @@
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             let finalId = id;
-            let finalType = type;
+            let tmdbFound = false;
 
             if (isAniList) {
-                // Bridge AniList to TMDB by title search
                 try {
                     const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                     const searchData = await searchRes.json();
                     if (searchData.results && searchData.results.length > 0) {
-                        const match = searchData.results.find(r => r.media_type !== 'person') || searchData.results[0];
-                        finalId = match.id;
-                        finalType = match.media_type || 'tv';
-                    } else {
-                        alert("Luxe Vault Mapping Error: Title not found in Master Library.");
-                        return;
+                        finalId = searchData.results[0].id;
+                        type = searchData.results[0].media_type || 'tv';
+                        tmdbFound = true;
                     }
-                } catch (err) { console.error("Mapping failed", err); }
+                } catch (e) { console.log("TMDB Match failed, proceeding with Title strategy."); }
+            } else { tmdbFound = true; }
+
+            let data = {};
+            if (tmdbFound) {
+                const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
+                data = await res.json();
+            } else {
+                data = { name: searchTitle, overview: "Exclusive vault title sourced via AniList.", poster_path: null, vote_average: 0 };
             }
 
-            const res = await fetch(`https://api.themoviedb.org/3/${finalType}/${finalId}?api_key=${API_KEY}`);
-            const data = await res.json();
-            
             currentMedia = { 
                 id: finalId, 
-                type: finalType, 
+                type, 
                 s: 1, 
                 e: 1, 
-                title: data.name || data.title, 
+                title: data.name || data.title || searchTitle, 
                 poster: data.poster_path, 
-                isAnime: isAniList 
+                isAnime: isAniList,
+                tmdbFound: tmdbFound
             };
 
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0] || 'N/A';
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-            document.getElementById('media-type-tag').innerText = finalType.toUpperCase();
+            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path ? `url(https://image.tmdb.org/t/p/original${data.backdrop_path})` : '';
+            document.getElementById('media-type-tag').innerText = type.toUpperCase();
             
-            document.getElementById('movie-action-area').classList.toggle('hidden', finalType !== 'movie');
-            document.getElementById('tv-action-area-top').classList.toggle('hidden', finalType !== 'tv');
-            document.getElementById('tv-action-area').classList.toggle('hidden', finalType !== 'tv');
+            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
+            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
+            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             
-            if (finalType === 'tv') renderSeasons(data);
-            
+            if (type === 'tv' && tmdbFound) renderSeasons(data);
+            else if (type === 'tv' && !tmdbFound) renderDummyEpisodes(); // Fallback for pure AniList shows
+
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
 
             setTimeout(() => {
-                const playBtn = (finalType === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
+                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(playBtn) playBtn.focus();
             }, 300);
+        }
+
+        function renderDummyEpisodes() {
+            const container = document.getElementById('season-buttons');
+            container.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5">Season 1</button>';
+            const grid = document.getElementById('episode-grid');
+            grid.innerHTML = '<div class="p-4 text-zinc-500 text-xs">Title search enabled. Use the main play button to start Episode 1.</div>';
         }
 
         function renderSeasons(data) {
@@ -314,17 +324,37 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         async function startLuxeStream() {
-            const { type, id, s, e } = currentMedia;
-            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
+            const { type, id, s, e, isAnime, title, tmdbFound } = currentMedia;
+            saveToHistory(id, type, s, e, title, currentMedia.poster); 
+            
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
-            
-            // Standardizing on vidsrc.pm for TMDB-based streaming
-            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-            
-            iframe.src = vidsrcUrl;
+            iframe.src = "about:blank";
 
+            // STRATEGY: 
+            // 1. If it's anime, try the specialized anime slug first.
+            // 2. If it's a standard TMDB found title, use vidsrc.pm (fastest).
+            // 3. If it's NOT found in TMDB (niche anime), use Title-Search.
+
+            let streamUrl = "";
+            const cleanTitle = encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+
+            if (isAnime) {
+                // Check if specific anime api has it (Simulated check)
+                streamUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanTitle}-episode-${e}`;
+            }
+
+            if (!streamUrl || !isAnime) {
+                if (tmdbFound) {
+                    streamUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+                } else {
+                    // UNIVERSAL FALLBACK: Title based searching for niche Asian content
+                    streamUrl = `https://vidsrc.to/embed/anime/${cleanTitle}/${e}`;
+                }
+            }
+
+            iframe.src = streamUrl;
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
