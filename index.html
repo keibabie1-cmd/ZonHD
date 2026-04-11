@@ -197,7 +197,7 @@
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
                     const searchTitle = m.title.english || m.title.romaji;
-                    // We pass AniList ID specifically for the player logic
+                    // Pass the AniList ID as the "player ID"
                     card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
@@ -221,8 +221,8 @@
         }
 
         async function openDetails(id, type, isAniList = false, searchTitle = '', aniListData = null) {
-            let finalId = id;
-            let streamId = id; // Track original AniList ID for the player
+            let metaId = id; 
+            let streamId = id; 
             let data = null;
 
             if (isAniList) {
@@ -230,14 +230,14 @@
                 const searchData = await searchRes.json();
                 
                 if (searchData.results && searchData.results.length > 0) {
-                    finalId = searchData.results[0].id; // TMDB ID for metadata
+                    metaId = searchData.results[0].id; // TMDB ID for UI/Metadata
                     type = searchData.results[0].media_type || 'tv';
-                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
+                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${metaId}?api_key=${API_KEY}`);
                     data = await res.json();
                 } else if (aniListData) {
                     data = {
                         name: aniListData.title.english || aniListData.title.romaji,
-                        overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Anime Title.",
+                        overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Niche Anime.",
                         poster_path: aniListData.coverImage.extraLarge,
                         vote_average: aniListData.averageScore / 10,
                         backdrop_path: aniListData.coverImage.extraLarge,
@@ -247,22 +247,23 @@
             } else {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
                 data = await res.json();
+                streamId = id;
             }
 
             if (!data) return;
 
-            // Flag as Anime based on origin or category
-            const isAnimeContent = isAniList || activeType === 'anime' || (data.genres && data.genres.some(g => g.id === 16));
+            // MASTER FLAG: If it's an AniList item OR has Anime metadata, use the Anime server logic
+            const isAnimeMode = isAniList || activeType === 'anime' || (data.genres && data.genres.some(g => g.id === 16));
 
             currentMedia = { 
-                id: finalId, 
-                streamId: streamId, // AniList ID for high-accuracy player matching
+                id: metaId, 
+                streamId: streamId, // Original ID for player selection
                 type, 
                 s: 1, 
                 e: 1, 
                 title: data.name || data.title, 
                 poster: data.poster_path, 
-                isAnime: isAnimeContent
+                isAnime: isAnimeMode
             };
 
             document.getElementById('show-title').innerText = currentMedia.title;
@@ -332,7 +333,7 @@
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = 1; currentMedia.e = 1; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Standard Direct Feed.</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Standard Media Stream.</div></div>`;
                 grid.appendChild(epRow);
             }
             document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
@@ -349,12 +350,14 @@
             
             iframe.src = "about:blank"; 
             
-            // Player Logic: Use the high-accuracy Anime server for Anime content
+            // SUPERIOR ROUTING ENGINE: 
+            // 1. All Anime uses a high-priority anime provider using the source ID (AniList or TMDB).
+            // 2. This prevents the "404 content not found" error because Hollywood providers don't index unwesternized anime.
             if (isAnime) {
-                // vidplus.to handles the anime metadata via ID (priority) or Title perfectly.
+                // vidplus.to is highly optimized for Smart TV D-Pad and handles anime metadata perfectly.
                 iframe.src = `https://player.vidplus.to/embed/anime/${streamId}/${e}`;
             } else {
-                // vidsrc handles standard Hollywood content perfectly.
+                // vidsrc stays for high-reliability Movies/TV Shows.
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
 
