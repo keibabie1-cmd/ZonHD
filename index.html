@@ -10,42 +10,26 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
-        
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
-
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; position: relative; }
-        
-        .focusable:focus {
-            outline: none;
-            border-color: var(--gold) !important;
-            transform: scale(1.08);
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
-            z-index: 50;
-        }
-
+        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); z-index: 50; }
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
-        
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
-        
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
-        
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
-
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
-        
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
@@ -58,7 +42,6 @@
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '24|463|380')">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
         </div>
-
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
         <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
@@ -74,15 +57,9 @@
 
     <div id="main-app-wrapper">
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
-
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" 
-                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
-                       placeholder="Search Master Library..." 
-                       enterkeyhint="search"
-                       onsearch="triggerSearch()"
-                       onkeyup="handleSearch(event)">
+                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." enterkeyhint="search" onsearch="triggerSearch()" onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -95,12 +72,10 @@
                 <button class="focusable whitespace-nowrap" onclick="setFilter('anime')">Anime</button>
             </nav>
         </div>
-
         <section id="continue-section" class="hidden px-4 pt-6">
             <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
             <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
         </section>
-
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
 
@@ -121,9 +96,13 @@
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
-            <div id="anime-action-area" class="hidden"><button id="play-anime-btn" onclick="startAnimeLuxeEngine()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #E50914)">★ Play Anime Luxe</button></div>
+            <div id="cinema-action-area" class="hidden">
+                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button>
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red hidden">▶ Play S1 E1</button>
+            </div>
+            <div id="anime-action-area" class="hidden">
+                <button id="play-anime-btn" onclick="startAnimeLuxePlayer()" class="focusable btn-play-red" style="background: linear-gradient(to right, #D4AF37, #E50914)">★ Launch Anime Luxe</button>
+            </div>
             
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
@@ -136,10 +115,10 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div id="player-header-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <div id="player-header-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media;" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -212,29 +191,28 @@
                     finalId = searchData.results[0].id; type = searchData.results[0].media_type || 'tv';
                     const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`); data = await res.json();
                 } else if (aniListData) {
-                    data = { name: aniListData.title.english || aniListData.title.romaji, overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Anime Luxe Title.", poster_path: aniListData.coverImage.extraLarge, vote_average: aniListData.averageScore / 10, backdrop_path: aniListData.coverImage.extraLarge, seasons: [{season_number: 1}] };
+                    data = { name: aniListData.title.english || aniListData.title.romaji, overview: aniListData.description ? aniListData.description.replace(/<[^>]*>?/gm, '') : "Niche Asian Content.", poster_path: aniListData.coverImage.extraLarge, vote_average: aniListData.averageScore / 10, backdrop_path: aniListData.coverImage.extraLarge, seasons: [{season_number: 1}] };
                 }
             } else {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`); data = await res.json();
             }
             if (!data) return;
 
-            currentMedia = { id: finalId, animeId: isAniList ? id : null, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
+            currentMedia = { id: finalId, animeStreamId: isAniList ? id : null, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path.startsWith('http') ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path.startsWith('http') ? `url(${data.backdrop_path})` : `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path ? (data.backdrop_path.startsWith('http') ? `url(${data.backdrop_path})` : `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`) : '';
             
-            document.getElementById('media-type-tag').innerText = type.toUpperCase();
-            
-            // SEPARATE PLAYER SELECTION
-            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie' || isAniList);
-            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv' || isAniList);
+            // UI Player Routing
+            document.getElementById('cinema-action-area').classList.toggle('hidden', isAniList);
             document.getElementById('anime-action-area').classList.toggle('hidden', !isAniList);
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv' || isAniList);
+            document.getElementById('main-tv-btn').classList.toggle('hidden', type !== 'tv' || isAniList);
+            document.getElementById('play-movie-btn').classList.toggle('hidden', type !== 'movie' || isAniList);
             
             if (type === 'tv' && !isAniList) renderSeasons(data);
             
@@ -279,28 +257,32 @@
             document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
         }
 
-        // PLAYER 1: ORIGINAL CINEMA LUXE PLAYER (RESTORED)
+        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
+
+        // --- THE TWO ENTIRELY SEPARATE PLAYERS ---
+
+        // PLAYER 1: ORIGINAL CINEMA LUXE PLAYER (Hollywood)
         function startLuxeStream() {
             const { type, id, s, e } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
-            const playerOverlay = document.getElementById('player-overlay');
+            const overlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             document.getElementById('player-header-tag').innerText = "Cinema Luxe Player";
-            playerOverlay.style.display = 'block';
+            overlay.style.display = 'block';
             iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
         }
 
-        // PLAYER 2: COMPLETELY SEPARATE ANIME LUXE ENGINE
-        function startAnimeLuxeEngine() {
-            const { animeId, title, e } = currentMedia;
+        // PLAYER 2: ANIME LUXE PLAYER (Asia - No TMDB)
+        function startAnimeLuxePlayer() {
+            const { animeStreamId, title, e } = currentMedia;
             saveToHistory(currentMedia.id, 'tv', 1, e, title, currentMedia.poster);
-            const playerOverlay = document.getElementById('player-overlay');
+            const overlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             document.getElementById('player-header-tag').innerText = "Anime Luxe Player";
-            playerOverlay.style.display = 'block';
-            // DIFFERENT LOGIC: This player ignores TMDB and uses a multi-server anime aggregator
-            iframe.src = `https://vidlink.pro/embed/anime/${animeId}/${e}`;
+            overlay.style.display = 'block';
+            // Dedicated Anime Engine - Bypasses TMDB Servers completely
+            iframe.src = `https://vidlink.pro/embed/anime/${animeStreamId}/${e}`;
             setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 400);
         }
 
@@ -322,7 +304,7 @@
                 const card = document.createElement('div');
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card"; card.tabIndex = 0;
                 card.onclick = () => openDetails(item.id, item.type);
-                const pUrl = item.poster.startsWith('http') ? item.poster : `https://image.tmdb.org/t/p/w300${item.poster}`;
+                const pUrl = item.poster && item.poster.startsWith('http') ? item.poster : `https://image.tmdb.org/t/p/w300${item.poster}`;
                 card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="${pUrl}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
                 grid.appendChild(card);
             });
