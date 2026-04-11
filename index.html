@@ -30,7 +30,7 @@
             z-index: 50;
         }
 
-        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; overflow-y: auto; }
+        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
@@ -196,7 +196,7 @@
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    const searchTitle = m.title.english || m.title.romaji;
+                    const searchTitle = m.title.english || m.title.romaji || m.title.native;
                     card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
@@ -221,54 +221,52 @@
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             let finalId = id;
-            let tmdbFound = false;
+            let tmdbData = null;
 
+            // If it's an AniList item, we MUST find the TMDB equivalent for the player to work
             if (isAniList) {
-                try {
-                    const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
-                    const searchData = await searchRes.json();
-                    if (searchData.results && searchData.results.length > 0) {
-                        finalId = searchData.results[0].id;
-                        type = searchData.results[0].media_type || 'tv';
-                        tmdbFound = true;
-                    }
-                } catch (e) { console.log("TMDB Match failed, proceeding with Title strategy."); }
-            } else { tmdbFound = true; }
-
-            let data = {};
-            if (tmdbFound) {
-                const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
-                data = await res.json();
-            } else {
-                data = { name: searchTitle, overview: "Exclusive vault title sourced via AniList.", poster_path: null, vote_average: 0 };
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
+                const searchData = await searchRes.json();
+                
+                // Use the first result from TMDB search
+                if (searchData.results && searchData.results.length > 0) {
+                    finalId = searchData.results[0].id;
+                    type = searchData.results[0].media_type || 'tv';
+                    tmdbData = searchData.results[0];
+                }
             }
+
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
+                tmdbData = await res.json();
+            } catch(e) { console.error("TMDB Fetch Error", e); }
+
+            if (!tmdbData) return;
 
             currentMedia = { 
                 id: finalId, 
-                type, 
+                type: type, 
                 s: 1, 
                 e: 1, 
-                title: data.name || data.title || searchTitle, 
-                poster: data.poster_path, 
-                isAnime: isAniList,
-                tmdbFound: tmdbFound
+                title: tmdbData.name || tmdbData.title || searchTitle, 
+                poster: tmdbData.poster_path, 
+                isAnime: isAniList 
             };
 
             document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0] || 'N/A';
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
-            document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path ? `url(https://image.tmdb.org/t/p/original${data.backdrop_path})` : '';
+            document.getElementById('show-desc').innerText = tmdbData.overview || "No description available.";
+            document.getElementById('show-year').innerText = (tmdbData.release_date || tmdbData.first_air_date || '').split('-')[0];
+            document.getElementById('show-rating').innerText = `★ ${tmdbData.vote_average ? tmdbData.vote_average.toFixed(1) : 'N/A'}`;
+            document.getElementById('details-poster').src = tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : 'IMG_8035.jpeg';
+            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${tmdbData.backdrop_path})`;
             document.getElementById('media-type-tag').innerText = type.toUpperCase();
             
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             
-            if (type === 'tv' && tmdbFound) renderSeasons(data);
-            else if (type === 'tv' && !tmdbFound) renderDummyEpisodes(); // Fallback for pure AniList shows
-
+            if (type === 'tv') renderSeasons(tmdbData);
+            
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
@@ -279,19 +277,12 @@
             }, 300);
         }
 
-        function renderDummyEpisodes() {
-            const container = document.getElementById('season-buttons');
-            container.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5">Season 1</button>';
-            const grid = document.getElementById('episode-grid');
-            grid.innerHTML = '<div class="p-4 text-zinc-500 text-xs">Title search enabled. Use the main play button to start Episode 1.</div>';
-        }
-
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
             if(!data.seasons) return;
             data.seasons.forEach(s => {
-                if (s.season_number === 0) return;
+                if (s.season_number === 0 && data.seasons.length > 1) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`;
@@ -324,37 +315,36 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, title, tmdbFound } = currentMedia;
-            saveToHistory(id, type, s, e, title, currentMedia.poster); 
-            
+            const { type, id, s, e, isAnime, title } = currentMedia;
+            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
-            iframe.src = "about:blank";
+            
+            // Primary stream source
+            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+            
+            // Clean title for anime search fallback
+            const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanTitle}-episode-${e}`;
 
-            // STRATEGY: 
-            // 1. If it's anime, try the specialized anime slug first.
-            // 2. If it's a standard TMDB found title, use vidsrc.pm (fastest).
-            // 3. If it's NOT found in TMDB (niche anime), use Title-Search.
-
-            let streamUrl = "";
-            const cleanTitle = encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-
+            iframe.src = "about:blank"; 
+            
             if (isAnime) {
-                // Check if specific anime api has it (Simulated check)
-                streamUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanTitle}-episode-${e}`;
-            }
-
-            if (!streamUrl || !isAnime) {
-                if (tmdbFound) {
-                    streamUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-                } else {
-                    // UNIVERSAL FALLBACK: Title based searching for niche Asian content
-                    streamUrl = `https://vidsrc.to/embed/anime/${cleanTitle}/${e}`;
+                // For Anime, we try the specialized anime server first, then fall back to the main movie/tv server
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
+                    const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    iframe.src = response.ok ? consumetUrl : vidsrcUrl;
+                } catch (err) { 
+                    iframe.src = vidsrcUrl; 
                 }
+            } else { 
+                iframe.src = vidsrcUrl; 
             }
 
-            iframe.src = streamUrl;
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
