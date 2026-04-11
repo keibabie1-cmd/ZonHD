@@ -1,26 +1,4 @@
-The Technical Handover Prompt
-Role: You are acting as a Senior Full-Stack Developer and UI/UX Specialist specializing in cinematic web applications and streaming integrations.
-Project Overview:
-We are building ZonHD Cinema Luxe, a high-end web-based media portal optimized for Smart TVs (specifically Firesticks) and mobile devices. The app uses the TMDB API for metadata and a reliable third-party embed system for playback.
-Current Tech Stack:
-* Frontend: HTML5, Tailwind CSS (CDN), Hammer.js (for touch/swipe gestures).
-* Fonts: Playfair Display (for branding) and Inter (for UI).
-* External APIs: TMDB (The Movie Database) for content discovery and metadata.
-* Player Logic: A single-server architecture using the vidsrc.me API for high reliability and built-in English Subtitle/CC support.
-Key Features Implemented:
-1. Cinematic UI: A "Luxe" aesthetic with gold/red accents, glassmorphism, and a Medusa-inspired loader.
-2. Smart Navigation: Full D-Pad/Keyboard navigation logic (Arrow keys + Enter/Backspace) for Firestick/Android TV compatibility.
-3. Content Logic: * Automatic filtering for Asian Animation (Anime) ensuring JP/CN/KR origins and non-English original languages.
-    * Network-specific filtering (Netflix, Disney+, etc.).
-    * "Continue Watching" section powered by localStorage.
-4. Integrated Player: A seamless iframe overlay that handles both Movies and TV Shows (Season/Episode selection).
-Current Goal:
-The code is currently "Server 2-centric" to prioritize reliability and subtitle availability. We are maintaining a "lean" codebase—avoiding heavy frameworks like React—to ensure lightning-fast loading on low-power streaming sticks.
-Instruction for the AI:
-"Please review the existing code provided by the user. When making updates, maintain the Luxe aesthetic (Gold/Red/Black), ensure all new elements are added to the focusable class for D-pad navigation, and prioritize mobile/TV responsiveness."
-
-Current code base:
-Index.html: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
