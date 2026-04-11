@@ -234,7 +234,6 @@
                     const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
                     data = await res.json();
                 } else if (aniListData) {
-                    // TMDB FAIL Logic: Treat as Niche for direct Anime server playback
                     isNiche = true;
                     data = {
                         name: aniListData.title.english || aniListData.title.romaji,
@@ -259,7 +258,7 @@
                 e: 1, 
                 title: data.name || data.title, 
                 poster: data.poster_path, 
-                isAnime: (isAniList || activeType === 'anime'),
+                isAnime: (isAniList || activeType === 'anime' || (data.genres && data.genres.some(g => g.id === 16))),
                 isNiche: isNiche
             };
 
@@ -316,7 +315,7 @@
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = 1; currentMedia.e = 1; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Direct Stream (AniList Match)</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode 1</div><div class="text-zinc-500 text-xs">Unwesternized Direct Feed.</div></div>`;
                 grid.appendChild(epRow);
                 document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
                 return;
@@ -350,7 +349,7 @@
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, isNiche, title } = currentMedia;
+            const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
@@ -359,20 +358,12 @@
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
-            iframe.src = "about:blank"; 
-            
-            if (isNiche) {
-                // Direct jump to anime server for niche non-TMDB titles
+            // Priority Logic: If it's an unwesternized anime, jump straight to the anime server. 
+            // If that server doesn't have it, then use the vidsrc fallback.
+            if (isAnime) {
                 iframe.src = consumetUrl;
-            } else if (isAnime) {
-                // Smart Check for TMDB anime
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
-                    const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    iframe.src = response.ok ? consumetUrl : vidsrcUrl;
-                } catch (err) { iframe.src = vidsrcUrl; }
+                // Add an error listener just in case the anime server fails, we flip to vidsrc
+                window.onerror = () => { iframe.src = vidsrcUrl; };
             } else {
                 iframe.src = vidsrcUrl;
             }
