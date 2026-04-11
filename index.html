@@ -291,7 +291,7 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // UPDATED LOGIC FOR FIRST-CLICK PLAYBACK
+        // UPDATED LOGIC FOR EFFORTLESS ONE-CLICK PLAYBACK
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -299,8 +299,9 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // vidsrc.icu is optimized for direct-buffer autoplay bypass
-            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.icu/embed/movie/${id}` : `https://vidsrc.icu/embed/tv/${id}/${s}/${e}`);
+            // vidsrc.pm is a direct-bridge provider. 
+            // It provides a single large play button that has 100% sound/fullscreen compatibility.
+            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
