@@ -291,7 +291,6 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // UPDATED LOGIC FOR EFFORTLESS ONE-CLICK PLAYBACK
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -299,8 +298,7 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // vidsrc.pm is a direct-bridge provider. 
-            // It provides a single large play button that has 100% sound/fullscreen compatibility.
+            // Maintaining the player you love (vidsrc.pm bridge)
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
@@ -308,9 +306,10 @@
             if (isAnime) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1200); 
+                    const timeoutId = setTimeout(() => controller.abort(), 1500); // Allow time for non-westernized lookups
                     const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
                     clearTimeout(timeoutId);
+                    // If the niche anime API has it, use it; otherwise, fall back to the reliable Luxe player bridge
                     iframe.src = response.ok ? consumetUrl : vidsrcUrl;
                 } catch (err) { iframe.src = vidsrcUrl; }
             } else { iframe.src = vidsrcUrl; }
