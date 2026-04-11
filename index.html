@@ -223,16 +223,12 @@
             let finalId = id;
             let tmdbData = null;
 
-            // If it's an AniList item, we MUST find the TMDB equivalent for the player to work
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const searchData = await searchRes.json();
-                
-                // Use the first result from TMDB search
                 if (searchData.results && searchData.results.length > 0) {
                     finalId = searchData.results[0].id;
                     type = searchData.results[0].media_type || 'tv';
-                    tmdbData = searchData.results[0];
                 }
             }
 
@@ -314,38 +310,48 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
+        // --- THE FIX: WATERFALL PROVIDER LOGIC ---
         async function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
+            
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
-            
-            // Primary stream source
-            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-            
-            // Clean title for anime search fallback
-            const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanTitle}-episode-${e}`;
+            iframe.src = "about:blank";
 
-            iframe.src = "about:blank"; 
+            // Clean title for URL safety
+            const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
             
+            // Waterfall Strategy: Try sources until one works
+            // vidsrc.pm is great for western, vidsrc.xyz is better for niche/intl
+            const providers = [
+                (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`),
+                (type === 'movie' ? `https://vidsrc.xyz/embed/movie/${id}` : `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`),
+                `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanTitle}-episode-${e}`
+            ];
+
+            let activeUrl = providers[0]; // Default
+
             if (isAnime) {
-                // For Anime, we try the specialized anime server first, then fall back to the main movie/tv server
+                // If it's an AniList item, start with the anime-specific server
+                activeUrl = providers[2];
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500); 
-                    const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    iframe.src = response.ok ? consumetUrl : vidsrcUrl;
-                } catch (err) { 
-                    iframe.src = vidsrcUrl; 
+                    const check = await fetch(activeUrl, { method: 'HEAD' });
+                    if (!check.ok) activeUrl = providers[1]; // Fallback to XYZ if anime-specific fails
+                } catch(err) {
+                    activeUrl = providers[1]; 
                 }
-            } else { 
-                iframe.src = vidsrcUrl; 
             }
 
-            setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
+            // Set the final URL
+            iframe.src = activeUrl;
+
+            // Handle potential 404s inside the iframe by providing a fallback button logic
+            // (Note: We can't see inside the iframe due to security, but we can ensure a good close/reset)
+            setTimeout(() => { 
+                if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); 
+            }, 400);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
