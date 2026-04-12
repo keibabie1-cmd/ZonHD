@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --red: #E50914; --black: #050505; --anime-blue: #00d2ff; }
+        :root { --gold: #D4AF37; --red: #E50914; --black: #050505; --anime-cyan: #00f2ff; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
@@ -42,7 +42,7 @@
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
-        /* PLAYERS */
+        /* SEPARATE PLAYER OVERLAYS */
         #player-overlay, #anime-player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -135,7 +135,7 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="bg-red/20 text-red-500 px-4 py-2 rounded-full border border-red-500/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <div class="bg-red-900/40 text-red-500 px-4 py-2 rounded-full border border-red-500/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin" referrerpolicy="no-referrer"></iframe>
@@ -299,46 +299,37 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE PLAYER ROUTING LOGIC
+        // ROUTING SYSTEM
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
+            const { type, id, s, e, isAnime } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
 
-            // IF ANIME TAG DETECTED: Bypasses Player 1 logic entirely.
             if (isAnime) {
-                const animeOverlay = document.getElementById('anime-player-overlay');
-                const animeIframe = document.getElementById('anime-luxe-player');
-                
-                // Construct specialized anime URL (using a non-Westernized provider slug format)
-                const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                const animeSource = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`; 
-                
-                animeOverlay.style.display = 'block';
-                animeIframe.src = animeSource;
-            } 
-            // STANDARD MOVIES/TV: Uses Player 1
-            else {
-                const playerOverlay = document.getElementById('player-overlay');
+                // OPEN PLAYER 2 (ANIME)
+                const overlay = document.getElementById('anime-player-overlay');
+                const iframe = document.getElementById('anime-luxe-player');
+                overlay.style.display = 'block';
+                // Using vidsrc.me for better un-westernized anime coverage
+                iframe.src = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
+            } else {
+                // OPEN PLAYER 1 (ORIGINAL)
+                const overlay = document.getElementById('player-overlay');
                 const iframe = document.getElementById('luxe-player');
-                playerOverlay.style.display = 'block';
-                const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-                iframe.src = vidsrcUrl;
+                overlay.style.display = 'block';
+                iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
         }
 
         function closePlayer() { 
-            const iframe = document.getElementById('luxe-player');
-            iframe.src = "about:blank";
+            document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
         }
 
         function closeAnimePlayer() { 
-            const iframe = document.getElementById('anime-luxe-player');
-            iframe.src = "about:blank";
+            document.getElementById('anime-luxe-player').src = "about:blank";
             document.getElementById('anime-player-overlay').style.display = 'none'; 
         }
 
-        // ... Keep History & Nav Functions ...
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             history = history.filter(item => item.id !== id);
@@ -369,14 +360,12 @@
             document.getElementById('main-app-wrapper').style.display = 'block';
         }
 
-        function toggleMenu() { 
-            document.getElementById('side-menu').classList.toggle('menu-open'); 
-        }
-
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
+            window.scrollTo(0,0);
         }
 
         function triggerSearch() {
