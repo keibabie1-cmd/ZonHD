@@ -138,7 +138,7 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -323,7 +323,7 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        /* THE MASTER PLAYER LOGIC: Unified in Cinema Luxe Player */
+        /* THE MASTER PLAYER LOGIC: Automatic Routing No Switches Needed */
         function startLuxeStream() {
             const { type, id, s, e, isAnime } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -332,11 +332,11 @@
             const overlay = document.getElementById('player-overlay');
 
             if (isAnime) {
-                // This routes specifically via AniList ID to prevent TMDB 404s
-                // It plays within your original Cinema Luxe Player
-                iframe.src = `https://anilist.autoembed.cc/embed/${id}/${e}`;
+                // I have updated this to use a smarter auto-routing provider
+                // This will specifically look for AniList IDs and find the best source automatically.
+                iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}`;
             } else {
-                // Your original vidsrc logic
+                // Your original vidsrc logic for movies/tv
                 iframe.src = (type === 'movie' 
                     ? `https://vidsrc.pm/embed/movie/${id}` 
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
