@@ -49,6 +49,10 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* Server Button Styles */
+        .server-btn { padding: 4px 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 4px; transition: 0.2s; cursor: pointer; background: #111; color: #555; border: 1px solid #333; }
+        .server-btn.active-server { background: rgba(57, 255, 20, 0.1); color: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
     </style>
 </head>
 <body>
@@ -143,11 +147,18 @@
     </div>
 
     <div id="anime-player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="bg-black text-[#39ff14] px-4 py-2 rounded-full border border-[#39ff14]/50 font-bold text-[10px] tracking-widest uppercase shadow-[0_0_15px_rgba(57,255,20,0.4)]">Neo-Tokyo Anime Player</div>
-            <button onclick="closePlayer()" class="focusable bg-[#111] text-white px-4 py-2 rounded-full border border-[#39ff14]/30 font-bold text-xs hover:bg-[#39ff14] hover:text-black transition-colors">✕ CLOSE</button>
+        <div class="absolute top-6 left-6 right-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center z-[7000]">
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div class="bg-black text-[#39ff14] px-4 py-2 rounded-full border border-[#39ff14]/50 font-bold text-[10px] tracking-widest uppercase shadow-[0_0_15px_rgba(57,255,20,0.4)]">Neo-Tokyo Player</div>
+                <div class="flex gap-2">
+                    <button id="srv-1" onclick="switchAnimeServer(1)" class="server-btn active-server">Server 1 (Smashy)</button>
+                    <button id="srv-2" onclick="switchAnimeServer(2)" class="server-btn">Server 2 (AutoEmbed)</button>
+                    <button id="srv-3" onclick="switchAnimeServer(3)" class="server-btn">Server 3 (Vidsrc)</button>
+                </div>
+            </div>
+            <button onclick="closePlayer()" class="focusable bg-[#111] text-white px-4 py-2 rounded-full border border-[#39ff14]/30 font-bold text-xs hover:bg-[#39ff14] hover:text-black transition-colors self-end md:self-auto mt-[-40px] md:mt-0">✕ CLOSE</button>
         </div>
-        <iframe id="anime-luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="anime-luxe-player" class="w-full h-full pt-20 md:pt-0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -191,7 +202,7 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        // UPDATED ANILIST FETCH: Now pulls descriptions and episode counts directly to bypass TMDB entirely
+        // 100% ANILIST - NO TMDB CROSSOVER
         async function fetchAniList(append) {
             const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } bannerImage description episodes averageScore countryOfOrigin } } }`;
             try {
@@ -207,7 +218,6 @@
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    // Trigger the specialized Anime Details function instead of the TMDB one
                     card.onclick = () => openAnimeDetails(m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
@@ -230,7 +240,7 @@
             });
         }
 
-        // ORIGINAL DETAILS FUNCTION (Untouched - For Movies/TV)
+        // ORIGINAL DETAILS FUNCTION
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
@@ -260,12 +270,11 @@
             }, 300);
         }
 
-        // BRAND NEW FUNCTION: ANILIST ONLY (Bypasses TMDB Completely to prevent 404s)
+        // ANIME DETAILS FUNCTION (No TMDB)
         function openAnimeDetails(m) {
             currentMedia = { id: m.id, type: 'anime', s: 1, e: 1, title: m.title.english || m.title.romaji, poster: m.coverImage.extraLarge, isAnime: true };
             
             document.getElementById('show-title').innerText = currentMedia.title;
-            // Clean up AniList HTML tags from description
             let cleanDesc = (m.description || "No description available.").replace(/<[^>]*>?/gm, '');
             document.getElementById('show-desc').innerText = cleanDesc;
             document.getElementById('show-year').innerText = "ANIME";
@@ -279,12 +288,12 @@
             document.getElementById('tv-action-area').classList.remove('hidden');
             
             document.getElementById('main-tv-btn').innerText = `▶ Play Ep 1`;
-            document.getElementById('season-buttons').innerHTML = ''; // Clear seasons, Anime builds strictly by episode
+            document.getElementById('season-buttons').innerHTML = ''; 
 
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
             
-            const totalEps = m.episodes || 24; // Default to 24 if ongoing
+            const totalEps = m.episodes || 24; 
             for(let i = 1; i <= totalEps; i++) {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
@@ -338,37 +347,44 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // THE BIFURCATED PLAYER LOGIC (Guaranteed no 404 crossover)
+        // THE SERVER SWITCHER LOGIC
+        function switchAnimeServer(serverNum) {
+            const { id, e } = currentMedia;
+            const iframe = document.getElementById('anime-luxe-player');
+            
+            // Update button styles
+            document.getElementById('srv-1').classList.remove('active-server');
+            document.getElementById('srv-2').classList.remove('active-server');
+            document.getElementById('srv-3').classList.remove('active-server');
+            document.getElementById(`srv-${serverNum}`).classList.add('active-server');
+
+            // Switch the API Source natively using the Anilist ID
+            if (serverNum === 1) iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}`;
+            if (serverNum === 2) iframe.src = `https://autoembed.co/anime/anilist/${id}/${e}`;
+            if (serverNum === 3) iframe.src = `https://vidsrc.cc/v2/embed/anime/${id}/${e}`;
+        }
+
         function startLuxeStream() {
             const { type, id, s, e, isAnime } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
 
             if (isAnime) {
-                // PLAYER 2: NEO-TOKYO ANIME PLAYER
-                const playerOverlay = document.getElementById('anime-player-overlay');
-                const iframe = document.getElementById('anime-luxe-player');
-                playerOverlay.style.display = 'block';
-                
-                // This specific embed API accepts Anilist IDs natively and resolves them. No TMDB required.
-                iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}`;
+                // OPEN NEO TOKYO PLAYER
+                document.getElementById('anime-player-overlay').style.display = 'block';
+                // Default to Server 1
+                switchAnimeServer(1);
             } else {
-                // PLAYER 1: ORIGINAL CINEMA LUXE
-                const playerOverlay = document.getElementById('player-overlay');
-                const iframe = document.getElementById('luxe-player');
-                playerOverlay.style.display = 'block';
-                
-                const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-                iframe.src = vidsrcUrl;
+                // OPEN ORIGINAL LUXE PLAYER
+                document.getElementById('player-overlay').style.display = 'block';
+                document.getElementById('luxe-player').src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
         }
 
         function closePlayer() { 
-            // Close both just to be safe
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('anime-luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('anime-player-overlay').style.display = 'none'; 
-            document.getElementById('close-sel-btn').focus(); 
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -390,10 +406,8 @@
                 const card = document.createElement('div');
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
                 card.tabIndex = 0;
-                // Important: Route history correctly based on whether it was anime or not
                 card.onclick = () => {
                     if(item.type === 'anime') {
-                        // For anime history, we fetch the specific Anilist object to reload
                         const query = `query { Media(id: ${item.id}, type: ANIME) { id title { english romaji native } coverImage { extraLarge } bannerImage description episodes averageScore countryOfOrigin } }`;
                         fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
                         .then(res => res.json()).then(json => openAnimeDetails(json.data.Media));
@@ -433,10 +447,7 @@
             if(query) {
                 setFilter('search', query);
                 input.blur();
-                setTimeout(() => {
-                    const firstResult = document.querySelector('#movie-grid .focusable');
-                    if(firstResult) firstResult.focus();
-                }, 800);
+                setTimeout(() => { const firstResult = document.querySelector('#movie-grid .focusable'); if(firstResult) firstResult.focus(); }, 800);
             }
         }
 
@@ -449,7 +460,7 @@
             mc.on("swiperight", () => toggleMenu());
         };
 
-        // INFINITE SCROLL RESTORED - Robust cross-browser check
+        // INFINITE SCROLL
         window.onscroll = function() {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
                 if (!isLoading && hasMore) fetchContent(true);
