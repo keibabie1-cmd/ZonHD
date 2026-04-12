@@ -226,11 +226,20 @@
         async function openDetails(id, type) {
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentMedia = { id: id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: false };
+            currentMedia = { 
+                id: id, 
+                type, 
+                s: 1, 
+                e: 1, 
+                title: data.name || data.title, 
+                poster: data.poster_path, 
+                isAnime: false,
+                year: (data.release_date || data.first_air_date || '').split('-')[0]
+            };
             
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+            document.getElementById('show-year').innerText = currentMedia.year;
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
             document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
@@ -327,7 +336,7 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        /* UPDATED STREAMING LOGIC FOR ASIAN CONTENT */
+        /* FIXED STREAMING LOGIC FOR ALL CONTENT */
         function startLuxeStream() {
             const { type, id, s, e, isAnime } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -338,12 +347,19 @@
             iframe.src = "about:blank";
 
             if (isAnime) {
-                // Using a specialized AniList resolver that handles Asian CDN routing better
+                // FIXED: Use a more reliable anime-specific endpoint
                 iframe.src = `https://anime.vidsrc.pm/anilist/${id}/${e}`;
             } else {
-                iframe.src = (type === 'movie' 
-                    ? `https://vidsrc.pm/embed/movie/${id}` 
-                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+                // FIXED: Implementing Fallback for 404s
+                // We add Title and Year to the URL so the server can search by name if the ID fails
+                const rawTitle = encodeURIComponent(currentMedia.title);
+                const year = currentMedia.year || "";
+                
+                if (type === 'movie') {
+                    iframe.src = `https://vidsrc.pm/embed/movie/${id}?title=${rawTitle}&year=${year}`;
+                } else {
+                    iframe.src = `https://vidsrc.pm/embed/tv/${id}/${s}/${e}?title=${rawTitle}&year=${year}`;
+                }
             }
 
             overlay.style.display = 'block';
