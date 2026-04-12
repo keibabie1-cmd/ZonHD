@@ -323,20 +323,21 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        /* THE MASTER PLAYER LOGIC: Automatic Routing No Switches Needed */
+        /* ULTIMATE OMNI-PLAYER LOGIC: Auto-resolves Donghua/Aeni/Anime */
         function startLuxeStream() {
             const { type, id, s, e, isAnime } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
 
             const iframe = document.getElementById('luxe-player');
             const overlay = document.getElementById('player-overlay');
+            
+            iframe.src = "about:blank"; // Reset to prevent 404 leakage
 
             if (isAnime) {
-                // I have updated this to use a smarter auto-routing provider
-                // This will specifically look for AniList IDs and find the best source automatically.
+                // Primary Resolver: Smashy (Best for Oshi no Ko and Unwesternized content)
+                // It treats AniList ID as the key and automatically handles the provider search.
                 iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}`;
             } else {
-                // Your original vidsrc logic for movies/tv
                 iframe.src = (type === 'movie' 
                     ? `https://vidsrc.pm/embed/movie/${id}` 
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
