@@ -23,7 +23,7 @@
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
-        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; cursor: pointer; }
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; background-color: #111; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
@@ -95,9 +95,16 @@
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
+            
+            <div id="movie-action-area" class="hidden">
+                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button>
+            </div>
+            <div id="tv-action-area-top" class="hidden">
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button>
+            </div>
+
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
+            
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
                 <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
@@ -132,11 +139,14 @@
             if (isLoading || !hasMore || (!API_KEY && activeType !== 'anime')) return;
             isLoading = true;
             if (!append) { currentPage = 1; document.getElementById('movie-grid').innerHTML = ''; }
+            
             if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
+
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -181,20 +191,25 @@
             });
         }
 
-        // NEW LOGIC: TRY TMDB FIRST, FALLBACK TO ANILIST
+        // HYBRID LOGIC: Try TMDB first (Nagatoro style), if fails, use AniList backup.
         async function tryAnimeViaTmdb(anilistData) {
-            const title = anilistData.title.english || anilistData.title.romaji;
-            try {
-                const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
-                const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    // It exists in TMDB (like Nagatoro). Use original player.
-                    openDetails(searchData.results[0].id, 'tv');
-                } else {
-                    // Not in TMDB. Use independent Anime Player.
-                    openAnimeDetails(anilistData);
+            const possibleTitles = [anilistData.title.english, anilistData.title.romaji, anilistData.title.native].filter(Boolean);
+            let tmdbResult = null;
+
+            for (let title of possibleTitles) {
+                const res = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    tmdbResult = data.results[0];
+                    break;
                 }
-            } catch (e) { openAnimeDetails(anilistData); }
+            }
+
+            if (tmdbResult) {
+                openDetails(tmdbResult.id, 'tv');
+            } else {
+                openAnimeDetails(anilistData);
+            }
         }
 
         function openAnimeDetails(anime) {
@@ -217,7 +232,7 @@
             document.getElementById('tv-action-area').classList.remove('hidden');
             
             const seasonCont = document.getElementById('season-buttons');
-            seasonCont.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-gold">Full Series</button>';
+            seasonCont.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-gold" tabIndex="0">Full Series</button>';
             
             const epGrid = document.getElementById('episode-grid');
             epGrid.innerHTML = '';
@@ -234,6 +249,9 @@
             document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
+            
+            // Force focus on main button so clicking works immediately
+            setTimeout(() => { document.getElementById('main-tv-btn').focus(); }, 100);
             window.scrollTo(0, 0);
         }
 
@@ -251,10 +269,18 @@
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
+            
             if (type === 'tv') renderSeasons(data);
             
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
+            
+            // Force focus
+            setTimeout(() => {
+                const btn = type === 'movie' ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
+                btn.focus();
+            }, 100);
+            window.scrollTo(0, 0);
         }
 
         function renderSeasons(data) {
@@ -296,10 +322,10 @@
             document.getElementById('player-overlay').style.display = 'block';
             
             if (isAnime) {
-                // If the anime is niche, use the AniList-based server
+                // AniList Backup Server
                 iframe.src = `https://vidsrc.me/embed/anime?anilist=${id}&episode=${e}`;
             } else {
-                // Standard Player (Works for Nagatoro and all TMDB-recognized anime)
+                // Original Nagatoro-style Player
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
         }
