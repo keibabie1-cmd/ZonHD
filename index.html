@@ -10,27 +10,38 @@
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
-        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+        
+        /* Navigation & Menus */
         #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #000; border-right: 1px solid var(--gold); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
         .menu-open { transform: translateX(0) !important; }
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, transparent, var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 20px var(--red); font-style: italic; }
+        
+        /* Grid & Cards */
         .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 3px solid transparent; position: relative; }
         .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); z-index: 50; }
-        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
-        #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
+        /* Details Overlay - CRITICAL FIXES HERE */
+        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: fixed; inset: 0; z-index: 4000; overflow-y: auto; }
+        #details-backdrop { position: fixed; top: 0; width: 100%; height: 100%; opacity: 0.3; background-size: cover; background-position: center; filter: blur(40px); pointer-events: none; z-index: -1; }
+        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; cursor: pointer; pointer-events: auto !important; position: relative; z-index: 4001; }
+        
+        /* Badges */
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
-        .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; cursor: pointer; }
-        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
+        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* Episode Rows */
+        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; pointer-events: auto; }
         .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; background-color: #111; }
-        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
+        
+        /* Player Overlay */
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
-        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -78,10 +89,10 @@
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
 
-    <div id="selector-overlay" class="no-scrollbar">
+    <div id="selector-overlay">
         <div id="details-backdrop"></div>
-        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+        <div class="relative z-[4005] p-6 pt-10 max-w-4xl mx-auto">
+            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10" tabIndex="0">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
             <div class="flex gap-5 mb-6">
@@ -97,10 +108,10 @@
             </div>
             
             <div id="movie-action-area" class="hidden">
-                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button>
+                <button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red" tabIndex="0">▶ Play Now</button>
             </div>
             <div id="tv-action-area-top" class="hidden">
-                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button>
+                <button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red" tabIndex="0">▶ Play S1 E1</button>
             </div>
 
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
@@ -116,9 +127,9 @@
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs" tabIndex="0">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -139,14 +150,11 @@
             if (isLoading || !hasMore || (!API_KEY && activeType !== 'anime')) return;
             isLoading = true;
             if (!append) { currentPage = 1; document.getElementById('movie-grid').innerHTML = ''; }
-            
             if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
-
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -191,25 +199,22 @@
             });
         }
 
-        // HYBRID LOGIC: Try TMDB first (Nagatoro style), if fails, use AniList backup.
+        // IMPROVED HYBRID SEARCH: Strips colons and extra text to find anime in TMDB
         async function tryAnimeViaTmdb(anilistData) {
-            const possibleTitles = [anilistData.title.english, anilistData.title.romaji, anilistData.title.native].filter(Boolean);
-            let tmdbResult = null;
+            const titles = [anilistData.title.english, anilistData.title.romaji].filter(Boolean);
+            let found = false;
 
-            for (let title of possibleTitles) {
-                const res = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
+            for (let t of titles) {
+                const cleanTitle = t.split(':')[0].split('-')[0].trim(); // Get base name
+                const res = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
                 const data = await res.json();
                 if (data.results && data.results.length > 0) {
-                    tmdbResult = data.results[0];
+                    openDetails(data.results[0].id, 'tv');
+                    found = true;
                     break;
                 }
             }
-
-            if (tmdbResult) {
-                openDetails(tmdbResult.id, 'tv');
-            } else {
-                openAnimeDetails(anilistData);
-            }
+            if (!found) openAnimeDetails(anilistData);
         }
 
         function openAnimeDetails(anime) {
@@ -221,18 +226,13 @@
                 isAnime: true 
             };
             document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerHTML = anime.description || "No description available.";
-            document.getElementById('show-year').innerText = anime.averageScore ? `Score: ${anime.averageScore}%` : 'Anime';
-            document.getElementById('show-rating').innerText = `★ Luxe`;
+            document.getElementById('show-desc').innerHTML = anime.description || "No description.";
             document.getElementById('details-poster').src = anime.coverImage.extraLarge;
             document.getElementById('details-backdrop').style.backgroundImage = `url(${anime.bannerImage || anime.coverImage.extraLarge})`;
             
             document.getElementById('movie-action-area').classList.add('hidden');
             document.getElementById('tv-action-area-top').classList.remove('hidden');
             document.getElementById('tv-action-area').classList.remove('hidden');
-            
-            const seasonCont = document.getElementById('season-buttons');
-            seasonCont.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-gold" tabIndex="0">Full Series</button>';
             
             const epGrid = document.getElementById('episode-grid');
             epGrid.innerHTML = '';
@@ -241,18 +241,13 @@
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
+                epRow.onclick = (ev) => { ev.stopPropagation(); currentMedia.e = i; startLuxeStream(); };
                 epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div></div>`;
                 epGrid.appendChild(epRow);
             }
 
             document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('selector-overlay').style.display = 'block';
-            
-            // Force focus on main button so clicking works immediately
-            setTimeout(() => { document.getElementById('main-tv-btn').focus(); }, 100);
-            window.scrollTo(0, 0);
+            showOverlay();
         }
 
         async function openDetails(id, type) {
@@ -261,8 +256,6 @@
             currentMedia = { id, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: false };
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview;
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average?.toFixed(1)}`;
             document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
             
@@ -271,15 +264,18 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             
             if (type === 'tv') renderSeasons(data);
-            
+            showOverlay();
+        }
+
+        function showOverlay() {
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             
-            // Force focus
+            // CRITICAL: Ensure focus goes to a clickable element in the overlay
             setTimeout(() => {
-                const btn = type === 'movie' ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                btn.focus();
-            }, 100);
+                const playBtn = document.querySelector('#selector-overlay .focusable:not(.hidden)');
+                if (playBtn) playBtn.focus();
+            }, 200);
             window.scrollTo(0, 0);
         }
 
@@ -307,7 +303,7 @@
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                epRow.onclick = (ev) => { ev.stopPropagation(); currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(https://image.tmdb.org/t/p/w300${e.still_path})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div></div>`;
                 grid.appendChild(epRow);
             });
@@ -315,48 +311,24 @@
 
         function playCurrentEpisode() { startLuxeStream(); }
 
-        async function startLuxeStream() {
+        function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
-            saveToHistory(id, type, s, e, title, currentMedia.poster); 
             const iframe = document.getElementById('luxe-player');
             document.getElementById('player-overlay').style.display = 'block';
             
             if (isAnime) {
-                // AniList Backup Server
                 iframe.src = `https://vidsrc.me/embed/anime?anilist=${id}&episode=${e}`;
             } else {
-                // Original Nagatoro-style Player
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
+            setTimeout(() => { document.getElementById('close-player-btn').focus(); }, 300);
         }
 
-        function saveToHistory(id, type, s, e, title, poster) {
-            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, s, e, title, poster, isAnime: currentMedia.isAnime });
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
-            renderContinueWatching();
+        function closeSelector() { 
+            document.getElementById('selector-overlay').style.display = 'none'; 
+            document.getElementById('main-app-wrapper').style.display = 'block'; 
+            document.getElementById('btn-trending').focus();
         }
-
-        function renderContinueWatching() {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            const section = document.getElementById('continue-section');
-            const grid = document.getElementById('continue-grid');
-            if (history.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            grid.innerHTML = '';
-            history.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] focusable movie-card";
-                card.tabIndex = 0;
-                card.onclick = () => item.isAnime ? openAnimeDetails(item) : openDetails(item.id, item.type);
-                const pSrc = item.poster.startsWith('http') ? item.poster : 'https://image.tmdb.org/t/p/w300'+item.poster;
-                card.innerHTML = `<img src="${pSrc}" class="w-full h-full object-cover">`;
-                grid.appendChild(card);
-            });
-        }
-
-        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; }
         function closePlayer() { document.getElementById('luxe-player').src = "about:blank"; document.getElementById('player-overlay').style.display = 'none'; }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { 
@@ -369,11 +341,10 @@
         function triggerSearch() { const q = document.getElementById('search-input').value; if(q) setFilter('search', q); }
 
         window.onload = () => { 
-            setTimeout(() => document.getElementById('loader').remove(), 1000);
+            setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
             fetchConfig();
             new Hammer(document.body).on("swiperight", () => toggleMenu());
         };
-        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
     </script>
 </body>
 </html>
