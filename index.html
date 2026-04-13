@@ -25,7 +25,7 @@
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
         .btn-play-red { background: var(--red); color: white; font-weight: 700; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 3px solid transparent; }
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #222; cursor: pointer; border: 3px solid transparent; }
-        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; }
+        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; position: relative; background-color: #111; }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -96,7 +96,7 @@
                 </div>
             </div>
             <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play Episode 1</button></div>
+            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
@@ -132,14 +132,11 @@
             if (isLoading || !hasMore || (!API_KEY && activeType !== 'anime')) return;
             isLoading = true;
             if (!append) { currentPage = 1; document.getElementById('movie-grid').innerHTML = ''; }
-            
             if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
-
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-
             try {
                 const res = await fetch(url);
                 const data = await res.json();
@@ -148,7 +145,7 @@
         }
 
         async function fetchAniList(append) {
-            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } bannerImage description averageScore } } }`;
+            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id episodes title { english romaji native } coverImage { extraLarge } bannerImage description averageScore } } }`;
             try {
                 const response = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
@@ -184,7 +181,6 @@
             });
         }
 
-        // COMPLETELY BYPASSES TMDB FOR ANIME
         function openAnimeDetails(anime) {
             currentMedia = { 
                 id: anime.id, 
@@ -202,9 +198,24 @@
             
             document.getElementById('movie-action-area').classList.add('hidden');
             document.getElementById('tv-action-area-top').classList.remove('hidden');
-            document.getElementById('tv-action-area').classList.add('hidden'); // Anime uses internal player navigation
+            document.getElementById('tv-action-area').classList.remove('hidden');
             
-            document.getElementById('main-tv-btn').innerText = `▶ Play Episode 1`;
+            // Build Anime Episode Grid
+            const seasonCont = document.getElementById('season-buttons');
+            seasonCont.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-gold">Full Series</button>';
+            
+            const epGrid = document.getElementById('episode-grid');
+            epGrid.innerHTML = '';
+            const totalEps = anime.episodes || 12; // Default to 12 if unknown
+            for(let i=1; i<=totalEps; i++) {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable";
+                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
+                epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div></div>`;
+                epGrid.appendChild(epRow);
+            }
+
+            document.getElementById('main-tv-btn').innerText = `▶ Play S1 E1`;
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
@@ -267,9 +278,8 @@
             document.getElementById('player-overlay').style.display = 'block';
             
             if (isAnime) {
-                // USES VIDSTREAM/VIDCLOUD LOGIC via slug-based mapping
-                const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                iframe.src = `https://animeadrenalini.com/embed/${slug}-episode-${e}`;
+                // Aniwave/9Anime Server Logic using AniList ID (Much more reliable)
+                iframe.src = `https://vidsrc.me/embed/anime?anilist=${id}&episode=${e}`;
             } else {
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
@@ -294,7 +304,8 @@
                 const card = document.createElement('div');
                 card.className = "min-w-[120px] max-w-[120px] focusable movie-card";
                 card.onclick = () => item.isAnime ? openAnimeDetails(item) : openDetails(item.id, item.type);
-                card.innerHTML = `<img src="${item.poster.startsWith('http') ? item.poster : 'https://image.tmdb.org/t/p/w300'+item.poster}" class="w-full h-full object-cover">`;
+                const pSrc = item.poster.startsWith('http') ? item.poster : 'https://image.tmdb.org/t/p/w300'+item.poster;
+                card.innerHTML = `<img src="${pSrc}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
@@ -302,14 +313,12 @@
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; }
         function closePlayer() { document.getElementById('luxe-player').src = "about:blank"; document.getElementById('player-overlay').style.display = 'none'; }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
-
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
         }
-
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
         function triggerSearch() { const q = document.getElementById('search-input').value; if(q) setFilter('search', q); }
 
