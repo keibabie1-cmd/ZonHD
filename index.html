@@ -218,49 +218,42 @@
             });
         }
 
-        async function handleAnimeSelection(anilistData) {
-            const cleanTitle = (anilistData.title.english || anilistData.title.romaji).split(':')[0].trim();
+        async function handleAnimeSelection(m) {
+            const cleanTitle = (m.title.english || m.title.romaji).split(':')[0].trim();
             const res = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
             const data = await res.json();
             
             if (data.results && data.results.length > 0) {
-                // If found on TMDB (Nagatoro style), use original player
                 openDetails(data.results[0].id, 'tv');
             } else {
-                // Not on TMDB, setup a custom detail view for 9Anime logic
-                setupManualAnimeDetails(anilistData);
+                currentMedia = { id: m.id, type: 'tv', s: 1, e: 1, title: m.title.english || m.title.romaji, poster: m.coverImage.extraLarge, isAnime: true };
+                document.getElementById('show-title').innerText = currentMedia.title;
+                document.getElementById('show-desc').innerText = "Streaming via alternate anime servers.";
+                document.getElementById('show-year').innerText = "Anime";
+                document.getElementById('show-rating').innerText = "★ Luxe";
+                document.getElementById('details-poster').src = m.coverImage.extraLarge;
+                document.getElementById('details-backdrop').style.backgroundImage = `url(${m.coverImage.extraLarge})`;
+                
+                document.getElementById('movie-action-area').classList.add('hidden');
+                document.getElementById('tv-action-area-top').classList.remove('hidden');
+                document.getElementById('tv-action-area').classList.remove('hidden');
+                
+                const epGrid = document.getElementById('episode-grid');
+                epGrid.innerHTML = '';
+                const total = m.episodes || 12;
+                for(let i=1; i<=total; i++) {
+                    const epRow = document.createElement('div');
+                    epRow.className = "episode-row focusable";
+                    epRow.tabIndex = 0;
+                    epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
+                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-color:#111"><div class="ep-play-btn">▶</div></div><div class="flex-1 text-white font-bold text-sm">Episode ${i}</div>`;
+                    epGrid.appendChild(epRow);
+                }
+                
+                document.getElementById('main-app-wrapper').style.display = 'none';
+                document.getElementById('selector-overlay').style.display = 'block';
+                window.scrollTo(0,0);
             }
-        }
-
-        function setupManualAnimeDetails(m) {
-            currentMedia = { id: m.id, type: 'tv', s: 1, e: 1, title: m.title.english || m.title.romaji, poster: m.coverImage.extraLarge, isAnime: true };
-            document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerText = "Anime content provided via alternate servers.";
-            document.getElementById('show-year').innerText = "Anime";
-            document.getElementById('show-rating').innerText = `★ ${m.averageScore ? (m.averageScore/10).toFixed(1) : 'N/A'}`;
-            document.getElementById('details-poster').src = m.coverImage.extraLarge;
-            document.getElementById('details-backdrop').style.backgroundImage = `url(${m.coverImage.extraLarge})`;
-            
-            document.getElementById('movie-action-area').classList.add('hidden');
-            document.getElementById('tv-action-area-top').classList.remove('hidden');
-            document.getElementById('tv-action-area').classList.remove('hidden');
-            
-            // Build simple episode list for manual anime
-            const grid = document.getElementById('episode-grid');
-            grid.innerHTML = '';
-            const total = m.episodes || 12;
-            for(let i=1; i<=total; i++) {
-                const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable";
-                epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-color:#111"><div class="ep-play-btn">▶</div></div><div class="flex-1 text-white font-bold text-sm">Episode ${i}</div>`;
-                grid.appendChild(epRow);
-            }
-            
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('selector-overlay').style.display = 'block';
-            setTimeout(() => document.getElementById('main-tv-btn').focus(), 200);
         }
 
         async function openDetails(id, type) {
@@ -281,22 +274,17 @@
             
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
-            setTimeout(() => {
-                const btn = type === 'movie' ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(btn) btn.focus();
-            }, 300);
+            window.scrollTo(0,0);
         }
 
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
-            if(!data.seasons) return;
-            data.seasons.forEach(s => {
+            data.seasons?.forEach(s => {
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
                 btn.innerText = `Season ${s.season_number}`;
-                btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
             });
@@ -308,17 +296,14 @@
             const data = await res.json();
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
-            if(data.episodes) {
-                data.episodes.forEach(e => {
-                    const epRow = document.createElement('div');
-                    epRow.className = "episode-row focusable";
-                    epRow.tabIndex = 0;
-                    epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                    const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div></div>`;
-                    grid.appendChild(epRow);
-                });
-            }
+            data.episodes?.forEach(e => {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable";
+                epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
+                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1 font-bold text-sm">E${e.episode_number} ${e.name}</div>`;
+                grid.appendChild(epRow);
+            });
         }
 
         function playCurrentEpisode() { startLuxeStream(); }
@@ -331,12 +316,10 @@
             playerOverlay.style.display = 'block';
             
             if (isAnime) {
-                // 9Anime style server using Anilist ID
                 iframe.src = `https://vidsrc.me/embed/anime?anilist=${id}&episode=${e}`;
             } else {
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
-            setTimeout(() => document.getElementById('close-player-btn').focus(), 400);
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -356,8 +339,7 @@
             grid.innerHTML = '';
             history.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
-                card.tabIndex = 0;
+                card.className = "min-w-[120px] max-w-[120px] focusable movie-card";
                 card.onclick = () => openDetails(item.id, item.type);
                 const pSrc = item.poster.startsWith('http') ? item.poster : `https://image.tmdb.org/t/p/w300${item.poster}`;
                 card.innerHTML = `<img src="${pSrc}" class="w-full h-full object-cover">`;
@@ -365,72 +347,15 @@
             });
         }
 
-        function closeSelector() { 
-            document.getElementById('selector-overlay').style.display = 'none'; 
-            document.getElementById('main-app-wrapper').style.display = 'block';
-        }
-
-        function closePlayer() { 
-            document.getElementById('luxe-player').src = "about:blank";
-            document.getElementById('player-overlay').style.display = 'none'; 
-        }
-
-        function toggleMenu() { 
-            document.getElementById('side-menu').classList.toggle('menu-open'); 
-        }
-
-        function setFilter(type, id = '') { 
-            activeType = type; activeID = id; 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open');
-            window.scrollTo(0,0);
-        }
-
-        function triggerSearch() {
-            const input = document.getElementById('search-input');
-            if(input.value) {
-                setFilter('search', input.value);
-                input.blur();
-            }
-        }
-
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; }
+        function closePlayer() { document.getElementById('luxe-player').src = "about:blank"; document.getElementById('player-overlay').style.display = 'none'; }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); }
+        function triggerSearch() { const input = document.getElementById('search-input'); if(input.value) { setFilter('search', input.value); input.blur(); } }
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
 
-        window.onload = () => { 
-            setTimeout(() => document.getElementById('loader').style.opacity = '0', 1000);
-            fetchConfig();
-            new Hammer(document.body).on("swiperight", () => toggleMenu());
-        };
-
+        window.onload = () => { setTimeout(() => document.getElementById('loader').style.opacity = '0', 1000); fetchConfig(); new Hammer(document.body).on("swiperight", () => toggleMenu()); };
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
-
-        // Original Navigation Logic preserved
-        document.addEventListener('keydown', function(e) {
-            const current = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            if (e.key === 'Enter') { if (current && current.classList.contains('focusable')) current.click(); }
-            let dir = '';
-            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
-            if (dir) {
-                e.preventDefault();
-                const next = findNext(current, focusables, dir);
-                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-            }
-        });
-
-        function findNext(cur, targets, dir) {
-            const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
-            let best = null, min = Infinity;
-            targets.forEach(t => {
-                if (t === cur) return;
-                const r2 = t.getBoundingClientRect(), c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return; if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
-                const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
-                if (d < min) { min = d; best = t; }
-            });
-            return best;
-        }
     </script>
 </body>
 </html>
