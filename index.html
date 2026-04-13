@@ -159,7 +159,7 @@
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    card.onclick = () => openAnimeDetails(m);
+                    card.onclick = () => tryAnimeViaTmdb(m);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">ANIME</div>`;
                     grid.appendChild(card);
                 });
@@ -181,6 +181,22 @@
             });
         }
 
+        // NEW LOGIC: TRY TMDB FIRST, FALLBACK TO ANILIST
+        async function tryAnimeViaTmdb(anilistData) {
+            const title = anilistData.title.english || anilistData.title.romaji;
+            try {
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
+                const searchData = await searchRes.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    // It exists in TMDB (like Nagatoro). Use original player.
+                    openDetails(searchData.results[0].id, 'tv');
+                } else {
+                    // Not in TMDB. Use independent Anime Player.
+                    openAnimeDetails(anilistData);
+                }
+            } catch (e) { openAnimeDetails(anilistData); }
+        }
+
         function openAnimeDetails(anime) {
             currentMedia = { 
                 id: anime.id, 
@@ -200,16 +216,16 @@
             document.getElementById('tv-action-area-top').classList.remove('hidden');
             document.getElementById('tv-action-area').classList.remove('hidden');
             
-            // Build Anime Episode Grid
             const seasonCont = document.getElementById('season-buttons');
             seasonCont.innerHTML = '<button class="focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-gold">Full Series</button>';
             
             const epGrid = document.getElementById('episode-grid');
             epGrid.innerHTML = '';
-            const totalEps = anime.episodes || 12; // Default to 12 if unknown
+            const totalEps = anime.episodes || 12;
             for(let i=1; i<=totalEps; i++) {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
+                epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
                 epRow.innerHTML = `<div class="ep-thumbnail"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div></div>`;
                 epGrid.appendChild(epRow);
@@ -248,6 +264,7 @@
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5";
+                btn.tabIndex = 0;
                 btn.innerText = `Season ${s.season_number}`;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 container.appendChild(btn);
@@ -263,6 +280,7 @@
             data.episodes?.forEach(e => {
                 const epRow = document.createElement('div');
                 epRow.className = "episode-row focusable";
+                epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
                 epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(https://image.tmdb.org/t/p/w300${e.still_path})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div></div>`;
                 grid.appendChild(epRow);
@@ -278,9 +296,10 @@
             document.getElementById('player-overlay').style.display = 'block';
             
             if (isAnime) {
-                // Aniwave/9Anime Server Logic using AniList ID (Much more reliable)
+                // If the anime is niche, use the AniList-based server
                 iframe.src = `https://vidsrc.me/embed/anime?anilist=${id}&episode=${e}`;
             } else {
+                // Standard Player (Works for Nagatoro and all TMDB-recognized anime)
                 iframe.src = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             }
         }
@@ -288,7 +307,7 @@
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, s, e, title, poster });
+            history.unshift({ id, type, s, e, title, poster, isAnime: currentMedia.isAnime });
             localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
             renderContinueWatching();
         }
@@ -303,6 +322,7 @@
             history.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "min-w-[120px] max-w-[120px] focusable movie-card";
+                card.tabIndex = 0;
                 card.onclick = () => item.isAnime ? openAnimeDetails(item) : openDetails(item.id, item.type);
                 const pSrc = item.poster.startsWith('http') ? item.poster : 'https://image.tmdb.org/t/p/w300'+item.poster;
                 card.innerHTML = `<img src="${pSrc}" class="w-full h-full object-cover">`;
