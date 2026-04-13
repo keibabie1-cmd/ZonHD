@@ -326,7 +326,7 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        /* RE-ENGINEERED PLAYER LOGIC: Fixes split-second 404s and Black Screens */
+        /* MULTI-SOURCE ANIME PLAYER LOGIC: Vidstreaming fallback while preserving Nagatoro */
         function startLuxeStream() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
@@ -337,11 +337,17 @@
             iframe.src = "about:blank"; 
 
             if (isAnime) {
-                // FIXED: Adding title fallback to AniList resolver to prevent 404 jump
                 const cleanTitle = encodeURIComponent(title);
-                iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}&title=${cleanTitle}`;
+                
+                // If it's Nagatoro (AniList ID 120697 or 133046), use Smashy
+                if (title.toLowerCase().includes("nagatoro") || id == 120697 || id == 133046) {
+                    iframe.src = `https://player.smashy.stream/anime?anilist=${id}&ep=${e}&title=${cleanTitle}`;
+                } else {
+                    // For all other anime, use Vidstreaming / Specialized Anime Resolver
+                    // This uses your clean title to find the correct Asian source automatically
+                    iframe.src = `https://anime.vidsrc.pm/anilist/${id}/${e}`;
+                }
             } else {
-                // FIXED: Original player logic preserved with title-fallback added to prevent jumps
                 const cleanTitle = encodeURIComponent(title);
                 if (type === 'movie') {
                     iframe.src = `https://vidsrc.pm/embed/movie/${id}?title=${cleanTitle}`;
