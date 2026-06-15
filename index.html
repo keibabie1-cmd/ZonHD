@@ -55,7 +55,7 @@
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
         <h2 class="text-gold font-bold mb-4 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Luxe Vaults</h2>
         <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-            <button class="focusable text-left py-2 hover:text-white" onclick="activeType='list'; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); isLoading=true; document.getElementById('movie-grid').innerHTML=''; fetch('https://api.themoviedb.org/3/list/8661848?api_key=' + API_KEY).then(r=>r.json()).then(d=>{ renderGrid(d.items || []); hasMore=false; isLoading=false; }).catch(()=>isLoading=false)">African American Vault</button>
+            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
         </div>
 
@@ -143,7 +143,8 @@
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
-        let savedScrollPosition = 0, lastFocusedElement = null; // <-- ADDED: Scroll & focus memory variables
+        let savedScrollPosition = 0, lastFocusedElement = null; 
+        let listCache = []; // <-- ADDED: Client-side cache to hold full list endpoints
 
         async function fetchConfig() {
             try {
@@ -156,7 +157,6 @@
         }
 
         async function fetchContent(append = false) {
-            // <-- FIXED: Only block requests based on hasMore if we are actively scrolling/appending
             if (isLoading || !API_KEY || (append && !hasMore)) return; 
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
@@ -164,6 +164,33 @@
             if (activeType === 'anime') {
                 await fetchAniList(append);
                 isLoading = false;
+                return;
+            }
+
+            // <-- NEW LOGIC: Handles the custom list endpoint with custom chunked infinite scroll
+            if (activeType === 'list') {
+                if (!append) {
+                    try {
+                        const res = await fetch(`https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}`);
+                        const data = await res.json();
+                        listCache = data.items || [];
+                        renderGrid(listCache.slice(0, 20)); // Load first 20 items
+                        currentPage = 2;
+                        hasMore = listCache.length > 20;
+                    } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+                } else {
+                    const start = (currentPage - 1) * 20;
+                    const end = start + 20;
+                    const chunk = listCache.slice(start, end);
+                    if (chunk.length > 0) {
+                        renderGrid(chunk);
+                        currentPage++;
+                        hasMore = end < listCache.length;
+                    } else {
+                        hasMore = false;
+                    }
+                    isLoading = false;
+                }
                 return;
             }
 
@@ -222,8 +249,8 @@
         }
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
-            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; // <-- ADDED: Save exact scroll position
-            lastFocusedElement = document.activeElement; // <-- ADDED: Save the poster we clicked on (critical for FireTV remote)
+            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
+            lastFocusedElement = document.activeElement; 
             
             let finalId = id;
             if (isAniList) {
@@ -349,7 +376,6 @@
             document.getElementById('selector-overlay').style.display = 'none'; 
             document.getElementById('main-app-wrapper').style.display = 'block';
             
-            // <-- ADDED: Restore scroll height and focus element upon closing the movie details!
             window.scrollTo(0, savedScrollPosition); 
             if (lastFocusedElement) {
                 lastFocusedElement.focus();
@@ -381,9 +407,8 @@
 
         function triggerSearch() {
             const input = document.getElementById('search-input');
-            const query = input.value.trim(); // Trim extra spaces
+            const query = input.value.trim();
             
-            // <-- FIXED: Handle clear searches smoothly
             if(query) {
                 setFilter('search', query);
                 input.blur();
@@ -392,7 +417,6 @@
                     if(firstResult) firstResult.focus();
                 }, 800);
             } else {
-                // If they erased the text and clicked search/enter, bounce them back to the normal trending grid!
                 input.blur();
                 setFilter('trending');
                 document.getElementById('btn-trending').classList.add('active-filter');
@@ -415,7 +439,6 @@
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                // Fix: Allow standard backspace behavior if the search bar is focused
                 if (current && current.id === 'search-input') {
                     return; 
                 }
