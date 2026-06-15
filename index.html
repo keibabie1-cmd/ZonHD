@@ -279,11 +279,45 @@
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
-            
-            // <-- NEW: These two lines are critical for the mathematical centering to work properly
             container.style.position = 'relative'; 
             container.style.scrollBehavior = 'smooth'; 
             
+            // ADDED: Dynamically injects clickable left/right arrows without touching your static HTML
+            if (!container.parentElement.classList.contains('season-scroll-wrapper')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'season-scroll-wrapper relative flex items-center mb-6 w-full';
+                
+                const leftBtn = document.createElement('button');
+                leftBtn.className = 'focusable absolute left-0 z-20 bg-black/95 text-gold border border-gold/30 w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl';
+                leftBtn.innerHTML = '❮';
+                leftBtn.onclick = () => container.scrollBy({left: -250, behavior: 'smooth'});
+
+                const rightBtn = document.createElement('button');
+                rightBtn.className = 'focusable absolute right-0 z-20 bg-black/95 text-gold border border-gold/30 w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl';
+                rightBtn.innerHTML = '❯';
+                rightBtn.onclick = () => container.scrollBy({left: 250, behavior: 'smooth'});
+
+                container.classList.remove('mb-6');
+                container.parentNode.insertBefore(wrapper, container);
+                wrapper.appendChild(leftBtn);
+                wrapper.appendChild(container);
+                wrapper.appendChild(rightBtn);
+            }
+
+            const wrapper = container.parentElement;
+            let validSeasons = data.seasons ? data.seasons.filter(s => s.season_number > 0) : [];
+            
+            // Evaluates if the show actually has enough seasons to warrant showing the arrows
+            if (validSeasons.length > 4) {
+                wrapper.children[0].style.display = 'flex'; 
+                wrapper.children[2].style.display = 'flex'; 
+                container.style.padding = '0 36px'; 
+            } else {
+                wrapper.children[0].style.display = 'none';
+                wrapper.children[2].style.display = 'none';
+                container.style.padding = '0';
+            }
+
             if(!data.seasons) return;
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
@@ -293,7 +327,7 @@
                 btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 
-                // <-- NEW: Overrides global events by forcing the container to physically slide horizontally
+                // RETAINED: Your FireTV remote fix remains active alongside the new arrows
                 btn.addEventListener('focus', function() {
                     setTimeout(() => {
                         container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
