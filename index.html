@@ -287,6 +287,14 @@
                 btn.innerText = `Season ${s.season_number}`;
                 btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                
+                // ADDED: FireTV Remote Horizontal Tracking Fix
+                btn.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }, 10);
+                });
+
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
