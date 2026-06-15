@@ -83,7 +83,7 @@
                        enterkeyhint="search"
                        onsearch="triggerSearch()"
                        onkeyup="handleSearch(event)">
-                <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
+                <button onclick="triggerSearch()" tabindex="0" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
@@ -143,6 +143,7 @@
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
+        let savedScrollPosition = 0, lastFocusedElement = null; // <-- ADDED: Scroll & focus memory variables
 
         async function fetchConfig() {
             try {
@@ -155,7 +156,8 @@
         }
 
         async function fetchContent(append = false) {
-            if (isLoading || !hasMore || !API_KEY) return;
+            // <-- FIXED: Only block requests based on hasMore if we are actively scrolling/appending
+            if (isLoading || !API_KEY || (append && !hasMore)) return; 
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
@@ -220,6 +222,9 @@
         }
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
+            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; // <-- ADDED: Save exact scroll position
+            lastFocusedElement = document.activeElement; // <-- ADDED: Save the poster we clicked on (critical for FireTV remote)
+            
             let finalId = id;
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
@@ -343,7 +348,14 @@
         function closeSelector() { 
             document.getElementById('selector-overlay').style.display = 'none'; 
             document.getElementById('main-app-wrapper').style.display = 'block';
-            document.getElementById('btn-trending').focus(); 
+            
+            // <-- ADDED: Restore scroll height and focus element upon closing the movie details!
+            window.scrollTo(0, savedScrollPosition); 
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            } else {
+                document.getElementById('btn-trending').focus(); 
+            }
         }
 
         function closePlayer() { 
@@ -369,7 +381,9 @@
 
         function triggerSearch() {
             const input = document.getElementById('search-input');
-            const query = input.value;
+            const query = input.value.trim(); // Trim extra spaces
+            
+            // <-- FIXED: Handle clear searches smoothly
             if(query) {
                 setFilter('search', query);
                 input.blur();
@@ -377,6 +391,11 @@
                     const firstResult = document.querySelector('#movie-grid .focusable');
                     if(firstResult) firstResult.focus();
                 }, 800);
+            } else {
+                // If they erased the text and clicked search/enter, bounce them back to the normal trending grid!
+                input.blur();
+                setFilter('trending');
+                document.getElementById('btn-trending').classList.add('active-filter');
             }
         }
 
