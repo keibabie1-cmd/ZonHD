@@ -279,6 +279,11 @@
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
+            
+            // <-- NEW: These two lines are critical for the mathematical centering to work properly
+            container.style.position = 'relative'; 
+            container.style.scrollBehavior = 'smooth'; 
+            
             if(!data.seasons) return;
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
@@ -288,11 +293,11 @@
                 btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 
-                // ADDED: FireTV Remote Horizontal Tracking Fix
+                // <-- NEW: Overrides global events by forcing the container to physically slide horizontally
                 btn.addEventListener('focus', function() {
                     setTimeout(() => {
-                        this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    }, 10);
+                        container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
+                    }, 100); 
                 });
 
                 container.appendChild(btn);
