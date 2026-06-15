@@ -144,7 +144,6 @@
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null; 
-        let listCache = []; // <-- ADDED: Client-side cache to hold full list endpoints
 
         async function fetchConfig() {
             try {
@@ -167,30 +166,22 @@
                 return;
             }
 
-            // <-- NEW LOGIC: Handles the custom list endpoint with custom chunked infinite scroll
+            // <-- FIXED: Directly leverages TMDb pagination to fetch the next 20 items infinitely 
             if (activeType === 'list') {
-                if (!append) {
-                    try {
-                        const res = await fetch(`https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}`);
-                        const data = await res.json();
-                        listCache = data.items || [];
-                        renderGrid(listCache.slice(0, 20)); // Load first 20 items
-                        currentPage = 2;
-                        hasMore = listCache.length > 20;
-                    } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
-                } else {
-                    const start = (currentPage - 1) * 20;
-                    const end = start + 20;
-                    const chunk = listCache.slice(start, end);
-                    if (chunk.length > 0) {
-                        renderGrid(chunk);
+                try {
+                    const res = await fetch(`https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`);
+                    const data = await res.json();
+                    const listItems = data.items || data.results || [];
+                    
+                    if (listItems.length > 0) {
+                        renderGrid(listItems);
                         currentPage++;
-                        hasMore = end < listCache.length;
+                        // Determines if we should stop scrolling by checking the total pages on TMDb's side
+                        hasMore = data.total_pages ? currentPage <= data.total_pages : listItems.length === 20;
                     } else {
                         hasMore = false;
                     }
-                    isLoading = false;
-                }
+                } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
                 return;
             }
 
