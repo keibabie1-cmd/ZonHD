@@ -55,7 +55,7 @@
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
         <h2 class="text-gold font-bold mb-4 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Luxe Vaults</h2>
         <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '24|463|380')">African American Vault</button>
+            <button class="focusable text-left py-2 hover:text-white" onclick="activeType='list'; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); isLoading=true; document.getElementById('movie-grid').innerHTML=''; fetch('https://api.themoviedb.org/3/list/8661848?api_key=' + API_KEY).then(r=>r.json()).then(d=>{ renderGrid(d.items || []); hasMore=false; isLoading=false; }).catch(()=>isLoading=false)">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
         </div>
 
