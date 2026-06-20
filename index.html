@@ -58,6 +58,7 @@
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8662163')">Wrestling</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
+            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('kdrama')">K-Drama</button>
         </div>
 
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
@@ -193,6 +194,7 @@
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+            if (activeType === 'kdrama') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ko&sort_by=popularity.desc&page=${currentPage}`;
 
             try {
                 const res = await fetch(url);
