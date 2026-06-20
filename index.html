@@ -141,10 +141,7 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="flex items-center gap-3">
-                <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-                <button id="switch-server-btn" onclick="switchServer()" class="focusable hidden bg-zinc-900/90 text-white px-3 py-2 rounded-full border border-white/20 font-bold text-[10px] tracking-widest uppercase hover:bg-gold hover:text-black transition">⟳ Switch Server</button>
-            </div>
+            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
@@ -154,11 +151,6 @@
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null; 
-        
-        // ADDED: Server backup arrays
-        let currentServerIndex = 0;
-        const movieBases = ['https://vidsrc.pm/embed/movie/', 'https://vidsrc.net/embed/movie/', 'https://vidsrc.me/embed/movie/'];
-        const tvBases = ['https://vidsrc.pm/embed/tv/', 'https://vidsrc.net/embed/tv/', 'https://vidsrc.me/embed/tv/'];
 
         async function fetchConfig() {
             try {
@@ -231,8 +223,7 @@
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
                     const searchTitle = m.title.english || m.title.romaji;
-                    // UPDATED: Now passes the romaji title into the background memory
-                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle, m.title.romaji);
+                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
                 });
@@ -254,8 +245,7 @@
             });
         }
 
-        // UPDATED: Accepts the romaji title
-        async function openDetails(id, type, isAniList = false, searchTitle = '', romajiTitle = '') {
+        async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             
@@ -270,8 +260,7 @@
             }
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
-            // UPDATED: Saves the romaji title securely to your background data object
-            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList, romaji: romajiTitle };
+            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
@@ -300,6 +289,7 @@
             container.style.position = 'relative'; 
             container.style.scrollBehavior = 'smooth'; 
             
+            // ADDED: Dynamically injects clickable left/right arrows without touching your static HTML
             if (!container.parentElement.classList.contains('season-scroll-wrapper')) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'season-scroll-wrapper relative flex items-center mb-6 w-full';
@@ -324,6 +314,7 @@
             const wrapper = container.parentElement;
             let validSeasons = data.seasons ? data.seasons.filter(s => s.season_number > 0) : [];
             
+            // Evaluates if the show actually has enough seasons to warrant showing the arrows
             if (validSeasons.length > 4) {
                 wrapper.children[0].style.display = 'flex'; 
                 wrapper.children[2].style.display = 'flex'; 
@@ -343,6 +334,7 @@
                 btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 
+                // RETAINED: Your FireTV remote fix remains active alongside the new arrows
                 btn.addEventListener('focus', function() {
                     setTimeout(() => {
                         container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
@@ -375,38 +367,16 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        // ADDED: The Switch Server function
-        function switchServer() {
-            currentServerIndex = (currentServerIndex + 1) % movieBases.length;
-            document.getElementById('switch-server-btn').innerText = `⟳ Server ${currentServerIndex + 1}`;
-            startLuxeStream(); // Restarts the video silently with the new URL
-        }
-
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, title, romaji } = currentMedia;
-            saveToHistory(id, type, s, e, title, currentMedia.poster); 
+            const { type, id, s, e, isAnime, title } = currentMedia;
+            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            const serverBtn = document.getElementById('switch-server-btn');
-            
             playerOverlay.style.display = 'block';
             
-            // Only show the server switcher for standard media
-            if (!isAnime) {
-                serverBtn.classList.remove('hidden');
-            } else {
-                serverBtn.classList.add('hidden');
-            }
-            
-            // UPDATED: Dynamically uses the current server from the array
-            const vidsrcUrl = (type === 'movie' ? `${movieBases[currentServerIndex]}${id}` : `${tvBases[currentServerIndex]}${id}/${s}/${e}`);
-            
-            // UPDATED: Advanced anime title formatting (cleans up colons, commas, and uses Romaji if available)
-            let formatTitle = (isAnime && romaji) ? romaji : title;
-            let safeSlug = formatTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${safeSlug}-episode-${e}`;
+            const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+            const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
-            // YOUR CORE IFRAME LOGIC IS UNTOUCHED
             iframe.src = "about:blank"; 
             if (isAnime) {
                 try {
@@ -462,10 +432,6 @@
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
-            
-            // ADDED: Resets the server back to default when the video is closed
-            currentServerIndex = 0;
-            document.getElementById('switch-server-btn').innerText = `⟳ Switch Server`;
         }
         
         function toggleMenu() { 
