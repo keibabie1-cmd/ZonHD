@@ -171,7 +171,7 @@
                 renderContinueWatching();
                 fetchContent();
             } catch (err) { 
-                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API.</p>';
+                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API. Make sure Render service is live.</p>';
                 console.error("Config load failed", err); 
             }
         }
@@ -524,7 +524,7 @@
             return best;
         }
 
-        // --- BOUNCER: INTERCEPTING JUNK ---
+        // --- THE BOUNCER: HARDENED EDITION ---
         (function() {
             window.open = function() { console.log("Popup intercepted."); return null; };
             document.addEventListener('click', function(e) {
