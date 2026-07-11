@@ -374,16 +374,9 @@
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
-            iframe.src = "about:blank"; 
-            if (isAnime) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1200); 
-                    const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    iframe.src = response.ok ? consumetUrl : vidsrcUrl;
-                } catch (err) { iframe.src = vidsrcUrl; }
-            } else { iframe.src = vidsrcUrl; }
+            // --- UPDATED FOR PROXY ENGINE ---
+            const targetUrl = isAnime ? consumetUrl : vidsrcUrl;
+            iframe.src = `/api/stream-proxy?url=${encodeURIComponent(targetUrl)}`;
 
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
@@ -521,26 +514,16 @@
 
         // --- THE BOUNCER: HARDENED EDITION ---
         (function() {
-            // Intercept window.open
-            window.open = function() {
-                console.log("Popup intercepted.");
-                return null;
-            };
-
-            // Intercept all clicks to stop events from reaching the player's internal ad triggers
+            window.open = function() { console.log("Popup intercepted."); return null; };
             document.addEventListener('click', function(e) {
                 const target = e.target.closest('a');
                 if (target && target.target === '_blank') {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log("Link click intercepted.");
                 }
             }, true);
-
-            // Click shield: Stop the first click from propagating if it hits a suspicious element
             document.addEventListener('mousedown', function(e) {
                 if (e.target.closest('#luxe-player')) {
-                    // We allow the click to play the video, but keep the event contained
                     e.stopPropagation();
                 }
             }, true);
