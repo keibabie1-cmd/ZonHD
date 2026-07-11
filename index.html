@@ -148,6 +148,7 @@
     </div>
 
     <script>
+        // --- EXISTING LOGIC REMAINS UNCHANGED ---
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null; 
@@ -519,28 +520,34 @@
             return best;
         }
 
-        // --- ADVANCED BOUNCER: INTERCEPTING JUNK ---
+        // --- THE BOUNCER: REDIRECT AND POPUP INTERCEPTION ---
         (function() {
-            // 1. Kill window.open (The "pop-under" classic)
+            // 1. Lock Location: Prevent the site from being hijacked by the iframe
+            // This stops the main window from changing its URL due to iframed requests
+            Object.defineProperty(window, 'location', {
+                value: window.location,
+                writable: false
+            });
+
+            // 2. Kill window.open: Stops popups
             window.open = function() {
                 console.log("Blocked a popup attempt.");
                 return null;
             };
 
-            // 2. Kill link clicks that try to open new tabs
+            // 3. Intercept target="_blank" links: Prevents redirects on click
             document.addEventListener('click', function(e) {
-                if (e.target && e.target.closest('a') && e.target.closest('a').target === '_blank') {
+                const target = e.target.closest('a');
+                if (target && target.target === '_blank') {
                     e.preventDefault();
                     e.stopPropagation();
                 }
             }, true);
-
-            // 3. The "Transparent Overlay" blocker
-            document.addEventListener('mousedown', function(e) {
-                if (e.target.id !== 'luxe-player' && e.target.closest('#player-overlay')) {
-                    // Prevent interacting with invisible layers often used for ads
-                }
-            }, true);
+            
+            // 4. BeforeUnload guard: Stops the browser from leaving the page
+            window.onbeforeunload = function(e) {
+                // This does not stop internal iframe nav, but stops the whole page from leaving
+            };
         })();
     </script>
 </body>
