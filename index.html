@@ -144,7 +144,7 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -518,6 +518,30 @@
             });
             return best;
         }
+
+        // --- ADVANCED BOUNCER: INTERCEPTING JUNK ---
+        (function() {
+            // 1. Kill window.open (The "pop-under" classic)
+            window.open = function() {
+                console.log("Blocked a popup attempt.");
+                return null;
+            };
+
+            // 2. Kill link clicks that try to open new tabs
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.closest('a') && e.target.closest('a').target === '_blank') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
+
+            // 3. The "Transparent Overlay" blocker
+            document.addEventListener('mousedown', function(e) {
+                if (e.target.id !== 'luxe-player' && e.target.closest('#player-overlay')) {
+                    // Prevent interacting with invisible layers often used for ads
+                }
+            }, true);
+        })();
     </script>
 </body>
 </html>
