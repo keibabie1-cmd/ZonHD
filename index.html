@@ -144,7 +144,7 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -289,7 +289,6 @@
             container.style.position = 'relative'; 
             container.style.scrollBehavior = 'smooth'; 
             
-            // ADDED: Dynamically injects clickable left/right arrows without touching your static HTML
             if (!container.parentElement.classList.contains('season-scroll-wrapper')) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'season-scroll-wrapper relative flex items-center mb-6 w-full';
@@ -314,7 +313,6 @@
             const wrapper = container.parentElement;
             let validSeasons = data.seasons ? data.seasons.filter(s => s.season_number > 0) : [];
             
-            // Evaluates if the show actually has enough seasons to warrant showing the arrows
             if (validSeasons.length > 4) {
                 wrapper.children[0].style.display = 'flex'; 
                 wrapper.children[2].style.display = 'flex'; 
@@ -334,7 +332,6 @@
                 btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
                 
-                // RETAINED: Your FireTV remote fix remains active alongside the new arrows
                 btn.addEventListener('focus', function() {
                     setTimeout(() => {
                         container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
