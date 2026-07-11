@@ -148,7 +148,6 @@
     </div>
 
     <script>
-        // --- EXISTING LOGIC REMAINS UNCHANGED ---
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null; 
@@ -520,34 +519,31 @@
             return best;
         }
 
-        // --- THE BOUNCER: REDIRECT AND POPUP INTERCEPTION ---
+        // --- THE BOUNCER: HARDENED EDITION ---
         (function() {
-            // 1. Lock Location: Prevent the site from being hijacked by the iframe
-            // This stops the main window from changing its URL due to iframed requests
-            Object.defineProperty(window, 'location', {
-                value: window.location,
-                writable: false
-            });
-
-            // 2. Kill window.open: Stops popups
+            // Intercept window.open
             window.open = function() {
-                console.log("Blocked a popup attempt.");
+                console.log("Popup intercepted.");
                 return null;
             };
 
-            // 3. Intercept target="_blank" links: Prevents redirects on click
+            // Intercept all clicks to stop events from reaching the player's internal ad triggers
             document.addEventListener('click', function(e) {
                 const target = e.target.closest('a');
                 if (target && target.target === '_blank') {
                     e.preventDefault();
                     e.stopPropagation();
+                    console.log("Link click intercepted.");
                 }
             }, true);
-            
-            // 4. BeforeUnload guard: Stops the browser from leaving the page
-            window.onbeforeunload = function(e) {
-                // This does not stop internal iframe nav, but stops the whole page from leaving
-            };
+
+            // Click shield: Stop the first click from propagating if it hits a suspicious element
+            document.addEventListener('mousedown', function(e) {
+                if (e.target.closest('#luxe-player')) {
+                    // We allow the click to play the video, but keep the event contained
+                    e.stopPropagation();
+                }
+            }, true);
         })();
     </script>
 </body>
