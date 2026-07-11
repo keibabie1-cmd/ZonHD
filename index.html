@@ -148,14 +148,12 @@
     </div>
 
     <script>
-        // --- SERVICE WORKER REGISTRATION (Disabled for Testing) ---
-        /*
+        // --- EMERGENCY NUKE: Force kill any lingering service workers ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-            .then(() => console.log('Firewall activated.'))
-            .catch(err => console.log('Firewall failed:', err));
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) { registration.unregister(); }
+            });
         }
-        */
 
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
@@ -163,10 +161,10 @@
 
         async function fetchConfig() {
             try {
-                const res = await fetch('/api/config');
+                const res = await fetch(window.location.origin + '/api/config');
                 const data = await res.json();
                 if (!data.tmdb_key) {
-                    document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error: API Key Not Found. Check Render Environment Variables.</p>';
+                    document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error: API Key Not Found.</p>';
                     return;
                 }
                 API_KEY = data.tmdb_key;
@@ -526,7 +524,7 @@
             return best;
         }
 
-        // --- THE BOUNCER: HARDENED EDITION ---
+        // --- BOUNCER: INTERCEPTING JUNK ---
         (function() {
             window.open = function() { console.log("Popup intercepted."); return null; };
             document.addEventListener('click', function(e) {
