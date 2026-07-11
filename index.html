@@ -148,12 +148,14 @@
     </div>
 
     <script>
-        // --- SERVICE WORKER REGISTRATION ---
+        // --- SERVICE WORKER REGISTRATION (Disabled for Testing) ---
+        /*
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
             .then(() => console.log('Firewall activated.'))
             .catch(err => console.log('Firewall failed:', err));
         }
+        */
 
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
@@ -163,10 +165,17 @@
             try {
                 const res = await fetch('/api/config');
                 const data = await res.json();
+                if (!data.tmdb_key) {
+                    document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error: API Key Not Found. Check Render Environment Variables.</p>';
+                    return;
+                }
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
                 fetchContent();
-            } catch (err) { console.error("Config load failed", err); }
+            } catch (err) { 
+                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API.</p>';
+                console.error("Config load failed", err); 
+            }
         }
 
         async function fetchContent(append = false) {
