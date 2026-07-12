@@ -31,7 +31,7 @@
         }
 
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
-        #details-backdrop { position: absolute; top: 0; right: 0; width: 100%; height: 450px; background-size: cover; background-position: top right; opacity: 0.75; mask-image: linear-gradient(to bottom, black 40%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%); }
+        #details-backdrop { position: absolute; top: 0; right: 0; width: 100%; height: 450px; background-size: cover; background-position: top right; opacity: 0.75; pointer-events: none; mask-image: linear-gradient(to bottom, black 40%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%); }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
@@ -43,12 +43,9 @@
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        
-        /* New Click Shield for Mobile Initialization */
-        #click-shield { position: absolute; inset: 0; z-index: 6000; background: transparent; cursor: pointer; display: none; }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
+        
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
@@ -63,6 +60,7 @@
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('kdrama')">K-Drama</button>
         </div>
+
         <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
         <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
             <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
@@ -74,6 +72,7 @@
             <button class="focusable" onclick="setFilter('network', 56)">Cartoon Network</button>
             <button class="focusable" onclick="setFilter('network', 77)">SyFy</button>
         </div>
+
         <h2 class="text-gold font-bold mt-10 mb-4 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Support</h2>
         <a href="https://buymeacoffee.com/ZonHD" target="_blank" class="focusable flex items-center justify-center gap-2 bg-gold text-black font-black px-4 py-3 rounded-lg text-xs uppercase tracking-widest w-full hover:bg-yellow-600 transition">
             ☕ Buy Me a Coffee
@@ -82,9 +81,15 @@
 
     <div id="main-app-wrapper">
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
+
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <input type="search" id="search-input" class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" placeholder="Search Master Library..." enterkeyhint="search" onsearch="triggerSearch()" onkeyup="handleSearch(event)">
+                <input type="search" id="search-input" 
+                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
+                        placeholder="Search Master Library..." 
+                        enterkeyhint="search"
+                        onsearch="triggerSearch()"
+                        onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" tabindex="0" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -97,19 +102,40 @@
                 <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
             </nav>
         </div>
-        <section id="continue-section" class="hidden px-4 pt-6"><h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3><div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div></section>
+
+        <section id="continue-section" class="hidden px-4 pt-6">
+            <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
+            <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
+        </section>
+
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
 
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
         <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10"><svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-            <div class="flex gap-5 mb-6"><img id="details-poster" class="w-32 rounded-lg shadow-2xl"><div class="flex flex-col justify-end"><h2 id="show-title" class="text-3xl font-extrabold mb-2 tracking-tighter"></h2><div class="flex items-center gap-3"><span id="show-year" class="text-zinc-400 text-sm font-bold"></span><span id="show-rating" class="rating-badge"></span><span id="media-type-tag" class="tv-tag">TV</span></div></div></div>
+            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <div class="flex gap-5 mb-6">
+                <img id="details-poster" class="w-32 rounded-lg shadow-2xl">
+                <div class="flex flex-col justify-end">
+                    <h2 id="show-title" class="text-3xl font-extrabold mb-2 tracking-tighter"></h2>
+                    <div class="flex items-center gap-3">
+                        <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
+                        <span id="show-rating" class="rating-badge"></span>
+                        <span id="media-type-tag" class="tv-tag">TV</span>
+                    </div>
+                </div>
+            </div>
             <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
             <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
-            <div id="tv-action-area" class="hidden"><h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3><div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div><div id="episode-grid" class="flex flex-col"></div></div>
+            <div id="tv-action-area" class="hidden">
+                <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
+                <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
+                <div id="episode-grid" class="flex flex-col"></div>
+            </div>
         </div>
     </div>
 
@@ -118,24 +144,15 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <!-- Click Shield for mobile stability -->
-        <div id="click-shield" onclick="initPlayer()"></div>
-        <div id="iframe-container" class="w-full h-full"></div>
+        <!-- Wrapper to handle mobile interactions -->
+        <div id="iframe-container" class="w-full h-full" style="position:relative;"></div>
     </div>
 
     <script>
-        let currentUrl = "";
-
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            document.getElementById('click-shield').style.display = 'block'; // Show shield to catch initial click
             loadPlayerFinal();
-        }
-
-        function initPlayer() {
-            const shield = document.getElementById('click-shield');
-            shield.style.display = 'none'; // Simply remove the blocker once the user has clicked
         }
 
         function loadPlayerFinal() {
@@ -144,11 +161,13 @@
             container.innerHTML = ''; 
             
             const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
-                                  (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+                        (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
+            // Important: Adding sandbox attributes that allow necessary permissions without being too restrictive
+            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
