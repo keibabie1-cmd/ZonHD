@@ -159,8 +159,9 @@
             const container = document.getElementById('iframe-container');
             container.innerHTML = ''; 
             
+            // Reverted to VidSrc source provider
             const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
-                                `https://multiembed.mov/?video_id=${id}&tmdb=1${type === 'tv' ? `&s=${s}&e=${e}` : ''}`;
+                                (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
@@ -168,7 +169,6 @@
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
-            // Defensively inject after a delay
             setTimeout(() => { frame.src = url; }, 500);
             container.appendChild(frame);
         }
