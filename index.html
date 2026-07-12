@@ -6,7 +6,6 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
@@ -140,14 +139,14 @@
         }
 
         // ============================================================
-        // PROXY PLAYER – uses HLS.js, no iframe, no popups
+        // USING embed.su – clean player, no popups, works on free tier
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // Anime stays as iframe (consumet is fine)
+            // --- Anime: use consumet (iframe) ---
             if (isAnime) {
                 const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
                 const frame = document.createElement('iframe');
@@ -160,45 +159,33 @@
                 return;
             }
 
-            // Movies & TV – use proxy + HLS.js
-            const video = document.createElement('video');
-            video.id = 'hls-player';
-            video.controls = true;
-            video.autoplay = true;
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.background = '#000';
-            container.appendChild(video);
-
-            const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
-
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                });
-                hls.loadSource(proxyUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().catch(() => {});
-                });
-                window._hlsInstance = hls;
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = proxyUrl;
-                video.addEventListener('loadedmetadata', function() {
-                    video.play().catch(() => {});
-                });
+            // --- Movies & TV: use embed.su (clean, no popups) ---
+            // Option 1: embed.su (recommended)
+            let provider = 'embed.su';
+            let path;
+            if (type === 'movie') {
+                path = `embed/${id}`;
             } else {
-                container.innerHTML = '<p class="text-white text-center p-4">HLS not supported.</p>';
+                path = `embed/tv/${id}/${s}/${e}`;
             }
+            const url = `https://${provider}/${path}`;
+
+            // --- Fallback: if embed.su is down, try multiembed.to ---
+            // To use fallback, uncomment below and comment out the above
+            // const fallbackUrl = `https://multiembed.to/movie/${id}`; // or tv/${id}/${s}/${e}
+
+            const frame = document.createElement('iframe');
+            frame.className = "w-full h-full";
+            frame.style.border = "none";
+            frame.id = "main-player-frame";
+            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+            frame.setAttribute('allowfullscreen', 'true');
+            frame.src = url;
+            container.appendChild(frame);
         }
         // ============================================================
 
         function closePlayer() {
-            if (window._hlsInstance) {
-                window._hlsInstance.destroy();
-                window._hlsInstance = null;
-            }
             document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none';
             document.getElementById('close-sel-btn').focus();
