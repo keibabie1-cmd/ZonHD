@@ -165,25 +165,26 @@
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
+            frame.id = "main-player-frame";
             
-            // Surgical sandbox configuration: allows core functions but denies 
-            // top-level navigation, preventing the player from breaking out of your frame.
-            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-            frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+            // Allow functionality without using the sandbox attribute
+            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
-            
-            // This force-triggers a confirmation dialog on any attempt to navigate away
-            frame.addEventListener('load', function() {
-                try {
-                    frame.contentWindow.onbeforeunload = function() {
-                        return "Stay here?";
-                    };
-                } catch(e) {}
-            });
             
             frame.src = url;
             container.appendChild(frame);
-            frame.focus();
+            
+            monitorIframe(frame);
+        }
+
+        function monitorIframe(frame) {
+            try {
+                Object.defineProperty(window, 'top', {
+                    get: function() { return window; },
+                    configurable: false
+                });
+            } catch(e) {}
+            frame.onload = () => { try { frame.contentWindow.location.href = frame.src; } catch(e) {} };
         }
 
         window.addEventListener('blur', () => {
@@ -213,7 +214,6 @@
                 fetchContent();
             } catch (err) { 
                 document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API.</p>';
-                console.error("Config load failed", err); 
             }
         }
 
@@ -222,25 +222,14 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            if (activeType === 'anime') {
-                await fetchAniList(append);
-                isLoading = false;
-                return;
-            }
+            if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
 
             if (activeType === 'list') {
                 try {
                     const res = await fetch(`https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`);
                     const data = await res.json();
                     const listItems = data.items || data.results || [];
-                    
-                    if (listItems.length > 0) {
-                        renderGrid(listItems);
-                        currentPage++;
-                        hasMore = data.total_pages ? currentPage <= data.total_pages : listItems.length === 20;
-                    } else {
-                        hasMore = false;
-                    }
+                    if (listItems.length > 0) { renderGrid(listItems); currentPage++; hasMore = data.total_pages ? currentPage <= data.total_pages : listItems.length === 20; } else { hasMore = false; }
                 } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
                 return;
             }
@@ -254,22 +243,14 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
-                    currentPage++;
-                    hasMore = currentPage <= data.total_pages;
-                } else { hasMore = false; }
+                if (data.results && data.results.length > 0) { renderGrid(data.results); currentPage++; hasMore = currentPage <= data.total_pages; } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
         async function fetchAniList(append) {
             const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore } } }`;
             try {
-                const response = await fetch('https://graphql.anilist.co', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, variables: { page: currentPage } })
-                });
+                const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { page: currentPage } }) });
                 const json = await response.json();
                 const results = json.data.Page.media;
                 const grid = document.getElementById('movie-grid');
@@ -282,8 +263,7 @@
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
                 });
-                currentPage++;
-                hasMore = json.data.Page.pageInfo.hasNextPage;
+                currentPage++; hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) { console.error("AniList Error", err); }
         }
 
@@ -303,15 +283,11 @@
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
-            
             let finalId = id;
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    finalId = searchData.results[0].id;
-                    type = searchData.results[0].media_type || 'tv';
-                }
+                if (searchData.results && searchData.results.length > 0) { finalId = searchData.results[0].id; type = searchData.results[0].media_type || 'tv'; }
             }
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
@@ -327,72 +303,39 @@
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
-            
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-
-            setTimeout(() => {
-                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) playBtn.focus();
-            }, 300);
+            setTimeout(() => { const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(playBtn) playBtn.focus(); }, 300);
         }
 
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
-            container.style.position = 'relative'; 
-            container.style.scrollBehavior = 'smooth'; 
-            
             if (!container.parentElement.classList.contains('season-scroll-wrapper')) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'season-scroll-wrapper relative flex items-center mb-6 w-full';
-                
                 const leftBtn = document.createElement('button');
                 leftBtn.className = 'focusable absolute left-0 z-20 bg-black/95 text-gold border border-gold/30 w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl';
                 leftBtn.innerHTML = '❮';
                 leftBtn.onclick = () => container.scrollBy({left: -250, behavior: 'smooth'});
-
                 const rightBtn = document.createElement('button');
                 rightBtn.className = 'focusable absolute right-0 z-20 bg-black/95 text-gold border border-gold/30 w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl';
                 rightBtn.innerHTML = '❯';
                 rightBtn.onclick = () => container.scrollBy({left: 250, behavior: 'smooth'});
-
-                container.classList.remove('mb-6');
-                container.parentNode.insertBefore(wrapper, container);
-                wrapper.appendChild(leftBtn);
-                wrapper.appendChild(container);
-                wrapper.appendChild(rightBtn);
+                container.classList.remove('mb-6'); container.parentNode.insertBefore(wrapper, container);
+                wrapper.appendChild(leftBtn); wrapper.appendChild(container); wrapper.appendChild(rightBtn);
             }
-
             const wrapper = container.parentElement;
             let validSeasons = data.seasons ? data.seasons.filter(s => s.season_number > 0) : [];
-            
-            if (validSeasons.length > 4) {
-                wrapper.children[0].style.display = 'flex'; 
-                wrapper.children[2].style.display = 'flex'; 
-                container.style.padding = '0 36px'; 
-            } else {
-                wrapper.children[0].style.display = 'none';
-                wrapper.children[2].style.display = 'none';
-                container.style.padding = '0';
-            }
-
+            if (validSeasons.length > 4) { wrapper.children[0].style.display = 'flex'; wrapper.children[2].style.display = 'flex'; container.style.padding = '0 36px'; } else { wrapper.children[0].style.display = 'none'; wrapper.children[2].style.display = 'none'; container.style.padding = '0'; }
             if(!data.seasons) return;
             data.seasons.forEach(s => {
                 if (s.season_number === 0) return;
                 const btn = document.createElement('button');
                 btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
-                btn.innerText = `Season ${s.season_number}`;
-                btn.tabIndex = 0;
-                btn.onclick = () => loadEpisodes(data.id, s.season_number);
-                
-                btn.addEventListener('focus', function() {
-                    setTimeout(() => {
-                        container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
-                    }, 100); 
-                });
-
+                btn.innerText = `Season ${s.season_number}`; btn.tabIndex = 0; btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                btn.addEventListener('focus', function() { setTimeout(() => { container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2); }, 100); });
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
@@ -418,7 +361,6 @@
         }
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
-
         function saveToHistory(id, type, s, e, title, poster) {
             let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
             history = history.filter(item => item.id !== id);
@@ -432,8 +374,7 @@
             const section = document.getElementById('continue-section');
             const grid = document.getElementById('continue-grid');
             if (history.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            grid.innerHTML = '';
+            section.classList.remove('hidden'); grid.innerHTML = '';
             history.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
@@ -444,48 +385,14 @@
             });
         }
 
-        function closeSelector() { 
-            document.getElementById('selector-overlay').style.display = 'none'; 
-            document.getElementById('main-app-wrapper').style.display = 'block';
-            window.scrollTo(0, savedScrollPosition); 
-            if (lastFocusedElement) lastFocusedElement.focus();
-        }
-
-        function closePlayer() { 
-            document.getElementById('iframe-container').innerHTML = '';
-            document.getElementById('player-overlay').style.display = 'none'; 
-            document.getElementById('close-sel-btn').focus(); 
-        }
-        
-        function toggleMenu() { 
-            const menu = document.getElementById('side-menu');
-            menu.classList.toggle('menu-open'); 
-        }
-
-        function setFilter(type, id = '') { 
-            activeType = type; activeID = id; 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
-            fetchContent(); 
-            document.getElementById('side-menu').classList.remove('menu-open');
-            window.scrollTo(0,0);
-        }
-
-        function triggerSearch() {
-            const input = document.getElementById('search-input');
-            const query = input.value.trim();
-            if(query) { setFilter('search', query); }
-        }
-
+        function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; window.scrollTo(0, savedScrollPosition); if (lastFocusedElement) lastFocusedElement.focus(); }
+        function closePlayer() { document.getElementById('iframe-container').innerHTML = ''; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        function setFilter(type, id = '') { activeType = type; activeID = id; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
+        function triggerSearch() { const input = document.getElementById('search-input'); const query = input.value.trim(); if(query) { setFilter('search', query); } }
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
 
-        window.onload = () => { 
-            setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
-            fetchConfig();
-            const mc = new Hammer(document.body);
-            mc.on("swiperight", () => toggleMenu());
-        };
-
+        window.onload = () => { setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000); fetchConfig(); const mc = new Hammer(document.body); mc.on("swiperight", () => toggleMenu()); };
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
     </script>
 </body>
