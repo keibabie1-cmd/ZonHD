@@ -144,7 +144,8 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
+        <!-- SANDBOXED IFRAME: Prevents redirects/popups -->
+        <iframe id="luxe-player" class="w-full h-full" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -171,7 +172,7 @@
                 renderContinueWatching();
                 fetchContent();
             } catch (err) { 
-                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API. Make sure Render service is live.</p>';
+                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API. Ensure server is live.</p>';
                 console.error("Config load failed", err); 
             }
         }
