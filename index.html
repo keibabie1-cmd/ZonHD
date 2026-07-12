@@ -145,7 +145,6 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         
-        <!-- GATEKEEPER OVERLAY -->
         <div id="gatekeeper" style="position:fixed; inset:0; z-index:9999; background:black; display:none; align-items:center; justify-content:center;">
             <button id="start-stream-btn" onclick="loadPlayerFinal()" class="bg-red-600 px-8 py-4 rounded-full font-bold text-lg tracking-widest uppercase">Start Playing</button>
         </div>
@@ -154,7 +153,16 @@
     </div>
 
     <script>
-        // Emergency Nuke for old SW
+        // --- FOCUS REVERT HACK ---
+        window.addEventListener('blur', () => {
+            if (document.getElementById('player-overlay').style.display === 'block') {
+                setTimeout(() => {
+                    window.focus();
+                }, 500);
+            }
+        });
+
+        // Emergency Nuke
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()) });
         }
@@ -468,16 +476,9 @@
 
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
 
-        // --- THE BOUNCER: HARDENED EDITION ---
+        // --- BOUNCER ---
         (function() {
             window.open = function() { console.log("Popup intercepted."); return null; };
-            document.addEventListener('click', function(e) {
-                const target = e.target.closest('a');
-                if (target && target.target === '_blank') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, true);
         })();
     </script>
 </body>
