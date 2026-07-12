@@ -85,11 +85,11 @@
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
                 <input type="search" id="search-input" 
-                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
-                        placeholder="Search Master Library..." 
-                        enterkeyhint="search"
-                        onsearch="triggerSearch()"
-                        onkeyup="handleSearch(event)">
+                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
+                       placeholder="Search Master Library..." 
+                       enterkeyhint="search"
+                       onsearch="triggerSearch()"
+                       onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" tabindex="0" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -159,13 +159,14 @@
             const container = document.getElementById('iframe-container');
             container.innerHTML = ''; 
             
-            // Reverted to VidSrc source provider
             const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
-                                (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
+                                  (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
+            // Using sandbox to restrict top-level navigation and popups which cause mobile redirects
+            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
