@@ -26,105 +26,146 @@ app.get('/api/config', (req, res) => {
 });
 
 // ============================================================
-// PROXY ENDPOINTS – Enhanced headers to bypass anti-bot detection
+// PROXY ENDPOINTS – Recursive iframe-following + fallback providers
 // ============================================================
 
-app.get('/api/proxy/stream', async (req, res) => {
-    const { type, id, s, e } = req.query;
+// Helper: fetch with realistic headers
+async function fetchWithHeaders(url) {
+    return fetch(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://vidsrc.pm/',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+        }
+    });
+}
 
-    let embedUrl;
-    if (type === 'movie') {
-        embedUrl = `https://vidsrc.pm/embed/movie/${id}`;
-    } else {
-        embedUrl = `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
-    }
+// Recursive manifest extractor
+async function extractManifestFromUrl(url, depth = 0) {
+    if (depth > 3) return null; // prevent infinite loops
 
-    console.log(`[Proxy] Fetching: ${embedUrl}`);
+    console.log(`[Proxy] Fetching (depth ${depth}): ${url}`);
 
     try {
-        // --- Real browser headers ---
-        const pageRes = await fetch(embedUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Referer': 'https://vidsrc.pm/',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'same-origin',
-                'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1',
-            }
-        });
+        const response = await fetchWithHeaders(url);
+        const html = await response.text();
 
-        const html = await pageRes.text();
-
-        // --- Improved Regex to find the .m3u8 manifest ---
-        let manifestUrl = null;
+        // Try to find .m3u8 manifest
         const patterns = [
-            /["'](?:file|source)["']\s*:\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
-            /file\s*:\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
+            /["'](?:file|source)["']\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
+            /file\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
             /src\s*=\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
-            /url\s*:\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
+            /url\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
             /(https?:\/\/[^\s"']+\.m3u8[^\s"']*)/i
         ];
 
         for (const pattern of patterns) {
             const match = html.match(pattern);
             if (match) {
-                manifestUrl = match[1];
-                break;
+                return match[1];
             }
         }
 
-        if (!manifestUrl) {
-            console.error('[Proxy] ❌ Manifest not found in HTML');
-            // Log more of the HTML to see what we're getting
-            console.log('[Proxy] HTML length:', html.length);
-            console.log('[Proxy] HTML preview (first 2000 chars):', html.substring(0, 2000));
-            return res.status(500).send('Could not find video manifest');
+        // If not found, look for an iframe src
+        const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+        if (iframeMatch) {
+            let iframeSrc = iframeMatch[1];
+            // Resolve relative URLs
+            if (!iframeSrc.startsWith('http')) {
+                const base = new URL(url);
+                iframeSrc = new URL(iframeSrc, base).href;
+            }
+            console.log(`[Proxy] Found iframe, following to: ${iframeSrc}`);
+            return extractManifestFromUrl(iframeSrc, depth + 1);
         }
 
-        console.log(`[Proxy] ✅ Found manifest: ${manifestUrl}`);
-
-        // Fetch the manifest
-        const manifestRes = await fetch(manifestUrl, {
-            headers: {
-                'Referer': 'https://vidsrc.pm',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        // Also look for embedded script that sets the source (some providers use js)
+        const scriptMatch = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+        if (scriptMatch) {
+            for (const script of scriptMatch) {
+                const urlMatch = script.match(/(https?:\/\/[^\s"']+\.m3u8[^\s"']*)/i);
+                if (urlMatch) {
+                    return urlMatch[1];
+                }
             }
-        });
+        }
 
-        let manifestText = await manifestRes.text();
-        const baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
-
-        // Rewrite every URL in the manifest to go through our proxy
-        const lines = manifestText.split('\n');
-        const rewrittenLines = lines.map(line => {
-            const trimmed = line.trim();
-            if (trimmed === '' || trimmed.startsWith('#')) return line;
-
-            if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-                return `/api/proxy/raw?url=${encodeURIComponent(trimmed)}`;
-            }
-
-            try {
-                const fullUrl = new URL(trimmed, baseUrl).href;
-                return `/api/proxy/raw?url=${encodeURIComponent(fullUrl)}`;
-            } catch (_) {
-                return line;
-            }
-        });
-
-        const rewrittenManifest = rewrittenLines.join('\n');
-        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        res.send(rewrittenManifest);
-
+        console.log(`[Proxy] ❌ No manifest or iframe found at depth ${depth}`);
+        return null;
     } catch (err) {
-        console.error('[Proxy] /stream error:', err);
-        res.status(500).send('Proxy error: ' + err.message);
+        console.error(`[Proxy] Error fetching ${url}:`, err.message);
+        return null;
     }
+}
+
+app.get('/api/proxy/stream', async (req, res) => {
+    const { type, id, s, e } = req.query;
+
+    // List of providers to try (fallback order)
+    const providers = [
+        { domain: 'vidsrc.pm', path: (type === 'movie') ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` },
+        { domain: 'vidsrc.to', path: (type === 'movie') ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` },
+        { domain: 'vidsrc.xyz', path: (type === 'movie') ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` },
+        { domain: 'vidsrc.cc', path: (type === 'movie') ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` },
+        { domain: 'vidbinge.com', path: (type === 'movie') ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` },
+    ];
+
+    for (const provider of providers) {
+        const embedUrl = `https://${provider.domain}/${provider.path}`;
+        console.log(`[Proxy] Trying provider: ${provider.domain}`);
+
+        try {
+            const manifestUrl = await extractManifestFromUrl(embedUrl);
+            if (manifestUrl) {
+                console.log(`[Proxy] ✅ Found manifest from ${provider.domain}: ${manifestUrl}`);
+
+                // Fetch the manifest and rewrite URLs
+                const manifestRes = await fetch(manifestUrl, {
+                    headers: {
+                        'Referer': `https://${provider.domain}/`,
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+
+                let manifestText = await manifestRes.text();
+                const baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
+
+                const lines = manifestText.split('\n');
+                const rewrittenLines = lines.map(line => {
+                    const trimmed = line.trim();
+                    if (trimmed === '' || trimmed.startsWith('#')) return line;
+
+                    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+                        return `/api/proxy/raw?url=${encodeURIComponent(trimmed)}`;
+                    }
+
+                    try {
+                        const fullUrl = new URL(trimmed, baseUrl).href;
+                        return `/api/proxy/raw?url=${encodeURIComponent(fullUrl)}`;
+                    } catch (_) {
+                        return line;
+                    }
+                });
+
+                const rewrittenManifest = rewrittenLines.join('\n');
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                res.send(rewrittenManifest);
+                return; // success – exit
+            }
+        } catch (err) {
+            console.error(`[Proxy] Provider ${provider.domain} failed:`, err.message);
+        }
+    }
+
+    // If all providers fail
+    res.status(500).send('Could not find video stream from any provider');
 });
 
 app.get('/api/proxy/raw', async (req, res) => {
@@ -138,7 +179,7 @@ app.get('/api/proxy/raw', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                'Referer': 'https://vidsrc.pm',
+                'Referer': 'https://vidsrc.pm/',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         });
