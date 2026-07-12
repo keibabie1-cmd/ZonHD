@@ -167,7 +167,6 @@
             frame.style.border = "none";
             frame.id = "main-player-frame";
             
-            // Allow functionality without using the sandbox attribute
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
             
@@ -181,9 +180,17 @@
             frame.onload = () => {
                 try {
                     const win = frame.contentWindow;
-                    // Sinkhole window.open to prevent popups
+                    
+                    // Capture clicks to block redirect triggers before they reach the player logic
+                    win.document.addEventListener('click', (e) => {
+                        const target = e.target.closest('a, button, div');
+                        if (target && (target.tagName === 'A' || target.getAttribute('target') === '_blank')) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                        }
+                    }, true);
+
                     win.open = (url, target, features) => { return null; };
-                    // Lock the location property to prevent redirects
                     Object.defineProperty(win, 'location', {
                         value: win.location,
                         writable: false,
