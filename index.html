@@ -163,20 +163,23 @@
                                   (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
             const frame = document.createElement('iframe');
+            frame.id = "video-player-frame";
             frame.className = "w-full h-full";
             frame.style.border = "none";
-            // Using sandbox to restrict top-level navigation and popups which cause mobile redirects
-            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
+            // This script helps prevent the iframe from breaking out of your window
+            window.onbeforeunload = function() { return "Are you sure you want to leave?"; };
+
             setTimeout(() => { frame.src = url; }, 500);
             container.appendChild(frame);
         }
 
+        // Monitoring for redirection attempts
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
-                setTimeout(() => { window.focus(); }, 500);
+                setTimeout(() => { window.focus(); }, 100);
             }
         });
 
@@ -442,6 +445,7 @@
         function closePlayer() { 
             document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none'; 
+            window.onbeforeunload = null; // Clear monitor
             document.getElementById('close-sel-btn').focus(); 
         }
         
