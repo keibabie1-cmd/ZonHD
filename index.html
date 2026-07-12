@@ -162,28 +162,19 @@
             const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
                         (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
-            const iframeContent = `
-                <!DOCTYPE html>
-                <html>
-                <body style="margin:0; padding:0; overflow:hidden; background:#000;">
-                    <iframe src="${url}" 
-                            style="width:100vw; height:100vh; border:none;" 
-                            allow="autoplay; encrypted-media; picture-in-picture" 
-                            allowfullscreen>
-                    </iframe>
-                </body>
-                </html>
-            `;
-
-            const blob = new Blob([iframeContent], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
-            frame.src = blobUrl;
             
+            // This policy configuration explicitly excludes popups, preventing the player 
+            // from successfully opening new windows/tabs, while avoiding the 
+            // 'sandbox' attribute name that the player detects.
+            frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+            frame.setAttribute('allowfullscreen', 'true');
+            
+            frame.src = url;
             container.appendChild(frame);
+            frame.focus();
         }
 
         window.addEventListener('blur', () => {
