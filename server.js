@@ -26,7 +26,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // ============================================================
-// PROXY ENDPOINTS – Improved with better regex & logging
+// PROXY ENDPOINTS – Enhanced headers to bypass anti-bot detection
 // ============================================================
 
 app.get('/api/proxy/stream', async (req, res) => {
@@ -42,12 +42,22 @@ app.get('/api/proxy/stream', async (req, res) => {
     console.log(`[Proxy] Fetching: ${embedUrl}`);
 
     try {
+        // --- Real browser headers ---
         const pageRes = await fetch(embedUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://vidsrc.pm'
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Referer': 'https://vidsrc.pm/',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
             }
         });
+
         const html = await pageRes.text();
 
         // --- Improved Regex to find the .m3u8 manifest ---
@@ -70,7 +80,9 @@ app.get('/api/proxy/stream', async (req, res) => {
 
         if (!manifestUrl) {
             console.error('[Proxy] ❌ Manifest not found in HTML');
-            console.log('[Proxy] HTML snippet:', html.substring(0, 500));
+            // Log more of the HTML to see what we're getting
+            console.log('[Proxy] HTML length:', html.length);
+            console.log('[Proxy] HTML preview (first 2000 chars):', html.substring(0, 2000));
             return res.status(500).send('Could not find video manifest');
         }
 
@@ -111,7 +123,7 @@ app.get('/api/proxy/stream', async (req, res) => {
 
     } catch (err) {
         console.error('[Proxy] /stream error:', err);
-        res.status(500).send('Proxy error');
+        res.status(500).send('Proxy error: ' + err.message);
     }
 });
 
