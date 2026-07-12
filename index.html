@@ -151,14 +151,14 @@
         }
 
         // ============================================================
-        // LOAD PLAYER WITH CLICK SHIELD + WINDOW.OPEN/BEFOREUNLOAD BLOCK
+        // LOAD PLAYER WITH CLICK SHIELD + PARENT GUARDS (NO SANDBOX)
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // --- 1. Activate global blockers (parent window) ---
+            // --- 1. Activate global blockers on the parent window ---
             const originalOpen = window.open;
             let guardActive = true;
 
@@ -188,7 +188,7 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // --- 2. Build the iframe ---
+            // --- 2. Build the iframe (NO sandbox attribute) ---
             let url;
             if (isAnime) {
                 url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
@@ -204,16 +204,11 @@
             frame.id = "main-player-frame";
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
-            
-            // --- 3. Critical: use sandbox without popup permissions ---
-            // This is the last line of defense – if the shield fails, the sandbox blocks popups.
-            // We give it just enough to play video, but NOT allow-popups or allow-top-navigation.
-            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
-            
+            // NO sandbox attribute here – let vidsrc.pm run freely
             frame.src = url;
             container.appendChild(frame);
 
-            // --- 4. Click Shield (transparent overlay) ---
+            // --- 3. Click Shield (transparent overlay) ---
             const shield = document.createElement('div');
             shield.id = "click-shield";
             shield.style.position = "absolute";
@@ -225,21 +220,16 @@
             shield.style.background = "transparent";
             shield.style.cursor = "pointer";
 
-            // Capture the first click (or touch) and block it
+            // Capture the first click/touch and block it
             const firstClickHandler = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('[Shield] First click intercepted');
 
-                // Remove the shield so the second click goes to the video
+                // Remove the shield so subsequent clicks go to the iframe
                 if (shield.parentNode) {
                     shield.parentNode.removeChild(shield);
                 }
-
-                // Also ensure the guard is still active for a moment
-                // (the popup might be triggered by this click)
-                // The global guard will handle it.
-
                 return false;
             };
 
