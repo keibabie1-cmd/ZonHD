@@ -144,16 +144,22 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <!-- SANDBOXED IFRAME: Prevents redirects/popups -->
-        <iframe id="luxe-player" class="w-full h-full" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
+        
+        <!-- CLICK SHIELD: Transparent div that intercepts the FIRST click to prevent popup -->
+        <div id="click-shield" style="position:absolute; inset:0; z-index:9000; cursor:pointer;" onclick="hideShield()"></div>
+        
+        <!-- IFRAME: No sandbox attribute to ensure it plays -->
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
-        // --- EMERGENCY NUKE: Force kill any lingering service workers ---
+        function hideShield() {
+            document.getElementById('click-shield').style.display = 'none';
+        }
+
+        // --- SERVICE WORKER NUKE ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for (let registration of registrations) { registration.unregister(); }
-            });
+            navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()) });
         }
 
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
@@ -172,7 +178,7 @@
                 renderContinueWatching();
                 fetchContent();
             } catch (err) { 
-                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API. Ensure server is live.</p>';
+                document.getElementById('movie-grid').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Connection Error: Could not reach Config API.</p>';
                 console.error("Config load failed", err); 
             }
         }
@@ -385,6 +391,7 @@
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
+            document.getElementById('click-shield').style.display = 'block';
             
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
