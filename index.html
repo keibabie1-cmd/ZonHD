@@ -150,14 +150,14 @@
         }
 
         // ============================================================
-        // LOAD PLAYER USING vidsrc.to (less aggressive) + click shield
+        // FIXED: Shield auto-removes after 2 seconds so you can press play
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // --- Parent guards (backup) ---
+            // --- Parent guards (block popups/redirects) ---
             const originalOpen = window.open;
             let guardActive = true;
             window.open = function(url, target, features) {
@@ -181,13 +181,12 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // --- Build the iframe using vidsrc.to (instead of .pm) ---
+            // --- Build the iframe using vidsrc.to ---
             let url;
             if (isAnime) {
                 url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
             } else {
-                // Use vidsrc.to (less aggressive redirects)
-                const provider = 'vidsrc.to'; // change to 'vidsrc.xyz' or 'vidbinge.com' if needed
+                const provider = 'vidsrc.to'; // fallback: 'vidsrc.xyz' or 'vidbinge.com'
                 url = (type === 'movie')
                     ? `https://${provider}/embed/movie/${id}`
                     : `https://${provider}/embed/tv/${id}/${s}/${e}`;
@@ -199,7 +198,6 @@
             frame.id = "main-player-frame";
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
-            // NO sandbox – let the player run freely
             frame.src = url;
             container.appendChild(frame);
 
@@ -215,12 +213,22 @@
             shield.style.background = "transparent";
             shield.style.cursor = "pointer";
 
+            // Remove the shield automatically after 2 seconds
+            // This gives the iframe time to load, but lets you tap play quickly
+            setTimeout(() => {
+                if (shield.parentNode) {
+                    shield.parentNode.removeChild(shield);
+                    console.log('[Shield] Auto-removed after 2 seconds');
+                }
+            }, 2000);
+
+            // Also remove on first click (if you tap before the auto-remove)
             const firstClickHandler = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('[Shield] First click intercepted');
                 if (shield.parentNode) {
                     shield.parentNode.removeChild(shield);
+                    console.log('[Shield] Removed by click');
                 }
                 return false;
             };
@@ -230,13 +238,13 @@
             container.style.position = "relative";
             container.appendChild(shield);
 
-            // Auto-remove shield after 12 seconds
-            setTimeout(() => {
-                const existing = document.getElementById('click-shield');
-                if (existing && existing.parentNode) {
-                    existing.parentNode.removeChild(existing);
+            // If the iframe loads, we can also remove the shield immediately
+            frame.addEventListener('load', function() {
+                if (shield.parentNode) {
+                    shield.parentNode.removeChild(shield);
+                    console.log('[Shield] Removed on iframe load');
                 }
-            }, 12000);
+            });
         }
         // ============================================================
 
