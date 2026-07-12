@@ -166,11 +166,20 @@
             frame.className = "w-full h-full";
             frame.style.border = "none";
             
-            // This policy configuration explicitly excludes popups, preventing the player 
-            // from successfully opening new windows/tabs, while avoiding the 
-            // 'sandbox' attribute name that the player detects.
+            // Surgical sandbox configuration: allows core functions but denies 
+            // top-level navigation, preventing the player from breaking out of your frame.
+            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
+            
+            // This force-triggers a confirmation dialog on any attempt to navigate away
+            frame.addEventListener('load', function() {
+                try {
+                    frame.contentWindow.onbeforeunload = function() {
+                        return "Stay here?";
+                    };
+                } catch(e) {}
+            });
             
             frame.src = url;
             container.appendChild(frame);
