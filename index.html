@@ -155,21 +155,51 @@
         }
 
         // ============================================================
-        // UPDATED loadPlayerFinal with Click Shield to block 1st popup
+        // FIXED: Guard against on-load redirects & popups
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // Build the video URL
+            // --- 1. Activate the "Danger Window" Guard ---
+            const originalOpen = window.open;
+            let guardActive = true;
+
+            // Block popups
+            window.open = function(url, target, features) {
+                if (guardActive) {
+                    console.log('Blocked popup on load:', url);
+                    return null;
+                }
+                return originalOpen.call(this, url, target, features);
+            };
+
+            // Block top-level redirects (e.g., window.top.location)
+            const beforeUnloadHandler = function(e) {
+                if (guardActive) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            };
+            window.addEventListener('beforeunload', beforeUnloadHandler);
+
+            // Automatically remove the guard after 6 seconds
+            // (the video loads, and the malicious script has run its course)
+            setTimeout(() => {
+                guardActive = false;
+                window.open = originalOpen;
+                window.removeEventListener('beforeunload', beforeUnloadHandler);
+            }, 6000);
+
+            // --- 2. Load the iframe ---
             const url = isAnime
                 ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`
                 : (type === 'movie'
                     ? `https://vidsrc.pm/embed/movie/${id}`
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
-            // 1. Create the Iframe
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
@@ -178,58 +208,6 @@
             frame.setAttribute('allowfullscreen', 'true');
             frame.src = url;
             container.appendChild(frame);
-
-            // 2. Create the Click Shield (transparent overlay)
-            const shield = document.createElement('div');
-            shield.id = "click-shield";
-            shield.style.position = "absolute";
-            shield.style.top = "0";
-            shield.style.left = "0";
-            shield.style.width = "100%";
-            shield.style.height = "100%";
-            shield.style.zIndex = "9999";
-            shield.style.background = "transparent";
-            shield.style.cursor = "pointer";
-
-            // 3. Trap the very first click
-            shield.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Block popups/redirects by overriding window.open and preventing beforeunload
-                const originalOpen = window.open;
-                window.open = function() { return null; };
-
-                const blockBeforeUnload = function(ev) {
-                    ev.preventDefault();
-                    ev.returnValue = '';
-                    window.removeEventListener('beforeunload', blockBeforeUnload);
-                };
-                window.addEventListener('beforeunload', blockBeforeUnload, { once: true });
-
-                // Remove the shield so the next click hits the real player
-                if (shield.parentNode) {
-                    shield.parentNode.removeChild(shield);
-                }
-
-                // Restore window.open after the dangerous moment has passed
-                setTimeout(() => {
-                    window.open = originalOpen;
-                }, 200);
-
-                return false;
-            }, true);
-
-            container.style.position = "relative";
-            container.appendChild(shield);
-
-            // Safety net: auto-remove shield after 15 seconds in case the user never clicks
-            setTimeout(() => {
-                const existingShield = document.getElementById('click-shield');
-                if (existingShield && existingShield.parentNode) {
-                    existingShield.parentNode.removeChild(existingShield);
-                }
-            }, 15000);
         }
         // ============================================================
 
