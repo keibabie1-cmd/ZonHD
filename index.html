@@ -144,35 +144,42 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <!-- Iframe with Sandbox -->
-        <iframe id="luxe-player" class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-presentation allow-autoplay allow-forms" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+        <div id="iframe-container" class="w-full h-full"></div>
     </div>
 
     <script>
-        // --- PLAYER LOGIC ---
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            
+            loadPlayerFinal();
+        }
+
+        function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
-            const iframe = document.getElementById('luxe-player');
+            const container = document.getElementById('iframe-container');
+            container.innerHTML = '';
             
-            // New Source Provider
             const baseUrl = "https://www.2embed.cc/embed";
             const url = (type === 'movie') ? `${baseUrl}/${id}` : `${baseUrl}tv/${id}&s=${s}&e=${e}`;
             const animeUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+
+            const frame = document.createElement('iframe');
+            frame.className = "w-full h-full";
+            frame.style.border = "none";
+            frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+            frame.setAttribute('allowfullscreen', 'true');
             
-            iframe.src = isAnime ? animeUrl : url;
+            // Dynamic injection to bypass initial redirect script
+            setTimeout(() => { frame.src = isAnime ? animeUrl : url; }, 500);
+            container.appendChild(frame);
         }
 
-        // --- FOCUS REVERT HACK ---
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
             }
         });
 
-        // Emergency Nuke
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()) });
         }
@@ -433,7 +440,7 @@
         }
 
         function closePlayer() { 
-            document.getElementById('luxe-player').src = "about:blank";
+            document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
         }
