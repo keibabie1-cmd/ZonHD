@@ -159,8 +159,10 @@
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
             
-            const baseUrl = "https://www.2embed.cc/embed";
-            const url = (type === 'movie') ? `${baseUrl}/${id}` : `${baseUrl}tv/${id}&s=${s}&e=${e}`;
+            // Switching to SuperEmbed provider
+            const baseUrl = "https://multiembed.mov/?video_id=";
+            const tvUrl = `${baseUrl}${id}&tmdb=1&s=${s}&e=${e}`;
+            const movieUrl = `${baseUrl}${id}&tmdb=1`;
             const animeUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             const frame = document.createElement('iframe');
@@ -169,8 +171,7 @@
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
-            // Dynamic injection to bypass initial redirect script
-            setTimeout(() => { frame.src = isAnime ? animeUrl : url; }, 500);
+            setTimeout(() => { frame.src = isAnime ? animeUrl : (type === 'movie' ? movieUrl : tvUrl); }, 500);
             container.appendChild(frame);
         }
 
