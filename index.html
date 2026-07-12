@@ -139,7 +139,7 @@
         }
 
         // ============================================================
-        // USING embed.su – clean player, no popups, works on free tier
+        // USING multiembed.to – clean player, no popups, works on free tier
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
@@ -159,20 +159,18 @@
                 return;
             }
 
-            // --- Movies & TV: use embed.su (clean, no popups) ---
-            // Option 1: embed.su (recommended)
-            let provider = 'embed.su';
+            // --- Movies & TV: use multiembed.to (reliable, no popups) ---
             let path;
             if (type === 'movie') {
-                path = `embed/${id}`;
+                path = `movie/${id}`;
             } else {
-                path = `embed/tv/${id}/${s}/${e}`;
+                path = `tv/${id}/${s}/${e}`;
             }
-            const url = `https://${provider}/${path}`;
+            const url = `https://multiembed.to/${path}`;
 
-            // --- Fallback: if embed.su is down, try multiembed.to ---
-            // To use fallback, uncomment below and comment out the above
-            // const fallbackUrl = `https://multiembed.to/movie/${id}`; // or tv/${id}/${s}/${e}
+            // --- Fallback: if multiembed.to fails, try embed.su ---
+            // To use fallback, uncomment the lines below and comment the above
+            // const fallbackUrl = `https://embed.su/embed/${type === 'movie' ? id : `tv/${id}/${s}/${e}`}`;
 
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
