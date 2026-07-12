@@ -31,40 +31,23 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
-
-        /* Debug overlay */
         #debug-box {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.85);
             color: #ffdd44;
-            padding: 10px 20px;
+            padding: 8px 12px;
             border-radius: 8px;
             font-size: 12px;
             z-index: 9999;
-            max-width: 90%;
-            text-align: center;
             border: 1px solid var(--gold);
             pointer-events: none;
             display: none;
-        }
-        #error-box {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(200,0,0,0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            font-size: 18px;
-            z-index: 9998;
-            max-width: 90%;
             text-align: center;
-            display: none;
-            border: 2px solid var(--gold);
+            font-family: monospace;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -165,7 +148,6 @@
         </div>
         <div id="iframe-container" class="w-full h-full" style="position:relative;">
             <div id="debug-box"></div>
-            <div id="error-box"></div>
         </div>
     </div>
 
@@ -177,20 +159,20 @@
         }
 
         // ============================================================
-        // DEBUGGABLE PLAYER – shows URL and errors
+        // DEBUGGABLE PLAYER – shows URL and load events
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             const debug = document.getElementById('debug-box');
-            const errorBox = document.getElementById('error-box');
             container.innerHTML = '';
-            debug.style.display = 'none';
-            errorBox.style.display = 'none';
+            debug.style.display = 'block';
+            debug.textContent = 'Initializing...';
 
             // --- Anime: use consumet ---
             if (isAnime) {
                 const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+                debug.textContent = 'Anime: ' + url;
                 const frame = document.createElement('iframe');
                 frame.className = "w-full h-full";
                 frame.style.border = "none";
@@ -201,69 +183,52 @@
                 return;
             }
 
-            // --- Movies & TV: try multiple providers in order ---
-            const providers = [
-                { domain: 'multiembed.to', path: type === 'movie' ? `movie/${id}` : `tv/${id}/${s}/${e}` },
-                { domain: 'embed.su', path: type === 'movie' ? `embed/${id}` : `embed/tv/${id}/${s}/${e}` },
-                { domain: '2embed.cc', path: type === 'movie' ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` }
-            ];
-
-            let frame = null;
-            let currentProviderIndex = 0;
-
-            function tryNextProvider() {
-                if (currentProviderIndex >= providers.length) {
-                    errorBox.textContent = '❌ All video providers failed. Please try another movie.';
-                    errorBox.style.display = 'block';
-                    return;
-                }
-                const provider = providers[currentProviderIndex];
-                const url = `https://${provider.domain}/${provider.path}`;
-                debug.textContent = `🔄 Trying: ${url}`;
-                debug.style.display = 'block';
-
-                // Create iframe
-                if (frame) frame.remove();
-                frame = document.createElement('iframe');
-                frame.className = "w-full h-full";
-                frame.style.border = "none";
-                frame.id = "main-player-frame";
-                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.src = url;
-                container.appendChild(frame);
-
-                // Listen for load error
-                frame.onerror = function() {
-                    console.log(`[Provider] ${provider.domain} failed to load`);
-                    currentProviderIndex++;
-                    tryNextProvider();
-                };
-                // If iframe loads but stays blank, we can't detect that, but we'll show a manual fallback after 10s
-                let timeout = setTimeout(() => {
-                    // If after 10 seconds the iframe is still not showing content, try next
-                    // (this is a heuristic)
-                    if (frame && frame.contentWindow && !frame.contentWindow.location.href.includes(provider.domain)) {
-                        // Probably blank – move to next
-                        console.log(`[Provider] ${provider.domain} seemed blank, trying next`);
-                        currentProviderIndex++;
-                        tryNextProvider();
-                    }
-                }, 10000);
-                // Clear timeout if we move on
-                frame._timeout = timeout;
-                currentProviderIndex++;
+            // --- Movies & TV: use multiembed.to with proper format ---
+            // Format: https://multiembed.to/movie/{id}?autoplay=1
+            // For TV: https://multiembed.to/tv/{id}/{season}/{episode}?autoplay=1
+            let url;
+            if (type === 'movie') {
+                url = `https://multiembed.to/movie/${id}?autoplay=1`;
+            } else {
+                url = `https://multiembed.to/tv/${id}/${s}/${e}?autoplay=1`;
             }
 
-            // Start with first provider
-            tryNextProvider();
+            debug.textContent = 'Loading: ' + url;
+
+            // Create iframe with referrerpolicy to avoid referrer blocking
+            const frame = document.createElement('iframe');
+            frame.className = "w-full h-full";
+            frame.style.border = "none";
+            frame.id = "main-player-frame";
+            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+            frame.setAttribute('allowfullscreen', 'true');
+            frame.referrerPolicy = 'no-referrer'; // helps avoid referrer blocking
+            frame.src = url;
+
+            // --- Event listeners to see if it loads ---
+            frame.addEventListener('load', function() {
+                debug.textContent = '✅ Iframe loaded: ' + url;
+                // Hide debug after 3 seconds on success
+                setTimeout(() => { debug.style.display = 'none'; }, 3000);
+            });
+
+            frame.addEventListener('error', function(e) {
+                debug.textContent = '❌ Iframe error: ' + url;
+                debug.style.color = '#ff6666';
+            });
+
+            container.appendChild(frame);
+
+            // Fallback: if no load/error event fires within 10s, show a warning
+            setTimeout(() => {
+                if (debug.style.display !== 'none' && debug.textContent.startsWith('Loading')) {
+                    debug.textContent = '⏳ Iframe still loading... (check provider)';
+                }
+            }, 10000);
         }
         // ============================================================
 
         function closePlayer() {
-            // Clean up any ongoing iframe timeouts
-            const frame = document.getElementById('main-player-frame');
-            if (frame && frame._timeout) clearTimeout(frame._timeout);
             document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none';
             document.getElementById('close-sel-btn').focus();
