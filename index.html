@@ -85,11 +85,11 @@
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
                 <input type="search" id="search-input" 
-                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
-                       placeholder="Search Master Library..." 
-                       enterkeyhint="search"
-                       onsearch="triggerSearch()"
-                       onkeyup="handleSearch(event)">
+                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
+                        placeholder="Search Master Library..." 
+                        enterkeyhint="search"
+                        onsearch="triggerSearch()"
+                        onkeyup="handleSearch(event)">
                 <button onclick="triggerSearch()" tabindex="0" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
@@ -145,11 +145,8 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         
-        <div id="gatekeeper" style="position:fixed; inset:0; z-index:9999; background:black; display:none; align-items:center; justify-content:center;">
-            <button id="start-stream-btn" onclick="loadPlayerFinal()" class="bg-red-600 px-8 py-4 rounded-full font-bold text-lg tracking-widest uppercase">Start Playing</button>
-        </div>
-        
-        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
+        <!-- Updated iframe: Includes strict sandboxing to prevent navigation/popups while allowing video playback -->
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-autoplay"></iframe>
     </div>
 
     <script>
@@ -392,18 +389,14 @@
 
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
-            document.getElementById('player-overlay').style.display = 'block';
-            document.getElementById('gatekeeper').style.display = 'flex';
-        }
-
-        function loadPlayerFinal() {
+            // Removed bouncer/gatekeeper logic to allow immediate loading
             const { type, id, s, e, isAnime, title } = currentMedia;
             const iframe = document.getElementById('luxe-player');
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = isAnime ? consumetUrl : vidsrcUrl; 
-            document.getElementById('gatekeeper').style.display = 'none';
+            document.getElementById('player-overlay').style.display = 'block';
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -441,7 +434,6 @@
         function closePlayer() { 
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
-            document.getElementById('gatekeeper').style.display = 'none';
             document.getElementById('close-sel-btn').focus(); 
         }
         
@@ -475,11 +467,6 @@
         };
 
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
-
-        // --- BOUNCER ---
-        (function() {
-            window.open = function() { console.log("Popup intercepted."); return null; };
-        })();
     </script>
 </body>
 </html>
