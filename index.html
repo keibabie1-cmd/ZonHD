@@ -178,13 +178,20 @@
         }
 
         function monitorIframe(frame) {
-            try {
-                Object.defineProperty(window, 'top', {
-                    get: function() { return window; },
-                    configurable: false
-                });
-            } catch(e) {}
-            frame.onload = () => { try { frame.contentWindow.location.href = frame.src; } catch(e) {} };
+            frame.onload = () => {
+                try {
+                    const win = frame.contentWindow;
+                    // Sinkhole window.open to prevent popups
+                    win.open = (url, target, features) => { return null; };
+                    // Lock the location property to prevent redirects
+                    Object.defineProperty(win, 'location', {
+                        value: win.location,
+                        writable: false,
+                        configurable: false
+                    });
+                    win.onbeforeunload = null;
+                } catch(e) {}
+            };
         }
 
         window.addEventListener('blur', () => {
