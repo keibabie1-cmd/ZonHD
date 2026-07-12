@@ -57,7 +57,7 @@ app.get('/api/proxy/stream', async (req, res) => {
             /file\s*:\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
             /src\s*=\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
             /url\s*:\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
-            /(https?:\/\/[^\s"']+\.m3u8[^\s"']*)/i  // catch any raw URL ending in .m3u8
+            /(https?:\/\/[^\s"']+\.m3u8[^\s"']*)/i
         ];
 
         for (const pattern of patterns) {
@@ -70,7 +70,6 @@ app.get('/api/proxy/stream', async (req, res) => {
 
         if (!manifestUrl) {
             console.error('[Proxy] ❌ Manifest not found in HTML');
-            // Log a snippet of the HTML for debugging (check Render logs)
             console.log('[Proxy] HTML snippet:', html.substring(0, 500));
             return res.status(500).send('Could not find video manifest');
         }
@@ -94,12 +93,10 @@ app.get('/api/proxy/stream', async (req, res) => {
             const trimmed = line.trim();
             if (trimmed === '' || trimmed.startsWith('#')) return line;
 
-            // If it's already absolute, proxy it
             if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
                 return `/api/proxy/raw?url=${encodeURIComponent(trimmed)}`;
             }
 
-            // Relative path – build absolute URL
             try {
                 const fullUrl = new URL(trimmed, baseUrl).href;
                 return `/api/proxy/raw?url=${encodeURIComponent(fullUrl)}`;
