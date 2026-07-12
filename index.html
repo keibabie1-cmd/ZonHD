@@ -6,6 +6,8 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <!-- HLS.js – required for proxy streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
@@ -155,59 +157,74 @@
         }
 
         // ============================================================
-        // FIXED: Guard against on-load redirects & popups
+        // NEW: Proxy-based player – NO iframe, NO popups/redirects
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // --- 1. Activate the "Danger Window" Guard ---
-            const originalOpen = window.open;
-            let guardActive = true;
+            // ---- Anime stays as iframe (consumet-api handles it) ----
+            if (isAnime) {
+                const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+                const frame = document.createElement('iframe');
+                frame.className = "w-full h-full";
+                frame.style.border = "none";
+                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+                frame.setAttribute('allowfullscreen', 'true');
+                frame.src = url;
+                container.appendChild(frame);
+                return;
+            }
 
-            // Block popups
-            window.open = function(url, target, features) {
-                if (guardActive) {
-                    console.log('Blocked popup on load:', url);
-                    return null;
-                }
-                return originalOpen.call(this, url, target, features);
-            };
+            // ---- Movies & TV Shows: use HLS proxy ----
+            const video = document.createElement('video');
+            video.id = 'hls-player';
+            video.controls = true;
+            video.autoplay = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.background = '#000';
+            container.appendChild(video);
 
-            // Block top-level redirects (e.g., window.top.location)
-            const beforeUnloadHandler = function(e) {
-                if (guardActive) {
-                    e.preventDefault();
-                    e.returnValue = '';
-                    return '';
-                }
-            };
-            window.addEventListener('beforeunload', beforeUnloadHandler);
+            // Build the proxy URL – this calls our /api/proxy/stream endpoint
+            const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
 
-            // Automatically remove the guard after 6 seconds
-            // (the video loads, and the malicious script has run its course)
-            setTimeout(() => {
-                guardActive = false;
-                window.open = originalOpen;
-                window.removeEventListener('beforeunload', beforeUnloadHandler);
-            }, 6000);
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hls.loadSource(proxyUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(() => {});
+                });
+                // Store the instance so we can destroy it later
+                window._hlsInstance = hls;
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS (Safari on macOS/iOS)
+                video.src = proxyUrl;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(() => {});
+                });
+            } else {
+                container.innerHTML = '<p class="text-white text-center p-4">Your browser does not support HLS playback.</p>';
+            }
+        }
+        // ============================================================
 
-            // --- 2. Load the iframe ---
-            const url = isAnime
-                ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`
-                : (type === 'movie'
-                    ? `https://vidsrc.pm/embed/movie/${id}`
-                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-
-            const frame = document.createElement('iframe');
-            frame.className = "w-full h-full";
-            frame.style.border = "none";
-            frame.id = "main-player-frame";
-            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-            frame.setAttribute('allowfullscreen', 'true');
-            frame.src = url;
-            container.appendChild(frame);
+        // ============================================================
+        // Updated closePlayer – destroys HLS instance properly
+        // ============================================================
+        function closePlayer() {
+            if (window._hlsInstance) {
+                window._hlsInstance.destroy();
+                window._hlsInstance = null;
+            }
+            document.getElementById('iframe-container').innerHTML = '';
+            document.getElementById('player-overlay').style.display = 'none';
+            document.getElementById('close-sel-btn').focus();
         }
         // ============================================================
 
@@ -410,7 +427,6 @@
         }
 
         function closeSelector() { document.getElementById('selector-overlay').style.display = 'none'; document.getElementById('main-app-wrapper').style.display = 'block'; window.scrollTo(0, savedScrollPosition); if (lastFocusedElement) lastFocusedElement.focus(); }
-        function closePlayer() { document.getElementById('iframe-container').innerHTML = ''; document.getElementById('player-overlay').style.display = 'none'; document.getElementById('close-sel-btn').focus(); }
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
         function setFilter(type, id = '') { activeType = type; activeID = id; document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter')); if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter'); fetchContent(); document.getElementById('side-menu').classList.remove('menu-open'); window.scrollTo(0,0); }
         function triggerSearch() { const input = document.getElementById('search-input'); const query = input.value.trim(); if(query) { setFilter('search', query); } }
