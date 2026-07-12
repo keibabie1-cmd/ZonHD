@@ -149,12 +149,30 @@
     </div>
 
     <script>
+        // --- ANTI-REDIRECT DEFENSE ---
+        // This overrides global window properties to nullify redirect attempts
+        (function() {
+            const originalWindowOpen = window.open;
+            window.open = function() { console.log("Attempted pop-up blocked"); return null; };
+            
+            // Periodically check if the iframe is trying to modify top window location
+            setInterval(() => {
+                try {
+                    if (window.top !== window.self) {
+                        // This prevents the iframe from navigating the parent
+                        Object.defineProperty(window, 'location', {
+                            value: window.location,
+                            writable: false
+                        });
+                    }
+                } catch(e) {}
+            }, 1000);
+        })();
+
         // --- FOCUS REVERT HACK ---
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
-                setTimeout(() => {
-                    window.focus();
-                }, 500);
+                setTimeout(() => { window.focus(); }, 100);
             }
         });
 
@@ -398,11 +416,7 @@
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
-            // Inject the source after a 1.5-second delay to potentially bypass the initial redirect trigger
-            iframe.src = "about:blank";
-            setTimeout(() => {
-                iframe.src = isAnime ? consumetUrl : vidsrcUrl;
-            }, 1500);
+            iframe.src = isAnime ? consumetUrl : vidsrcUrl;
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
