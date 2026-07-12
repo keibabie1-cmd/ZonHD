@@ -156,31 +156,27 @@
 
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
-            const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
-                                (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
-
             const container = document.getElementById('iframe-container');
-            container.innerHTML = '';
-
-            const blobContent = `<!DOCTYPE html><html style="width:100%;height:100%;margin:0;padding:0;overflow:hidden;"><body style="width:100%;height:100%;margin:0;padding:0;overflow:hidden;"><iframe src="${url}" style="width:100%;height:100%;border:none;" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></body></html>`;
-            const blob = new Blob([blobContent], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-
+            container.innerHTML = ''; 
+            const baseUrl = "https://www.2embed.cc/embed";
+            const url = (type === 'movie') ? `${baseUrl}/${id}` : `${baseUrl}tv/${id}&s=${s}&e=${e}`;
+            const animeUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+            
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
-            frame.src = blobUrl;
+            frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+            frame.setAttribute('allowfullscreen', 'true');
+            frame.src = isAnime ? animeUrl : url;
             container.appendChild(frame);
         }
 
-        // --- FOCUS REVERT HACK ---
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
             }
         });
 
-        // Emergency Nuke
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()) });
         }
