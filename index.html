@@ -157,13 +157,10 @@
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
-            container.innerHTML = '';
+            container.innerHTML = ''; 
             
-            // Switching to SuperEmbed provider
-            const baseUrl = "https://multiembed.mov/?video_id=";
-            const tvUrl = `${baseUrl}${id}&tmdb=1&s=${s}&e=${e}`;
-            const movieUrl = `${baseUrl}${id}&tmdb=1`;
-            const animeUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+            const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
+                                `https://multiembed.mov/?video_id=${id}&tmdb=1${type === 'tv' ? `&s=${s}&e=${e}` : ''}`;
 
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
@@ -171,7 +168,8 @@
             frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
             frame.setAttribute('allowfullscreen', 'true');
             
-            setTimeout(() => { frame.src = isAnime ? animeUrl : (type === 'movie' ? movieUrl : tvUrl); }, 500);
+            // Defensively inject after a delay
+            setTimeout(() => { frame.src = url; }, 500);
             container.appendChild(frame);
         }
 
