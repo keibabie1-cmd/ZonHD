@@ -6,7 +6,6 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <!-- HLS.js – required for proxy streaming -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
@@ -49,6 +48,24 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* On-screen debug overlay */
+        #debug-message {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 9999;
+            display: none;
+            max-width: 90%;
+            text-align: center;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -146,7 +163,10 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <div id="iframe-container" class="w-full h-full"></div>
+        <div id="iframe-container" class="w-full h-full" style="position:relative;">
+            <!-- Debug message appears here -->
+            <div id="debug-message"></div>
+        </div>
     </div>
 
     <script>
@@ -157,14 +177,17 @@
         }
 
         // ============================================================
-        // NEW: Proxy-based player – NO iframe, NO popups/redirects
+        // PROXY-BASED PLAYER with on-screen error display
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
+            const debug = document.getElementById('debug-message');
+            debug.style.display = 'none';
+            debug.textContent = '';
 
-            // ---- Anime stays as iframe (consumet-api handles it) ----
+            // ---- Anime stays as iframe ----
             if (isAnime) {
                 const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
                 const frame = document.createElement('iframe');
@@ -187,8 +210,16 @@
             video.style.background = '#000';
             container.appendChild(video);
 
-            // Build the proxy URL – this calls our /api/proxy/stream endpoint
             const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
+
+            // Show loading message
+            function showDebug(msg, isError = false) {
+                debug.textContent = msg;
+                debug.style.display = 'block';
+                debug.style.background = isError ? 'rgba(255,0,0,0.9)' : 'rgba(255,200,0,0.8)';
+                debug.style.color = isError ? '#fff' : '#000';
+            }
+            showDebug('⏳ Loading video stream...');
 
             if (Hls.isSupported()) {
                 const hls = new Hls({
@@ -197,26 +228,61 @@
                 });
                 hls.loadSource(proxyUrl);
                 hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().catch(() => {});
+
+                // --- Error handling with on-screen display ---
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('[HLS Error]', data);
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showDebug('⚠️ Network error – retrying...', false);
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                showDebug('⚠️ Media error – recovering...', false);
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                showDebug('❌ Fatal error: ' + (data.details || 'unknown'), true);
+                                hls.destroy();
+                                break;
+                        }
+                    } else {
+                        showDebug('⚠️ Non-fatal error: ' + (data.details || 'unknown'), false);
+                    }
                 });
-                // Store the instance so we can destroy it later
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('[HLS] Manifest parsed – attempting to play.');
+                    showDebug('▶️ Playing...', false);
+                    video.play().catch(err => {
+                        console.error('[HLS] Play() failed:', err);
+                        showDebug('⛔ Play failed: ' + err.message, true);
+                    });
+                    // Hide debug after a few seconds
+                    setTimeout(() => { debug.style.display = 'none'; }, 3000);
+                });
+
+                // Store instance for cleanup
                 window._hlsInstance = hls;
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS (Safari on macOS/iOS)
+                // Native HLS (Safari)
                 video.src = proxyUrl;
                 video.addEventListener('loadedmetadata', function() {
-                    video.play().catch(() => {});
+                    showDebug('▶️ Playing...', false);
+                    video.play().catch(err => {
+                        console.error('[Native HLS] Play failed:', err);
+                        showDebug('⛔ Play failed: ' + err.message, true);
+                    });
+                    setTimeout(() => { debug.style.display = 'none'; }, 3000);
                 });
             } else {
-                container.innerHTML = '<p class="text-white text-center p-4">Your browser does not support HLS playback.</p>';
+                showDebug('❌ Your browser does not support HLS playback.', true);
             }
         }
         // ============================================================
 
-        // ============================================================
-        // Updated closePlayer – destroys HLS instance properly
-        // ============================================================
         function closePlayer() {
             if (window._hlsInstance) {
                 window._hlsInstance.destroy();
@@ -226,8 +292,8 @@
             document.getElementById('player-overlay').style.display = 'none';
             document.getElementById('close-sel-btn').focus();
         }
-        // ============================================================
 
+        // ---- All your existing functions (unchanged) ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
