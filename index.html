@@ -49,22 +49,42 @@
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
 
-        /* On-screen debug overlay */
-        #debug-message {
+        /* On-screen error overlay */
+        #error-overlay {
             position: absolute;
-            bottom: 80px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255,0,0,0.8);
+            transform: translate(-50%, -50%);
+            background: rgba(200, 0, 0, 0.95);
             color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 30px 40px;
+            border-radius: 12px;
+            font-size: 18px;
             z-index: 9999;
-            display: none;
             max-width: 90%;
             text-align: center;
+            border: 2px solid var(--gold);
+            display: none;
+            font-weight: bold;
             pointer-events: none;
+        }
+        #error-overlay small {
+            display: block;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+        #loading-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--gold);
+            font-size: 20px;
+            z-index: 9998;
+            display: none;
+            text-align: center;
         }
     </style>
 </head>
@@ -164,8 +184,8 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <div id="iframe-container" class="w-full h-full" style="position:relative;">
-            <!-- Debug message appears here -->
-            <div id="debug-message"></div>
+            <div id="loading-overlay">⏳ Loading video...</div>
+            <div id="error-overlay"></div>
         </div>
     </div>
 
@@ -177,108 +197,105 @@
         }
 
         // ============================================================
-        // PROXY-BASED PLAYER with on-screen error display
+        // ROBUST PLAYER with full error trapping & on-screen display
         // ============================================================
         function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
+            const errorEl = document.getElementById('error-overlay');
+            const loadingEl = document.getElementById('loading-overlay');
+            
+            // Reset UI
             container.innerHTML = '';
-            const debug = document.getElementById('debug-message');
-            debug.style.display = 'none';
-            debug.textContent = '';
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            loadingEl.style.display = 'block';
+            loadingEl.textContent = '⏳ Loading video...';
 
-            // ---- Anime stays as iframe ----
-            if (isAnime) {
-                const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
-                const frame = document.createElement('iframe');
-                frame.className = "w-full h-full";
-                frame.style.border = "none";
-                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.src = url;
-                container.appendChild(frame);
-                return;
-            }
+            try {
+                const { type, id, s, e, isAnime, title } = currentMedia;
 
-            // ---- Movies & TV Shows: use HLS proxy ----
-            const video = document.createElement('video');
-            video.id = 'hls-player';
-            video.controls = true;
-            video.autoplay = true;
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.background = '#000';
-            container.appendChild(video);
+                // ---- Anime: use iframe ----
+                if (isAnime) {
+                    const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
+                    const frame = document.createElement('iframe');
+                    frame.className = "w-full h-full";
+                    frame.style.border = "none";
+                    frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+                    frame.setAttribute('allowfullscreen', 'true');
+                    frame.src = url;
+                    container.appendChild(frame);
+                    loadingEl.style.display = 'none';
+                    return;
+                }
 
-            const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
+                // ---- Movies & TV: use HLS proxy ----
+                // Check if HLS.js is loaded
+                if (typeof Hls === 'undefined') {
+                    errorEl.textContent = '❌ HLS library failed to load. Check internet connection.';
+                    errorEl.style.display = 'block';
+                    loadingEl.style.display = 'none';
+                    return;
+                }
 
-            // Show loading message
-            function showDebug(msg, isError = false) {
-                debug.textContent = msg;
-                debug.style.display = 'block';
-                debug.style.background = isError ? 'rgba(255,0,0,0.9)' : 'rgba(255,200,0,0.8)';
-                debug.style.color = isError ? '#fff' : '#000';
-            }
-            showDebug('⏳ Loading video stream...');
+                // Create video element
+                const video = document.createElement('video');
+                video.id = 'hls-player';
+                video.controls = true;
+                video.autoplay = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.background = '#000';
+                container.appendChild(video);
 
-            if (Hls.isSupported()) {
+                const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
+
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
                 });
+
                 hls.loadSource(proxyUrl);
                 hls.attachMedia(video);
 
-                // --- Error handling with on-screen display ---
                 hls.on(Hls.Events.ERROR, function(event, data) {
-                    console.error('[HLS Error]', data);
                     if (data.fatal) {
+                        let msg = '';
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                showDebug('⚠️ Network error – retrying...', false);
-                                hls.startLoad();
+                                msg = '⚠️ Network error – check Render logs.';
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                showDebug('⚠️ Media error – recovering...', false);
-                                hls.recoverMediaError();
+                                msg = '⚠️ Media error – invalid stream.';
                                 break;
                             default:
-                                showDebug('❌ Fatal error: ' + (data.details || 'unknown'), true);
-                                hls.destroy();
+                                msg = '❌ Fatal error: ' + (data.details || 'unknown');
                                 break;
                         }
-                    } else {
-                        showDebug('⚠️ Non-fatal error: ' + (data.details || 'unknown'), false);
+                        errorEl.textContent = msg + ' (check Render logs)';
+                        errorEl.style.display = 'block';
+                        loadingEl.style.display = 'none';
+                        hls.destroy();
                     }
                 });
 
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    console.log('[HLS] Manifest parsed – attempting to play.');
-                    showDebug('▶️ Playing...', false);
+                    loadingEl.style.display = 'none';
+                    errorEl.style.display = 'none';
                     video.play().catch(err => {
-                        console.error('[HLS] Play() failed:', err);
-                        showDebug('⛔ Play failed: ' + err.message, true);
+                        errorEl.textContent = '⛔ Autoplay blocked: ' + err.message;
+                        errorEl.style.display = 'block';
                     });
-                    // Hide debug after a few seconds
-                    setTimeout(() => { debug.style.display = 'none'; }, 3000);
                 });
 
                 // Store instance for cleanup
                 window._hlsInstance = hls;
 
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS (Safari)
-                video.src = proxyUrl;
-                video.addEventListener('loadedmetadata', function() {
-                    showDebug('▶️ Playing...', false);
-                    video.play().catch(err => {
-                        console.error('[Native HLS] Play failed:', err);
-                        showDebug('⛔ Play failed: ' + err.message, true);
-                    });
-                    setTimeout(() => { debug.style.display = 'none'; }, 3000);
-                });
-            } else {
-                showDebug('❌ Your browser does not support HLS playback.', true);
+            } catch (err) {
+                // Catch ANY unexpected error
+                errorEl.textContent = '❌ JavaScript Error: ' + err.message;
+                errorEl.style.display = 'block';
+                loadingEl.style.display = 'none';
+                console.error('[loadPlayerFinal]', err);
             }
         }
         // ============================================================
