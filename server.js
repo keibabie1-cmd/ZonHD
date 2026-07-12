@@ -54,12 +54,11 @@ app.get('/api/proxy/stream', async (req, res) => {
         try {
             await page.waitForSelector('video', { timeout: 15000 });
         } catch (_) {
-            // Some players don't have a <video> tag directly – try to detect the iframe source
             console.log('[Proxy] No <video> found, looking for iframe...');
         }
 
         // Extract the manifest URL from the page
-        const manifestUrl = await page.evaluate(() => {
+        let manifestUrl = await page.evaluate(() => {
             // Common patterns in vidsrc.pm
             const scripts = document.querySelectorAll('script');
             for (const script of scripts) {
