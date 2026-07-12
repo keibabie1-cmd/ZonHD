@@ -148,26 +148,28 @@
     </div>
 
     <script>
-        // --- DEFENSIVE PLAYER LOGIC ---
-        // Prevents redirecting by injecting the player dynamically 
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
-            
-            const container = document.getElementById('iframe-container');
-            container.innerHTML = ''; // Ensure container is clean
-            
+            loadPlayerFinal();
+        }
+
+        function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const url = isAnime ? `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}` : 
                                 (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
 
+            const container = document.getElementById('iframe-container');
+            container.innerHTML = '';
+
+            const blobContent = `<!DOCTYPE html><html style="width:100%;height:100%;margin:0;padding:0;overflow:hidden;"><body style="width:100%;height:100%;margin:0;padding:0;overflow:hidden;"><iframe src="${url}" style="width:100%;height:100%;border:none;" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></body></html>`;
+            const blob = new Blob([blobContent], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
-            frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-            frame.setAttribute('allowfullscreen', 'true');
-            
-            // Injection delay to bypass initial ad-trigger scripts
-            setTimeout(() => { frame.src = url; }, 800);
+            frame.style.border = "none";
+            frame.src = blobUrl;
             container.appendChild(frame);
         }
 
