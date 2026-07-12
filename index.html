@@ -145,25 +145,15 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         
-        <!-- HARDENED CLICK SHIELD -->
-        <div id="click-shield" style="position:absolute; inset:0; z-index:9000; cursor:pointer; background:rgba(0,0,0,0.1);"></div>
+        <!-- GATEKEEPER OVERLAY -->
+        <div id="gatekeeper" style="position:fixed; inset:0; z-index:9999; background:black; display:none; align-items:center; justify-content:center;">
+            <button id="start-stream-btn" onclick="loadPlayerFinal()" class="bg-red-600 px-8 py-4 rounded-full font-bold text-lg tracking-widest uppercase">Start Playing</button>
+        </div>
         
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
-        // HARDENED CLICK SHIELD LOGIC
-        const shield = document.getElementById('click-shield');
-        const shieldHandler = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            shield.style.display = 'none';
-        };
-        shield.addEventListener('click', shieldHandler, true);
-        shield.addEventListener('mousedown', shieldHandler, true);
-        shield.addEventListener('touchstart', shieldHandler, true);
-
         // Emergency Nuke for old SW
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()) });
@@ -392,20 +382,20 @@
 
         function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
 
-        async function startLuxeStream() {
+        function startLuxeStream() {
+            saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
+            document.getElementById('player-overlay').style.display = 'block';
+            document.getElementById('gatekeeper').style.display = 'flex';
+        }
+
+        function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
-            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
-            const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            playerOverlay.style.display = 'block';
-            document.getElementById('click-shield').style.display = 'block'; // Reset shield
-            
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = isAnime ? consumetUrl : vidsrcUrl; 
-
-            setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
+            document.getElementById('gatekeeper').style.display = 'none';
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -436,25 +426,20 @@
         function closeSelector() { 
             document.getElementById('selector-overlay').style.display = 'none'; 
             document.getElementById('main-app-wrapper').style.display = 'block';
-            
             window.scrollTo(0, savedScrollPosition); 
-            if (lastFocusedElement) {
-                lastFocusedElement.focus();
-            } else {
-                document.getElementById('btn-trending').focus(); 
-            }
+            if (lastFocusedElement) lastFocusedElement.focus();
         }
 
         function closePlayer() { 
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
+            document.getElementById('gatekeeper').style.display = 'none';
             document.getElementById('close-sel-btn').focus(); 
         }
         
         function toggleMenu() { 
             const menu = document.getElementById('side-menu');
             menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#side-menu .focusable'); if(firstNet) firstNet.focus(); }, 300);
         }
 
         function setFilter(type, id = '') { 
@@ -469,19 +454,7 @@
         function triggerSearch() {
             const input = document.getElementById('search-input');
             const query = input.value.trim();
-            
-            if(query) {
-                setFilter('search', query);
-                input.blur();
-                setTimeout(() => {
-                    const firstResult = document.querySelector('#movie-grid .focusable');
-                    if(firstResult) firstResult.focus();
-                }, 800);
-            } else {
-                input.blur();
-                setFilter('trending');
-                document.getElementById('btn-trending').classList.add('active-filter');
-            }
+            if(query) { setFilter('search', query); }
         }
 
         function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
@@ -495,50 +468,6 @@
 
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
 
-        document.addEventListener('keydown', function(e) {
-            const current = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
-            
-            if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                if (current && current.id === 'search-input') {
-                    return; 
-                }
-
-                e.preventDefault();
-                if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
-                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
-                else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
-                return;
-            }
-
-            if (e.key === 'Enter' || e.keyCode === 13) { 
-                if (current && current.id === 'search-input') { triggerSearch(); return; }
-                if (current && current.classList.contains('focusable')) { current.click(); return; }
-            }
-
-            let dir = '';
-            if (e.key === 'ArrowUp') dir = 'up'; if (e.key === 'ArrowDown') dir = 'down'; if (e.key === 'ArrowLeft') dir = 'left'; if (e.key === 'ArrowRight') dir = 'right';
-            if (dir) {
-                e.preventDefault();
-                const next = findNext(current, focusables, dir);
-                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-            }
-        });
-
-        function findNext(cur, targets, dir) {
-            if (!cur || cur === document.body) return targets[0];
-            const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
-            let best = null, min = Infinity;
-            targets.forEach(t => {
-                if (t === cur) return;
-                const r2 = t.getBoundingClientRect(), c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return; if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
-                const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
-                if (d < min) { min = d; best = t; }
-            });
-            return best;
-        }
-
         // --- THE BOUNCER: HARDENED EDITION ---
         (function() {
             window.open = function() { console.log("Popup intercepted."); return null; };
@@ -546,11 +475,6 @@
                 const target = e.target.closest('a');
                 if (target && target.target === '_blank') {
                     e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, true);
-            document.addEventListener('mousedown', function(e) {
-                if (e.target.closest('#luxe-player')) {
                     e.stopPropagation();
                 }
             }, true);
