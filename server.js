@@ -13,7 +13,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // ------------------------------------------------------------
-// PROXY WITH PUPPETEER – extracts manifest from vidsrc.pm
+// PROXY WITH OPTIMIZED PUPPETEER (free‑tier friendly)
 // ------------------------------------------------------------
 app.get('/api/proxy/stream', async (req, res) => {
     const { type, id, s, e } = req.query;
@@ -29,66 +29,64 @@ app.get('/api/proxy/stream', async (req, res) => {
 
     let browser;
     try {
-        // Launch headless browser
+        // Launch headless browser with low‑memory flags
         browser = await puppeteer.launch({
             headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
+                '--single-process',          // reduces memory footprint
                 '--disable-accelerated-2d-canvas',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--disable-software-rasterizer'
             ]
         });
 
         const page = await browser.newPage();
-
-        // Set realistic viewport and user agent
         await page.setViewport({ width: 1280, height: 720 });
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-        // Navigate to the embed URL
+        // Navigate and wait for network idle
         await page.goto(embedUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-        // Wait for the video player to appear (look for video element or specific selectors)
+        // Try to wait for video element
         try {
-            await page.waitForSelector('video', { timeout: 15000 });
+            await page.waitForSelector('video', { timeout: 10000 });
         } catch (_) {
-            console.log('[Proxy] No <video> found, looking for iframe...');
+            console.log('[Proxy] No <video> found, trying iframe fallback...');
         }
 
-        // Extract the manifest URL from the page
+        // Extract manifest URL
         let manifestUrl = await page.evaluate(() => {
-            // Common patterns in vidsrc.pm
+            // Search in scripts
             const scripts = document.querySelectorAll('script');
             for (const script of scripts) {
                 const text = script.textContent || script.innerText;
                 const match = text.match(/(?:file|source|url)\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i);
                 if (match) return match[1];
             }
-            // Check if there's an iframe with a src that contains .m3u8
+            // Check iframes
             const iframes = document.querySelectorAll('iframe');
             for (const iframe of iframes) {
-                const src = iframe.src;
-                if (src && src.includes('.m3u8')) return src;
+                if (iframe.src && iframe.src.includes('.m3u8')) return iframe.src;
             }
-            // Check video source
+            // Video src
             const video = document.querySelector('video');
             if (video && video.src && video.src.includes('.m3u8')) return video.src;
             return null;
         });
 
+        // If not found, try to follow iframe
         if (!manifestUrl) {
-            // If still not found, try to get the iframe src and fetch that page recursively
-            console.log('[Proxy] Manifest not found directly, trying iframe fallback...');
+            console.log('[Proxy] Manifest not found, following iframe...');
             const iframeSrc = await page.evaluate(() => {
                 const iframe = document.querySelector('iframe');
                 return iframe ? iframe.src : null;
             });
             if (iframeSrc) {
-                // Navigate to the iframe URL and try again
                 await page.goto(iframeSrc, { waitUntil: 'networkidle2', timeout: 30000 });
-                const nestedManifest = await page.evaluate(() => {
+                manifestUrl = await page.evaluate(() => {
                     const scripts = document.querySelectorAll('script');
                     for (const script of scripts) {
                         const text = script.textContent || script.innerText;
@@ -97,9 +95,6 @@ app.get('/api/proxy/stream', async (req, res) => {
                     }
                     return null;
                 });
-                if (nestedManifest) {
-                    manifestUrl = nestedManifest;
-                }
             }
         }
 
@@ -110,7 +105,7 @@ app.get('/api/proxy/stream', async (req, res) => {
 
         console.log(`[Proxy] ✅ Found manifest: ${manifestUrl}`);
 
-        // Fetch the manifest and rewrite URLs
+        // Fetch manifest and rewrite URLs
         const manifestResponse = await fetch(manifestUrl, {
             headers: {
                 'Referer': 'https://vidsrc.pm/',
