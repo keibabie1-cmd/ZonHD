@@ -31,10 +31,43 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* Source switcher button */
+        #source-switcher {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 8px 16px;
+            border-radius: 30px;
+            z-index: 9999;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        #debug-url {
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            right: 20px;
+            color: #aaa;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 9998;
+            text-align: center;
+            word-break: break-all;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <!-- Your existing HTML – same as before -->
+    <!-- Your existing HTML – same as before – I'll include it all below -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -129,23 +162,37 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <div id="iframe-container" class="w-full h-full" style="position:relative;"></div>
+        <div id="iframe-container" class="w-full h-full" style="position:relative;">
+            <div id="debug-url"></div>
+            <button id="source-switcher">🔄 Switch Source</button>
+        </div>
     </div>
 
     <script>
+        // ============================================================
+        // GLOBALS: source index for manual switching
+        // ============================================================
+        let currentSourceIndex = 0;
+        let sourceUrls = [];
+
+        // ============================================================
+        // PLAYER WITH SOURCE SWITCHER
+        // ============================================================
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
             loadPlayerFinal();
         }
 
-        // ============================================================
-        // PLAYER: Anime uses embed.su (reliable), Movies/TV use vidsrc.pm
-        // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title, tmdbId } = currentMedia;
             const container = document.getElementById('iframe-container');
-            container.innerHTML = '';
+            const debug = document.getElementById('debug-url');
+            const switcher = document.getElementById('source-switcher');
+            container.innerHTML = ''; // clear everything except debug and switcher (they are outside container)
+            // We'll re-add them after clearing
+            container.appendChild(debug);
+            container.appendChild(switcher);
 
             // 1. Parent guards
             const originalOpen = window.open;
@@ -171,41 +218,78 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // 2. Build iframe URL
-            let url;
+            // 2. Build source list
+            let sources = [];
             if (isAnime) {
-                // Use embed.su for anime – requires TMDB ID
+                // For anime, try multiple providers
                 if (tmdbId) {
-                    // For TV series: embed/tv/{tmdbId}/{season}/{episode}
-                    // For movies: embed/movie/{tmdbId}
-                    // We'll assume TV for now; if it's a movie, we need to differentiate.
-                    // In openAnimeDetails we set type to 'movie' or 'tv' based on TMDB result.
-                    if (type === 'movie') {
-                        url = `https://embed.su/embed/movie/${tmdbId}?autoplay=1`;
-                    } else {
-                        url = `https://embed.su/embed/tv/${tmdbId}/${s}/${e}?autoplay=1`;
-                    }
-                } else {
-                    // Fallback: try multiembed.to with title (last resort)
-                    url = `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1`;
+                    // If we have TMDB ID, use embed.su, multiembed, vidsrc.to
+                    const isMovie = (type === 'movie');
+                    const path = isMovie ? `movie/${tmdbId}` : `tv/${tmdbId}/${s}/${e}`;
+                    sources.push({ label: 'embed.su', url: `https://embed.su/embed/${path}?autoplay=1` });
+                    sources.push({ label: 'multiembed.to', url: `https://multiembed.to/${path}?autoplay=1&mute=1` });
+                    sources.push({ label: 'vidsrc.to', url: `https://vidsrc.to/embed/${path}?autoplay=1` });
                 }
+                // Always add fallback using title
+                sources.push({ label: 'multiembed (title)', url: `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1` });
+                // Also try vidsrc.pm with title (maybe works for some)
+                sources.push({ label: 'vidsrc.pm (search)', url: `https://vidsrc.pm/embed/movie/${encodeURIComponent(title)}` });
             } else {
-                // Movies & TV (non-anime) use vidsrc.pm
-                url = (type === 'movie')
+                // Non-anime: use vidsrc.pm (reliable for western content)
+                const url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
+                sources.push({ label: 'vidsrc.pm', url: url });
+                // Fallback to vidsrc.to
+                const fallback = (type === 'movie')
+                    ? `https://vidsrc.to/embed/movie/${id}`
+                    : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+                sources.push({ label: 'vidsrc.to (fallback)', url: fallback });
             }
 
-            const frame = document.createElement('iframe');
-            frame.className = "w-full h-full";
-            frame.style.border = "none";
-            frame.id = "main-player-frame";
-            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-            frame.setAttribute('allowfullscreen', 'true');
-            frame.src = url;
-            container.appendChild(frame);
+            // Store sources globally
+            sourceUrls = sources.map(s => s.url);
+            currentSourceIndex = 0;
+
+            // Function to load a specific source index
+            function loadSource(index) {
+                if (index >= sourceUrls.length) {
+                    debug.textContent = '⚠️ No more sources. Try again later.';
+                    return;
+                }
+                const url = sourceUrls[index];
+                const label = sources[index].label;
+                debug.textContent = `🔄 ${label}: ${url}`;
+
+                // Create iframe
+                const frame = document.createElement('iframe');
+                frame.className = "w-full h-full";
+                frame.style.border = "none";
+                frame.id = "main-player-frame";
+                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+                frame.setAttribute('allowfullscreen', 'true');
+                frame.src = url;
+                // Replace existing iframe if any
+                const existing = container.querySelector('iframe');
+                if (existing) existing.remove();
+                container.appendChild(frame);
+            }
+
+            // Initial load
+            loadSource(currentSourceIndex);
+
+            // Switcher click: cycle to next source
+            switcher.onclick = function() {
+                currentSourceIndex++;
+                if (currentSourceIndex >= sourceUrls.length) {
+                    currentSourceIndex = 0; // loop
+                }
+                loadSource(currentSourceIndex);
+            };
+
+            // Show switcher only if more than 1 source
+            switcher.style.display = (sources.length > 1) ? 'block' : 'none';
         }
-        // ============================================================
 
         function closePlayer() {
             document.getElementById('iframe-container').innerHTML = '';
@@ -331,19 +415,15 @@
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
-            // Determine the best display title (try to get Japanese)
+            // Determine the best display title
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
-            // If we have native (Japanese) and it's not the same as english, use it
-            if (media.title.native && media.title.native !== displayTitle) {
-                // If English is missing or we want to show Japanese
-                // We'll show both? We'll set displayTitle to native if it has Japanese characters.
-                if (!media.title.english || !media.title.english.match(/[\u3000-\u30FF\u4E00-\u9FFF]/)) {
-                    // English doesn't contain Japanese, so we assume it's western title; we can use native as alternative.
-                    // We'll keep displayTitle as english, but we can also store japanese for later.
-                    // We'll use english as primary, but we'll also try to get Japanese from Jikan.
-                    const jpTitle = await fetchJikanTitle(displayTitle);
-                    if (jpTitle) displayTitle = jpTitle;
-                }
+            // If we have native (Japanese) and it's not the same as english, use it if english is missing
+            if (!media.title.english && media.title.native) {
+                displayTitle = media.title.native;
+            } else if (media.title.english && media.title.native && media.title.native !== media.title.english) {
+                // We'll keep english, but we'll also try to get Japanese from Jikan for extra info
+                const jpTitle = await fetchJikanTitle(media.title.english);
+                if (jpTitle) displayTitle = jpTitle;
             }
 
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
@@ -366,7 +446,7 @@
                 console.warn('TMDB search failed for anime:', displayTitle);
             }
 
-            // Set currentMedia for playback (always anime, but we pass tmdbId if found)
+            // Set currentMedia for playback
             currentMedia = {
                 id: media.id,
                 type: mediaType, // 'tv' or 'movie' from TMDB
@@ -406,9 +486,7 @@
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             
-            // If it's an anime but we're using this function (should not happen), but fallback
             if (isAniList) {
-                // This shouldn't be called for anime anymore, but just in case
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const data = await searchRes.json();
                 if (data.results && data.results.length > 0) {
@@ -416,18 +494,15 @@
                     id = tmdbResult.id;
                     type = tmdbResult.media_type || 'tv';
                 } else {
-                    // Fallback to anime handler
                     const fallbackMedia = { title: { english: searchTitle }, coverImage: { extraLarge: 'IMG_8035.jpeg' } };
                     openAnimeDetails(fallbackMedia);
                     return;
                 }
             }
 
-            // Normal TMDB fetch
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             if (!data || data.status_code) {
-                // Error – show placeholder
                 currentMedia = { id, type, s: 1, e: 1, title: 'Unknown', poster: null, isAnime: false };
                 document.getElementById('show-title').innerText = 'Error loading details';
                 document.getElementById('show-desc').innerText = 'Could not fetch data.';
