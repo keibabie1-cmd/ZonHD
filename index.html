@@ -6,10 +6,8 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
-        /* your existing styles – unchanged */
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
@@ -33,10 +31,43 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+        /* Play button overlay */
+        #spoof-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.7);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            pointer-events: auto;
+        }
+        #spoof-play-btn::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 30px solid white;
+            border-top: 18px solid transparent;
+            border-bottom: 18px solid transparent;
+            margin-left: 8px;
+        }
+        #spoof-play-btn:active {
+            transform: translate(-50%, -50%) scale(0.9);
+        }
     </style>
 </head>
 <body>
-    <!-- Loader and Side Menu – exactly as before -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -135,97 +166,110 @@
     </div>
 
     <script>
-        // ------------------------------------------------------------
-        // JIKAN API CACHE – stores Japanese titles for anime
-        // ------------------------------------------------------------
-        const jikanCache = new Map();
-        async function getJapaneseTitle(romajiTitle) {
-            if (jikanCache.has(romajiTitle)) return jikanCache.get(romajiTitle);
-            try {
-                const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(romajiTitle)}&limit=1`);
-                const data = await res.json();
-                if (data.data && data.data.length > 0) {
-                    const jpTitle = data.data[0].title_japanese || data.data[0].title;
-                    jikanCache.set(romajiTitle, jpTitle);
-                    return jpTitle;
-                }
-                return romajiTitle; // fallback
-            } catch (_) {
-                return romajiTitle;
-            }
-        }
-
-        // ------------------------------------------------------------
-        // ORIGINAL FUNCTIONS (unchanged except fetchAniList)
-        // ------------------------------------------------------------
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
             loadPlayerFinal();
         }
 
-        // ------------------------------------------------------------
-        // PROXY PLAYER (vidsrc.pm + HLS.js)
-        // ------------------------------------------------------------
+        // ============================================================
+        // PLAYER: vidsrc.pm direct with click shield + parent guards
+        // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
+            // 1. Parent guards (block popups & redirects)
+            const originalOpen = window.open;
+            let guardActive = true;
+            window.open = function(url, target, features) {
+                if (guardActive) {
+                    console.log('[Guard] Blocked popup:', url);
+                    return null;
+                }
+                return originalOpen.call(this, url, target, features);
+            };
+            const beforeUnloadHandler = function(e) {
+                if (guardActive) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            };
+            window.addEventListener('beforeunload', beforeUnloadHandler);
+            setTimeout(() => {
+                guardActive = false;
+                window.open = originalOpen;
+                window.removeEventListener('beforeunload', beforeUnloadHandler);
+            }, 8000);
+
+            // 2. Build iframe (vidsrc.pm)
+            let url;
             if (isAnime) {
-                // Anime uses consumet (iframe) – keep as is
-                const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
-                const frame = document.createElement('iframe');
-                frame.className = "w-full h-full";
-                frame.style.border = "none";
-                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.src = url;
-                container.appendChild(frame);
-                return;
-            }
-
-            // Movies & TV – use proxy + HLS.js
-            const video = document.createElement('video');
-            video.id = 'hls-player';
-            video.controls = true;
-            video.autoplay = true;
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.background = '#000';
-            container.appendChild(video);
-
-            const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
-
-            if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
-                hls.loadSource(proxyUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().catch(() => {});
-                });
-                window._hlsInstance = hls;
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = proxyUrl;
-                video.addEventListener('loadedmetadata', function() {
-                    video.play().catch(() => {});
-                });
+                // For anime, use vidsrc.pm with the title (search might be needed) – but we'll use the same TV/movie logic.
+                // vidsrc.pm expects TMDB ID. We'll rely on the ID from TMDB.
+                url = (type === 'movie')
+                    ? `https://vidsrc.pm/embed/movie/${id}`
+                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
             } else {
-                container.innerHTML = '<p class="text-white text-center p-4">HLS not supported.</p>';
+                url = (type === 'movie')
+                    ? `https://vidsrc.pm/embed/movie/${id}`
+                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
             }
+
+            const frame = document.createElement('iframe');
+            frame.className = "w-full h-full";
+            frame.style.border = "none";
+            frame.id = "main-player-frame";
+            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+            frame.setAttribute('allowfullscreen', 'true');
+            // NO sandbox – let it run freely
+            frame.src = url;
+            container.appendChild(frame);
+
+            // 3. Visible spoof play button (over the iframe's play button)
+            const spoofBtn = document.createElement('div');
+            spoofBtn.id = "spoof-play-btn";
+            // Style already defined in CSS
+            // On tap/click, remove the spoof button and block the event from reaching the iframe
+            const spoofHandler = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[Spoof] Play button tapped – removing overlay.');
+                if (spoofBtn.parentNode) {
+                    spoofBtn.parentNode.removeChild(spoofBtn);
+                }
+                // Also ensure that any subsequent events from this interaction are blocked
+                return false;
+            };
+            // Attach to both click and touchstart (with capture)
+            spoofBtn.addEventListener('click', spoofHandler, true);
+            spoofBtn.addEventListener('touchstart', spoofHandler, { passive: false, capture: true });
+            // Also block mousedown and mouseup to be safe
+            spoofBtn.addEventListener('mousedown', spoofHandler, true);
+            spoofBtn.addEventListener('mouseup', spoofHandler, true);
+
+            container.style.position = "relative";
+            container.appendChild(spoofBtn);
+
+            // Auto‑remove after 5 seconds (in case user doesn't tap)
+            setTimeout(() => {
+                const existing = document.getElementById('spoof-play-btn');
+                if (existing && existing.parentNode) {
+                    existing.parentNode.removeChild(existing);
+                }
+            }, 5000);
         }
+        // ============================================================
 
         function closePlayer() {
-            if (window._hlsInstance) {
-                window._hlsInstance.destroy();
-                window._hlsInstance = null;
-            }
             document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none';
             document.getElementById('close-sel-btn').focus();
         }
 
-        // ---- All your existing code below – with Jikan integration in fetchAniList ----
+        // ---- All your original code below – unchanged, with Jikan fallback added ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
@@ -286,9 +330,6 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        // ------------------------------------------------------------
-        // UPDATED fetchAniList – adds Jikan Japanese title fallback
-        // ------------------------------------------------------------
         async function fetchAniList(append) {
             const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore } } }`;
             try {
@@ -296,28 +337,22 @@
                 const json = await response.json();
                 const results = json.data.Page.media;
                 const grid = document.getElementById('movie-grid');
-                
                 for (const m of results) {
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    
-                    // Determine display title: English if exists, else fetch Japanese via Jikan
-                    let displayTitle = m.title.english || m.title.romaji || m.title.native || 'Untitled';
-                    if (!m.title.english) {
-                        // Use Jikan to get Japanese title (async)
-                        const jpTitle = await getJapaneseTitle(m.title.romaji || m.title.native);
-                        displayTitle = jpTitle;
-                    }
-                    
-                    card.onclick = () => openDetails(m.id, 'tv', true, displayTitle);
+                    let searchTitle = m.title.english || m.title.romaji || m.title.native || '';
+                    // If no English title, we'll use the native (Japanese) title directly.
+                    if (!searchTitle) searchTitle = m.title.native || 'Unknown';
+                    // Store the original title for later use in Jikan fallback
+                    card.dataset.originalTitle = searchTitle;
+                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
                 }
                 currentPage++; hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) { console.error("AniList Error", err); }
         }
-        // ------------------------------------------------------------
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
@@ -332,33 +367,109 @@
             });
         }
 
+        // --- Jikan API helper ---
+        async function fetchJikanTitle(animeTitle) {
+            try {
+                const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeTitle)}&limit=1`);
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    return data.data[0].title; // Jikan returns the Japanese title as 'title'
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // --- Modified openDetails with Jikan fallback ---
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             let finalId = id;
+            let mediaType = type;
+            let displayTitle = searchTitle;
+
             if (isAniList) {
+                // Search TMDB using the AniList title
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) { finalId = searchData.results[0].id; type = searchData.results[0].media_type || 'tv'; }
+                if (searchData.results && searchData.results.length > 0) {
+                    finalId = searchData.results[0].id;
+                    mediaType = searchData.results[0].media_type || 'tv';
+                    displayTitle = searchData.results[0].name || searchData.results[0].title || searchTitle;
+                } else {
+                    // TMDB not found – try to use the title as-is (might be Japanese)
+                    // We'll still try to fetch details with a dummy ID? We'll just show the title.
+                    currentMedia = { id: finalId, type: 'tv', s: 1, e: 1, title: searchTitle, poster: null, isAnime: true };
+                    document.getElementById('show-title').innerText = searchTitle;
+                    document.getElementById('show-desc').innerText = 'No description available.';
+                    document.getElementById('show-year').innerText = '';
+                    document.getElementById('show-rating').innerText = '★ N/A';
+                    document.getElementById('details-poster').src = 'IMG_8035.jpeg';
+                    document.getElementById('details-backdrop').style.backgroundImage = 'none';
+                    document.getElementById('media-type-tag').innerText = 'TV';
+                    document.getElementById('movie-action-area').classList.add('hidden');
+                    document.getElementById('tv-action-area-top').classList.remove('hidden');
+                    document.getElementById('tv-action-area').classList.add('hidden');
+                    document.getElementById('main-app-wrapper').style.display = 'none';
+                    document.getElementById('selector-overlay').style.display = 'block';
+                    window.scrollTo(0, 0);
+                    setTimeout(() => { document.getElementById('main-tv-btn').focus(); }, 300);
+                    return;
+                }
             }
-            const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
-            const data = await res.json();
-            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
-            document.getElementById('show-title').innerText = currentMedia.title;
-            document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
-            document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-            document.getElementById('media-type-tag').innerText = type.toUpperCase();
-            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
-            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
-            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            if (type === 'tv') renderSeasons(data);
+
+            // Now we have finalId and mediaType (maybe from TMDB)
+            const detailsRes = await fetch(`https://api.themoviedb.org/3/${mediaType}/${finalId}?api_key=${API_KEY}`);
+            const data = await detailsRes.json();
+            if (!data || data.status_code) {
+                // TMDB error – use fallback
+                currentMedia = { id: finalId, type: mediaType, s: 1, e: 1, title: displayTitle, poster: null, isAnime: isAniList };
+                document.getElementById('show-title').innerText = displayTitle;
+                document.getElementById('show-desc').innerText = 'No description available.';
+                document.getElementById('show-year').innerText = '';
+                document.getElementById('show-rating').innerText = '★ N/A';
+                document.getElementById('details-poster').src = 'IMG_8035.jpeg';
+                document.getElementById('details-backdrop').style.backgroundImage = 'none';
+                document.getElementById('media-type-tag').innerText = mediaType.toUpperCase();
+                document.getElementById('movie-action-area').classList.toggle('hidden', mediaType !== 'movie');
+                document.getElementById('tv-action-area-top').classList.toggle('hidden', mediaType !== 'tv');
+                document.getElementById('tv-action-area').classList.toggle('hidden', mediaType !== 'tv');
+                if (mediaType === 'tv') renderSeasons({ seasons: [{ season_number: 1 }] });
+            } else {
+                // Normal flow
+                let titleFromData = data.name || data.title || displayTitle;
+                // For anime, try to get Japanese title
+                let finalTitle = titleFromData;
+                if (isAniList && data.original_title && data.original_language === 'ja') {
+                    finalTitle = data.original_title;
+                } else if (isAniList && data.original_name && data.original_language === 'ja') {
+                    finalTitle = data.original_name;
+                }
+                // If still no Japanese characters, call Jikan API
+                if (isAniList && !finalTitle.match(/[\u3000-\u30FF\u4E00-\u9FFF]/)) {
+                    const jpTitle = await fetchJikanTitle(titleFromData);
+                    if (jpTitle) finalTitle = jpTitle;
+                }
+
+                currentMedia = { id: finalId, type: mediaType, s: 1, e: 1, title: finalTitle, poster: data.poster_path, isAnime: isAniList };
+                document.getElementById('show-title').innerText = finalTitle;
+                document.getElementById('show-desc').innerText = data.overview || "No description available.";
+                document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
+                document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
+                document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
+                document.getElementById('details-backdrop').style.backgroundImage = data.backdrop_path ? `url(https://image.tmdb.org/t/p/original${data.backdrop_path})` : 'none';
+                document.getElementById('media-type-tag').innerText = mediaType.toUpperCase();
+                document.getElementById('movie-action-area').classList.toggle('hidden', mediaType !== 'movie');
+                document.getElementById('tv-action-area-top').classList.toggle('hidden', mediaType !== 'tv');
+                document.getElementById('tv-action-area').classList.toggle('hidden', mediaType !== 'tv');
+                if (mediaType === 'tv') renderSeasons(data);
+            }
+
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-            setTimeout(() => { const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(playBtn) playBtn.focus(); }, 300);
+            setTimeout(() => { const playBtn = (mediaType === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(playBtn) playBtn.focus(); }, 300);
         }
 
         function renderSeasons(data) {
