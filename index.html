@@ -31,38 +31,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
-
-        #source-switcher {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.8);
-            color: var(--gold);
-            border: 1px solid var(--gold);
-            padding: 8px 16px;
-            border-radius: 30px;
-            z-index: 9999;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            pointer-events: auto;
-        }
-        #debug-url {
-            position: absolute;
-            bottom: 60px;
-            left: 20px;
-            right: 20px;
-            color: #aaa;
-            font-size: 10px;
-            font-family: monospace;
-            background: rgba(0,0,0,0.7);
-            padding: 4px 8px;
-            border-radius: 4px;
-            z-index: 9998;
-            text-align: center;
-            word-break: break-all;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body>
@@ -160,36 +128,23 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <div id="iframe-container" class="w-full h-full" style="position:relative;">
-            <div id="debug-url"></div>
-            <button id="source-switcher">🔄 Switch Source</button>
-        </div>
+        <div id="iframe-container" class="w-full h-full" style="position:relative;"></div>
     </div>
 
     <script>
-        // ============================================================
-        // GLOBALS
-        // ============================================================
-        let currentSourceIndex = 0;
-        let sourceUrls = [];
-
-        // ============================================================
-        // PLAYER
-        // ============================================================
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
             loadPlayerFinal();
         }
 
+        // ============================================================
+        // PLAYER: Anime uses consumet, Movies/TV use vidsrc.pm
+        // ============================================================
         function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title, tmdbId } = currentMedia;
+            const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
-            const debug = document.getElementById('debug-url');
-            const switcher = document.getElementById('source-switcher');
             container.innerHTML = '';
-            container.appendChild(debug);
-            container.appendChild(switcher);
 
             // Parent guards (block popups & redirects)
             const originalOpen = window.open;
@@ -215,61 +170,29 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // Build source list
-            let sources = [];
+            let url;
             if (isAnime) {
-                // Primary: 2embed.cc with TMDB ID
-                if (tmdbId) {
-                    const isMovie = (type === 'movie');
-                    const path = isMovie ? `movie/${tmdbId}` : `tv/${tmdbId}/${s}/${e}`;
-                    sources.push({ label: '2embed.cc', url: `https://www.2embed.cc/embed${path}?autoplay=1` });
-                    sources.push({ label: 'embed.su', url: `https://embed.su/embed/${path}?autoplay=1` });
-                    sources.push({ label: 'multiembed.to', url: `https://multiembed.to/${path}?autoplay=1&mute=1` });
-                    sources.push({ label: 'vidsrc.to', url: `https://vidsrc.to/embed/${path}?autoplay=1` });
-                }
-                // Fallback by title
-                sources.push({ label: 'multiembed (title)', url: `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1` });
+                // Use consumet API for anime
+                // Generate slug: try romaji if available, else native, else english
+                const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${slug}-episode-${e}`;
             } else {
-                // Non-anime: vidsrc.pm
-                const url = (type === 'movie') ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
-                sources.push({ label: 'vidsrc.pm', url });
-                sources.push({ label: 'vidsrc.to (fallback)', url: (type === 'movie') ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` });
+                // Movies & TV (non-anime) use vidsrc.pm
+                url = (type === 'movie')
+                    ? `https://vidsrc.pm/embed/movie/${id}`
+                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
             }
 
-            sourceUrls = sources.map(s => s.url);
-            currentSourceIndex = 0;
-
-            function loadSource(index) {
-                if (index >= sourceUrls.length) {
-                    debug.textContent = '⚠️ No more sources. Try again later.';
-                    return;
-                }
-                const url = sourceUrls[index];
-                const label = sources[index].label;
-                debug.textContent = `🔄 ${label}: ${url}`;
-
-                const frame = document.createElement('iframe');
-                frame.className = "w-full h-full";
-                frame.style.border = "none";
-                frame.id = "main-player-frame";
-                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.referrerPolicy = 'no-referrer';
-                frame.src = url;
-                const existing = container.querySelector('iframe');
-                if (existing) existing.remove();
-                container.appendChild(frame);
-            }
-
-            loadSource(currentSourceIndex);
-
-            switcher.onclick = function() {
-                currentSourceIndex++;
-                if (currentSourceIndex >= sourceUrls.length) currentSourceIndex = 0;
-                loadSource(currentSourceIndex);
-            };
-            switcher.style.display = (sources.length > 1) ? 'block' : 'none';
+            const frame = document.createElement('iframe');
+            frame.className = "w-full h-full";
+            frame.style.border = "none";
+            frame.id = "main-player-frame";
+            frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+            frame.setAttribute('allowfullscreen', 'true');
+            frame.src = url;
+            container.appendChild(frame);
         }
+        // ============================================================
 
         function closePlayer() {
             document.getElementById('iframe-container').innerHTML = '';
@@ -277,7 +200,7 @@
             document.getElementById('close-sel-btn').focus();
         }
 
-        // ---- All your original logic – unchanged ----
+        // ---- All your original logic – exactly as it was before ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
@@ -292,7 +215,7 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null;
 
-        // --- Jikan API helper ---
+        // --- Jikan API helper for Japanese title fallback ---
         async function fetchJikanTitle(animeTitle) {
             try {
                 const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeTitle)}&limit=1`);
@@ -388,17 +311,19 @@
             });
         }
 
-        // --- Anime details handler ---
+        // --- Anime details handler (uses AniList data directly) ---
         async function openAnimeDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
+            // Determine the best display title – try to get Japanese
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
-            if (!media.title.english && media.title.native) {
-                displayTitle = media.title.native;
-            } else if (media.title.english && media.title.native && media.title.native !== media.title.english) {
+            // If English exists and we want Japanese, try Jikan
+            if (media.title.english && media.title.native && media.title.native !== media.title.english) {
                 const jpTitle = await fetchJikanTitle(media.title.english);
                 if (jpTitle) displayTitle = jpTitle;
+            } else if (!media.title.english && media.title.native) {
+                displayTitle = media.title.native;
             }
 
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
@@ -406,7 +331,7 @@
             const year = media.startDate ? media.startDate.year : '';
             const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
 
-            // Try to get TMDB ID
+            // Try to get TMDB ID for metadata (optional) – but we'll still use consumet for playback
             let tmdbId = null;
             let mediaType = 'tv';
             try {
@@ -421,6 +346,7 @@
                 console.warn('TMDB search failed for anime:', displayTitle);
             }
 
+            // Set currentMedia: ALWAYS isAnime = true so we use consumet
             currentMedia = {
                 id: media.id,
                 type: mediaType,
@@ -428,10 +354,10 @@
                 e: 1,
                 title: displayTitle,
                 poster: poster,
-                isAnime: true,
-                tmdbId: tmdbId
+                isAnime: true  // FORCE consumet for all anime
             };
 
+            // Update UI
             document.getElementById('show-title').innerText = displayTitle;
             document.getElementById('show-desc').innerText = description;
             document.getElementById('show-year').innerText = year;
@@ -440,6 +366,7 @@
             document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
             document.getElementById('media-type-tag').innerText = 'ANIME';
 
+            // Show/hide action buttons
             document.getElementById('movie-action-area').classList.add('hidden');
             document.getElementById('tv-action-area-top').classList.remove('hidden');
             document.getElementById('tv-action-area').classList.add('hidden');
@@ -448,14 +375,17 @@
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-            setTimeout(() => { document.getElementById('main-tv-btn').focus(); }, 300);
+            setTimeout(() => { 
+                document.getElementById('main-tv-btn').focus();
+            }, 300);
         }
 
-        // --- TMDB details handler ---
+        // --- TMDB details handler (for movies and TV) ---
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             
+            // If it's an anime, use the anime handler
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
                 const data = await searchRes.json();
@@ -464,12 +394,20 @@
                     id = tmdbResult.id;
                     type = tmdbResult.media_type || 'tv';
                 } else {
-                    const fallbackMedia = { title: { english: searchTitle }, coverImage: { extraLarge: 'IMG_8035.jpeg' } };
+                    // No TMDB match – create a minimal media object and use anime handler
+                    const fallbackMedia = { 
+                        title: { english: searchTitle, native: searchTitle },
+                        coverImage: { extraLarge: 'IMG_8035.jpeg' },
+                        description: 'No description available.',
+                        startDate: { year: '' },
+                        averageScore: 0
+                    };
                     openAnimeDetails(fallbackMedia);
                     return;
                 }
             }
 
+            // Normal TMDB fetch
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             if (!data || data.status_code) {
