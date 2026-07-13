@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <!-- Your existing HTML – same as before – I'll include it all below -->
+    <!-- Your existing HTML – same as before -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -140,10 +140,10 @@
         }
 
         // ============================================================
-        // PLAYER: Anime uses multiembed.to, Movies/TV use vidsrc.pm
+        // PLAYER: Anime uses embed.su (reliable), Movies/TV use vidsrc.pm
         // ============================================================
         function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
+            const { type, id, s, e, isAnime, title, tmdbId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -174,9 +174,23 @@
             // 2. Build iframe URL
             let url;
             if (isAnime) {
-                // Use multiembed.to with title – reliable for anime
-                url = `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1`;
+                // Use embed.su for anime – requires TMDB ID
+                if (tmdbId) {
+                    // For TV series: embed/tv/{tmdbId}/{season}/{episode}
+                    // For movies: embed/movie/{tmdbId}
+                    // We'll assume TV for now; if it's a movie, we need to differentiate.
+                    // In openAnimeDetails we set type to 'movie' or 'tv' based on TMDB result.
+                    if (type === 'movie') {
+                        url = `https://embed.su/embed/movie/${tmdbId}?autoplay=1`;
+                    } else {
+                        url = `https://embed.su/embed/tv/${tmdbId}/${s}/${e}?autoplay=1`;
+                    }
+                } else {
+                    // Fallback: try multiembed.to with title (last resort)
+                    url = `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1`;
+                }
             } else {
+                // Movies & TV (non-anime) use vidsrc.pm
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
@@ -285,7 +299,6 @@
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    // Store full media data in a data attribute (stringified)
                     card.dataset.media = JSON.stringify(media);
                     card.onclick = function() {
                         const mediaData = JSON.parse(this.dataset.media);
@@ -314,43 +327,55 @@
         }
 
         // --- Anime details handler (uses AniList data directly) ---
-        function openAnimeDetails(media) {
+        async function openAnimeDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
-            const title = media.title.english || media.title.romaji || media.title.native || 'Unknown';
-            // Try to get Japanese title if English is missing
-            let displayTitle = title;
-            if (!media.title.english && media.title.native) {
-                displayTitle = media.title.native;
-            } else if (media.title.english && !media.title.english.match(/[\u3000-\u30FF\u4E00-\u9FFF]/)) {
-                // If English title has no Japanese chars, try Jikan for Japanese title
-                // but we can also use the native if available
-                if (media.title.native) displayTitle = media.title.native;
-                else {
-                    // Async call to Jikan – we'll do it after display
-                    fetchJikanTitle(media.title.english).then(jp => {
-                        if (jp) {
-                            document.getElementById('show-title').innerText = jp;
-                            currentMedia.title = jp;
-                        }
-                    });
+            // Determine the best display title (try to get Japanese)
+            let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
+            // If we have native (Japanese) and it's not the same as english, use it
+            if (media.title.native && media.title.native !== displayTitle) {
+                // If English is missing or we want to show Japanese
+                // We'll show both? We'll set displayTitle to native if it has Japanese characters.
+                if (!media.title.english || !media.title.english.match(/[\u3000-\u30FF\u4E00-\u9FFF]/)) {
+                    // English doesn't contain Japanese, so we assume it's western title; we can use native as alternative.
+                    // We'll keep displayTitle as english, but we can also store japanese for later.
+                    // We'll use english as primary, but we'll also try to get Japanese from Jikan.
+                    const jpTitle = await fetchJikanTitle(displayTitle);
+                    if (jpTitle) displayTitle = jpTitle;
                 }
             }
+
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
             const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
             const year = media.startDate ? media.startDate.year : '';
             const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
 
-            // Set currentMedia for playback (always anime)
+            // Try to get TMDB ID by searching TMDB with the title
+            let tmdbId = null;
+            let mediaType = 'tv';
+            try {
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(displayTitle)}`);
+                const searchData = await searchRes.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    const tmdbResult = searchData.results[0];
+                    tmdbId = tmdbResult.id;
+                    mediaType = tmdbResult.media_type || 'tv';
+                }
+            } catch (e) {
+                console.warn('TMDB search failed for anime:', displayTitle);
+            }
+
+            // Set currentMedia for playback (always anime, but we pass tmdbId if found)
             currentMedia = {
                 id: media.id,
-                type: 'tv',
+                type: mediaType, // 'tv' or 'movie' from TMDB
                 s: 1,
                 e: 1,
                 title: displayTitle,
                 poster: poster,
-                isAnime: true
+                isAnime: true,
+                tmdbId: tmdbId
             };
 
             // Update UI
@@ -388,7 +413,6 @@
                 const data = await searchRes.json();
                 if (data.results && data.results.length > 0) {
                     const tmdbResult = data.results[0];
-                    // Use the regular flow
                     id = tmdbResult.id;
                     type = tmdbResult.media_type || 'tv';
                 } else {
