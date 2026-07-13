@@ -7,7 +7,9 @@ const TMDB_KEY = process.env.TMDB_KEY;
 app.use(express.static(__dirname));
 
 app.get('/api/config', (req, res) => {
-    if (!TMDB_KEY) return res.status(500).json({ error: "API Key missing" });
+    if (!TMDB_KEY) {
+        return res.status(500).json({ error: "API Key not found on server" });
+    }
     res.json({ tmdb_key: TMDB_KEY });
 });
 
