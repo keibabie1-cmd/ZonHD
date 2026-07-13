@@ -32,7 +32,6 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
 
-        /* Source switcher button */
         #source-switcher {
             position: absolute;
             bottom: 20px;
@@ -67,7 +66,6 @@
     </style>
 </head>
 <body>
-    <!-- Your existing HTML – same as before – I'll include it all below -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -113,11 +111,11 @@
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
-                <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
-                <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
-                <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
+                <button class="focusable" onclick="setFilter('genre', 27)">Horror</button>
+                <button class="focusable" onclick="setFilter('genre', 28)">Action</button>
+                <button class="focusable" onclick="setFilter('genre', 53)">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
+                <button class="focusable" onclick="setFilter('anime')">Anime</button>
             </nav>
         </div>
 
@@ -170,13 +168,13 @@
 
     <script>
         // ============================================================
-        // GLOBALS: source index for manual switching
+        // GLOBALS
         // ============================================================
         let currentSourceIndex = 0;
         let sourceUrls = [];
 
         // ============================================================
-        // PLAYER WITH SOURCE SWITCHER
+        // PLAYER
         // ============================================================
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
@@ -189,12 +187,11 @@
             const container = document.getElementById('iframe-container');
             const debug = document.getElementById('debug-url');
             const switcher = document.getElementById('source-switcher');
-            container.innerHTML = ''; // clear everything except debug and switcher (they are outside container)
-            // We'll re-add them after clearing
+            container.innerHTML = '';
             container.appendChild(debug);
             container.appendChild(switcher);
 
-            // 1. Parent guards
+            // Parent guards (block popups & redirects)
             const originalOpen = window.open;
             let guardActive = true;
             window.open = function(url, target, features) {
@@ -218,40 +215,30 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // 2. Build source list
+            // Build source list
             let sources = [];
             if (isAnime) {
-                // For anime, try multiple providers
+                // Primary: 2embed.cc with TMDB ID
                 if (tmdbId) {
-                    // If we have TMDB ID, use embed.su, multiembed, vidsrc.to
                     const isMovie = (type === 'movie');
                     const path = isMovie ? `movie/${tmdbId}` : `tv/${tmdbId}/${s}/${e}`;
+                    sources.push({ label: '2embed.cc', url: `https://www.2embed.cc/embed${path}?autoplay=1` });
                     sources.push({ label: 'embed.su', url: `https://embed.su/embed/${path}?autoplay=1` });
                     sources.push({ label: 'multiembed.to', url: `https://multiembed.to/${path}?autoplay=1&mute=1` });
                     sources.push({ label: 'vidsrc.to', url: `https://vidsrc.to/embed/${path}?autoplay=1` });
                 }
-                // Always add fallback using title
+                // Fallback by title
                 sources.push({ label: 'multiembed (title)', url: `https://multiembed.to/movie/${encodeURIComponent(title)}?autoplay=1&mute=1` });
-                // Also try vidsrc.pm with title (maybe works for some)
-                sources.push({ label: 'vidsrc.pm (search)', url: `https://vidsrc.pm/embed/movie/${encodeURIComponent(title)}` });
             } else {
-                // Non-anime: use vidsrc.pm (reliable for western content)
-                const url = (type === 'movie')
-                    ? `https://vidsrc.pm/embed/movie/${id}`
-                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
-                sources.push({ label: 'vidsrc.pm', url: url });
-                // Fallback to vidsrc.to
-                const fallback = (type === 'movie')
-                    ? `https://vidsrc.to/embed/movie/${id}`
-                    : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-                sources.push({ label: 'vidsrc.to (fallback)', url: fallback });
+                // Non-anime: vidsrc.pm
+                const url = (type === 'movie') ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
+                sources.push({ label: 'vidsrc.pm', url });
+                sources.push({ label: 'vidsrc.to (fallback)', url: (type === 'movie') ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` });
             }
 
-            // Store sources globally
             sourceUrls = sources.map(s => s.url);
             currentSourceIndex = 0;
 
-            // Function to load a specific source index
             function loadSource(index) {
                 if (index >= sourceUrls.length) {
                     debug.textContent = '⚠️ No more sources. Try again later.';
@@ -261,33 +248,26 @@
                 const label = sources[index].label;
                 debug.textContent = `🔄 ${label}: ${url}`;
 
-                // Create iframe
                 const frame = document.createElement('iframe');
                 frame.className = "w-full h-full";
                 frame.style.border = "none";
                 frame.id = "main-player-frame";
                 frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
                 frame.setAttribute('allowfullscreen', 'true');
+                frame.referrerPolicy = 'no-referrer';
                 frame.src = url;
-                // Replace existing iframe if any
                 const existing = container.querySelector('iframe');
                 if (existing) existing.remove();
                 container.appendChild(frame);
             }
 
-            // Initial load
             loadSource(currentSourceIndex);
 
-            // Switcher click: cycle to next source
             switcher.onclick = function() {
                 currentSourceIndex++;
-                if (currentSourceIndex >= sourceUrls.length) {
-                    currentSourceIndex = 0; // loop
-                }
+                if (currentSourceIndex >= sourceUrls.length) currentSourceIndex = 0;
                 loadSource(currentSourceIndex);
             };
-
-            // Show switcher only if more than 1 source
             switcher.style.display = (sources.length > 1) ? 'block' : 'none';
         }
 
@@ -297,7 +277,7 @@
             document.getElementById('close-sel-btn').focus();
         }
 
-        // ---- All your original code below – with anime details fixed ----
+        // ---- All your original logic – unchanged ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
@@ -310,16 +290,14 @@
 
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
-        let savedScrollPosition = 0, lastFocusedElement = null; 
+        let savedScrollPosition = 0, lastFocusedElement = null;
 
-        // --- Jikan API helper for Japanese title fallback (when needed) ---
+        // --- Jikan API helper ---
         async function fetchJikanTitle(animeTitle) {
             try {
                 const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeTitle)}&limit=1`);
                 const data = await res.json();
-                if (data.data && data.data.length > 0) {
-                    return data.data[0].title;
-                }
+                if (data.data && data.data.length > 0) return data.data[0].title;
                 return null;
             } catch (e) {
                 return null;
@@ -410,18 +388,15 @@
             });
         }
 
-        // --- Anime details handler (uses AniList data directly) ---
+        // --- Anime details handler ---
         async function openAnimeDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
-            // Determine the best display title
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
-            // If we have native (Japanese) and it's not the same as english, use it if english is missing
             if (!media.title.english && media.title.native) {
                 displayTitle = media.title.native;
             } else if (media.title.english && media.title.native && media.title.native !== media.title.english) {
-                // We'll keep english, but we'll also try to get Japanese from Jikan for extra info
                 const jpTitle = await fetchJikanTitle(media.title.english);
                 if (jpTitle) displayTitle = jpTitle;
             }
@@ -431,7 +406,7 @@
             const year = media.startDate ? media.startDate.year : '';
             const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
 
-            // Try to get TMDB ID by searching TMDB with the title
+            // Try to get TMDB ID
             let tmdbId = null;
             let mediaType = 'tv';
             try {
@@ -446,10 +421,9 @@
                 console.warn('TMDB search failed for anime:', displayTitle);
             }
 
-            // Set currentMedia for playback
             currentMedia = {
                 id: media.id,
-                type: mediaType, // 'tv' or 'movie' from TMDB
+                type: mediaType,
                 s: 1,
                 e: 1,
                 title: displayTitle,
@@ -458,7 +432,6 @@
                 tmdbId: tmdbId
             };
 
-            // Update UI
             document.getElementById('show-title').innerText = displayTitle;
             document.getElementById('show-desc').innerText = description;
             document.getElementById('show-year').innerText = year;
@@ -467,7 +440,6 @@
             document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
             document.getElementById('media-type-tag').innerText = 'ANIME';
 
-            // Show/hide action buttons
             document.getElementById('movie-action-area').classList.add('hidden');
             document.getElementById('tv-action-area-top').classList.remove('hidden');
             document.getElementById('tv-action-area').classList.add('hidden');
@@ -476,12 +448,10 @@
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-            setTimeout(() => { 
-                document.getElementById('main-tv-btn').focus();
-            }, 300);
+            setTimeout(() => { document.getElementById('main-tv-btn').focus(); }, 300);
         }
 
-        // --- TMDB details handler (for movies and TV) ---
+        // --- TMDB details handler ---
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
@@ -548,7 +518,7 @@
             setTimeout(() => { const btn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn'); if(btn) btn.focus(); }, 300);
         }
 
-        // ---- TV seasons and episodes (unchanged) ----
+        // ---- TV seasons and episodes ----
         function renderSeasons(data) {
             const container = document.getElementById('season-buttons');
             container.innerHTML = '';
