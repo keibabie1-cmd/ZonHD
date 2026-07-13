@@ -48,47 +48,22 @@
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
 
-        /* Spoony Play Button Overlay */
-        #spoof-play-btn {
+        /* Minimal shield – just to block any initial click on load */
+        #click-shield {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border: 3px solid rgba(255, 255, 255, 0.7);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: transparent;
             cursor: pointer;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            pointer-events: auto;
-        }
-        #spoof-play-btn::after {
-            content: '';
-            width: 0;
-            height: 0;
-            border-left: 30px solid white;
-            border-top: 18px solid transparent;
-            border-bottom: 18px solid transparent;
-            margin-left: 8px;
-        }
-        #spoof-play-btn:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            background: rgba(255, 255, 255, 0.35);
-        }
-        #spoof-play-btn:active {
-            transform: translate(-50%, -50%) scale(0.9);
+            display: block;
         }
     </style>
 </head>
 <body>
+    <!-- (your existing HTML – same as before) -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -194,7 +169,7 @@
         }
 
         // ============================================================
-        // PLAYER WITH VISIBLE SPOOF PLAY BUTTON
+        // UPDATED: Add ?autoplay=1 to vidsrc.pm URL + click shield
         // ============================================================
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
@@ -225,14 +200,15 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            // 2. Build the iframe (vidsrc.pm)
+            // 2. Build the iframe with autoplay parameter
             let url;
             if (isAnime) {
                 url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
             } else {
+                // Add ?autoplay=1 to try to start video without click
                 url = (type === 'movie')
-                    ? `https://vidsrc.pm/embed/movie/${id}`
-                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
+                    ? `https://vidsrc.pm/embed/movie/${id}?autoplay=1`
+                    : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}?autoplay=1`;
             }
 
             const frame = document.createElement('iframe');
@@ -241,60 +217,48 @@
             frame.id = "main-player-frame";
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
-            // NO sandbox – let it run freely
             frame.src = url;
             container.appendChild(frame);
 
-            // 3. Visible Spoof Play Button (over the iframe's play button)
-            const spoofBtn = document.createElement('div');
-            spoofBtn.id = "spoof-play-btn";
-            // Position it in the center of the container
-            spoofBtn.style.position = "absolute";
-            spoofBtn.style.top = "50%";
-            spoofBtn.style.left = "50%";
-            spoofBtn.style.transform = "translate(-50%, -50%)";
-            spoofBtn.style.width = "80px";
-            spoofBtn.style.height = "80px";
-            spoofBtn.style.background = "rgba(255, 255, 255, 0.2)";
-            spoofBtn.style.borderRadius = "50%";
-            spoofBtn.style.border = "3px solid rgba(255, 255, 255, 0.7)";
-            spoofBtn.style.zIndex = "9999";
-            spoofBtn.style.display = "flex";
-            spoofBtn.style.alignItems = "center";
-            spoofBtn.style.justifyContent = "center";
-            spoofBtn.style.cursor = "pointer";
-            spoofBtn.style.boxShadow = "0 0 30px rgba(255, 255, 255, 0.3)";
-            spoofBtn.style.transition = "all 0.3s ease";
-            spoofBtn.style.backdropFilter = "blur(4px)";
-            spoofBtn.style.webkitBackdropFilter = "blur(4px)";
-            spoofBtn.style.pointerEvents = "auto";
-            // Add the play triangle using pseudo-element, but we'll just use innerHTML
-            spoofBtn.innerHTML = '<div style="width:0; height:0; border-left:30px solid white; border-top:18px solid transparent; border-bottom:18px solid transparent; margin-left:8px;"></div>';
+            // 3. Minimal shield: blocks any click that might happen immediately after load
+            const shield = document.createElement('div');
+            shield.id = "click-shield";
+            shield.style.position = "absolute";
+            shield.style.top = "0";
+            shield.style.left = "0";
+            shield.style.width = "100%";
+            shield.style.height = "100%";
+            shield.style.zIndex = "9999";
+            shield.style.background = "transparent";
+            shield.style.cursor = "pointer";
 
-            // On click/tap, remove the spoof button so the user can tap the real play button
-            const spoofHandler = function(e) {
+            // Capture any event that might trigger a pop-up
+            const shieldHandler = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('[Spoof] Play button tapped – removing overlay.');
-                if (spoofBtn.parentNode) {
-                    spoofBtn.parentNode.removeChild(spoofBtn);
+                console.log('[Shield] Blocked event');
+                // Remove shield after first interaction
+                if (shield.parentNode) {
+                    shield.parentNode.removeChild(shield);
                 }
                 return false;
             };
 
-            spoofBtn.addEventListener('click', spoofHandler, true);
-            spoofBtn.addEventListener('touchstart', spoofHandler, { passive: false, capture: true });
+            shield.addEventListener('click', shieldHandler, true);
+            shield.addEventListener('touchstart', shieldHandler, { passive: false, capture: true });
+            shield.addEventListener('mousedown', shieldHandler, true);
+            shield.addEventListener('mouseup', shieldHandler, true);
 
             container.style.position = "relative";
-            container.appendChild(spoofBtn);
+            container.appendChild(shield);
 
-            // Auto-remove after 8 seconds (in case the user doesn't tap, they can still click the iframe)
+            // Remove shield after 2 seconds – by then autoplay should have started
             setTimeout(() => {
-                const existing = document.getElementById('spoof-play-btn');
+                const existing = document.getElementById('click-shield');
                 if (existing && existing.parentNode) {
                     existing.parentNode.removeChild(existing);
                 }
-            }, 8000);
+            }, 2000);
         }
         // ============================================================
 
