@@ -6,8 +6,10 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
+        /* your existing styles – unchanged */
         :root { --gold: #D4AF37; --red: #E50914; --black: #050505; }
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
@@ -31,56 +33,10 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
-
-        /* Debug overlay */
-        #debug-box {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.85);
-            color: #ffdd44;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 9999;
-            border: 1px solid var(--gold);
-            pointer-events: none;
-            text-align: center;
-            font-family: monospace;
-            word-break: break-all;
-            display: none;
-        }
-        #debug-box.error {
-            color: #ff6b6b;
-            border-color: #ff6b6b;
-        }
-        #debug-box.success {
-            color: #51cf66;
-            border-color: #51cf66;
-        }
-        .fallback-btn {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--gold);
-            color: black;
-            font-weight: 800;
-            padding: 10px 20px;
-            border-radius: 30px;
-            z-index: 9999;
-            text-decoration: none;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <!-- HTML structure is exactly as before – I'll keep it short for brevity, but I'll include all your original HTML -->
+    <!-- Loader and Side Menu – exactly as before -->
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
@@ -175,34 +131,49 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <div id="iframe-container" class="w-full h-full" style="position:relative;">
-            <div id="debug-box"></div>
-            <button id="fallback-btn" class="fallback-btn">📺 Open in new tab</button>
-        </div>
+        <div id="iframe-container" class="w-full h-full" style="position:relative;"></div>
     </div>
 
     <script>
+        // ------------------------------------------------------------
+        // JIKAN API CACHE – stores Japanese titles for anime
+        // ------------------------------------------------------------
+        const jikanCache = new Map();
+        async function getJapaneseTitle(romajiTitle) {
+            if (jikanCache.has(romajiTitle)) return jikanCache.get(romajiTitle);
+            try {
+                const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(romajiTitle)}&limit=1`);
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    const jpTitle = data.data[0].title_japanese || data.data[0].title;
+                    jikanCache.set(romajiTitle, jpTitle);
+                    return jpTitle;
+                }
+                return romajiTitle; // fallback
+            } catch (_) {
+                return romajiTitle;
+            }
+        }
+
+        // ------------------------------------------------------------
+        // ORIGINAL FUNCTIONS (unchanged except fetchAniList)
+        // ------------------------------------------------------------
         function startLuxeStream() {
             saveToHistory(currentMedia.id, currentMedia.type, currentMedia.s, currentMedia.e, currentMedia.title, currentMedia.poster); 
             document.getElementById('player-overlay').style.display = 'block';
             loadPlayerFinal();
         }
 
-        // ============================================================
-        // DEBUGGABLE PLAYER WITH FALLBACKS
-        // ============================================================
+        // ------------------------------------------------------------
+        // PROXY PLAYER (vidsrc.pm + HLS.js)
+        // ------------------------------------------------------------
         function loadPlayerFinal() {
             const { type, id, s, e, isAnime, title } = currentMedia;
             const container = document.getElementById('iframe-container');
-            const debug = document.getElementById('debug-box');
-            const fallbackBtn = document.getElementById('fallback-btn');
-            container.innerHTML = ''; // clear everything
-            debug.style.display = 'none';
-            debug.className = '';
-            fallbackBtn.style.display = 'none';
+            container.innerHTML = '';
 
-            // --- Anime: use consumet ---
             if (isAnime) {
+                // Anime uses consumet (iframe) – keep as is
                 const url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
                 const frame = document.createElement('iframe');
                 frame.className = "w-full h-full";
@@ -214,90 +185,47 @@
                 return;
             }
 
-            // --- Movies & TV: try multiple providers in order ---
-            const providers = [
-                { domain: 'multiembed.to', path: type === 'movie' ? `movie/${id}` : `tv/${id}/${s}/${e}` },
-                { domain: 'embed.su', path: type === 'movie' ? `embed/${id}` : `embed/tv/${id}/${s}/${e}` },
-                { domain: 'vidsrc.to', path: type === 'movie' ? `embed/movie/${id}` : `embed/tv/${id}/${s}/${e}` }
-            ];
+            // Movies & TV – use proxy + HLS.js
+            const video = document.createElement('video');
+            video.id = 'hls-player';
+            video.controls = true;
+            video.autoplay = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.background = '#000';
+            container.appendChild(video);
 
-            let currentIndex = 0;
-            let frame = null;
+            const proxyUrl = `/api/proxy/stream?type=${type}&id=${id}&s=${s}&e=${e}`;
 
-            function tryProvider() {
-                if (currentIndex >= providers.length) {
-                    debug.textContent = '❌ All providers failed. Try another movie.';
-                    debug.className = 'error';
-                    debug.style.display = 'block';
-                    fallbackBtn.style.display = 'none';
-                    return;
-                }
-
-                const provider = providers[currentIndex];
-                const url = `https://${provider.domain}/${provider.path}?autoplay=1&mute=1`;
-                debug.textContent = `🔄 Trying: ${url}`;
-                debug.className = '';
-                debug.style.display = 'block';
-                fallbackBtn.style.display = 'none';
-
-                // Create iframe
-                if (frame) frame.remove();
-                frame = document.createElement('iframe');
-                frame.className = "w-full h-full";
-                frame.style.border = "none";
-                frame.id = "main-player-frame";
-                frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.src = url;
-                // Add referrerpolicy to avoid blocking
-                frame.referrerPolicy = 'no-referrer';
-                container.appendChild(frame);
-
-                // On load: success
-                frame.addEventListener('load', function() {
-                    debug.textContent = `✅ Loaded: ${provider.domain}`;
-                    debug.className = 'success';
-                    debug.style.display = 'block';
-                    fallbackBtn.style.display = 'none';
-                    // Hide debug after 3s
-                    setTimeout(() => { debug.style.display = 'none'; }, 3000);
+            if (Hls.isSupported()) {
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                hls.loadSource(proxyUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(() => {});
                 });
-
-                // On error: try next
-                frame.addEventListener('error', function() {
-                    console.warn(`[Provider] ${provider.domain} failed to load`);
-                    currentIndex++;
-                    tryProvider();
+                window._hlsInstance = hls;
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = proxyUrl;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(() => {});
                 });
-
-                // Fallback: if after 8 seconds the iframe hasn't loaded, assume it's blank and try next
-                setTimeout(() => {
-                    if (frame && frame.contentWindow && !frame.contentWindow.location.href.includes(provider.domain)) {
-                        // Might be blank – try next
-                        console.warn(`[Provider] ${provider.domain} seemed blank, trying next`);
-                        currentIndex++;
-                        tryProvider();
-                    }
-                }, 8000);
-
-                // Show fallback button anyway (in case user wants to open in new tab)
-                fallbackBtn.style.display = 'block';
-                fallbackBtn.onclick = function() {
-                    window.open(url, '_blank');
-                };
+            } else {
+                container.innerHTML = '<p class="text-white text-center p-4">HLS not supported.</p>';
             }
-
-            tryProvider();
         }
-        // ============================================================
 
         function closePlayer() {
+            if (window._hlsInstance) {
+                window._hlsInstance.destroy();
+                window._hlsInstance = null;
+            }
             document.getElementById('iframe-container').innerHTML = '';
             document.getElementById('player-overlay').style.display = 'none';
             document.getElementById('close-sel-btn').focus();
         }
 
-        // ---- All your original code below – unchanged ----
+        // ---- All your existing code below – with Jikan integration in fetchAniList ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
@@ -358,6 +286,9 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
+        // ------------------------------------------------------------
+        // UPDATED fetchAniList – adds Jikan Japanese title fallback
+        // ------------------------------------------------------------
         async function fetchAniList(append) {
             const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore } } }`;
             try {
@@ -365,18 +296,28 @@
                 const json = await response.json();
                 const results = json.data.Page.media;
                 const grid = document.getElementById('movie-grid');
-                results.forEach(m => {
+                
+                for (const m of results) {
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
                     card.tabIndex = 0;
-                    const searchTitle = m.title.english || m.title.romaji;
-                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
+                    
+                    // Determine display title: English if exists, else fetch Japanese via Jikan
+                    let displayTitle = m.title.english || m.title.romaji || m.title.native || 'Untitled';
+                    if (!m.title.english) {
+                        // Use Jikan to get Japanese title (async)
+                        const jpTitle = await getJapaneseTitle(m.title.romaji || m.title.native);
+                        displayTitle = jpTitle;
+                    }
+                    
+                    card.onclick = () => openDetails(m.id, 'tv', true, displayTitle);
                     card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
                     grid.appendChild(card);
-                });
+                }
                 currentPage++; hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) { console.error("AniList Error", err); }
         }
+        // ------------------------------------------------------------
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
