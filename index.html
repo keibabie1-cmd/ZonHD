@@ -139,10 +139,10 @@
         }
 
         // ============================================================
-        // PLAYER: Anime uses consumet, Movies/TV use vidsrc.pm
+        // PLAYER: Anime uses consumet with ROMAJI slug, Movies/TV use vidsrc.pm
         // ============================================================
         function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
+            const { type, id, s, e, isAnime, title, slugTitle } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -172,12 +172,11 @@
 
             let url;
             if (isAnime) {
-                // Use consumet API for anime
-                // Generate slug: try romaji if available, else native, else english
-                const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                // Use ROMAJI (or native) for the slug – this is the FIX
+                const slug = (slugTitle || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                 url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${slug}-episode-${e}`;
+                console.log('[Anime] Trying URL:', url);
             } else {
-                // Movies & TV (non-anime) use vidsrc.pm
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
                     : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`;
@@ -200,7 +199,7 @@
             document.getElementById('close-sel-btn').focus();
         }
 
-        // ---- All your original logic – exactly as it was before ----
+        // ---- All your original logic – with slugTitle added ----
         window.addEventListener('blur', () => {
             if (document.getElementById('player-overlay').style.display === 'block') {
                 setTimeout(() => { window.focus(); }, 500);
@@ -318,6 +317,8 @@
 
             // Determine the best display title – try to get Japanese
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
+            let slugTitle = media.title.romaji || media.title.native || media.title.english || 'unknown';
+            
             // If English exists and we want Japanese, try Jikan
             if (media.title.english && media.title.native && media.title.native !== media.title.english) {
                 const jpTitle = await fetchJikanTitle(media.title.english);
@@ -331,30 +332,16 @@
             const year = media.startDate ? media.startDate.year : '';
             const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
 
-            // Try to get TMDB ID for metadata (optional) – but we'll still use consumet for playback
-            let tmdbId = null;
-            let mediaType = 'tv';
-            try {
-                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(displayTitle)}`);
-                const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    const tmdbResult = searchData.results[0];
-                    tmdbId = tmdbResult.id;
-                    mediaType = tmdbResult.media_type || 'tv';
-                }
-            } catch (e) {
-                console.warn('TMDB search failed for anime:', displayTitle);
-            }
-
             // Set currentMedia: ALWAYS isAnime = true so we use consumet
             currentMedia = {
                 id: media.id,
-                type: mediaType,
+                type: 'tv', // consumet handles this
                 s: 1,
                 e: 1,
                 title: displayTitle,
+                slugTitle: slugTitle, // <-- this is the FIX – stores the romaji slug
                 poster: poster,
-                isAnime: true  // FORCE consumet for all anime
+                isAnime: true
             };
 
             // Update UI
@@ -396,7 +383,7 @@
                 } else {
                     // No TMDB match – create a minimal media object and use anime handler
                     const fallbackMedia = { 
-                        title: { english: searchTitle, native: searchTitle },
+                        title: { english: searchTitle, romaji: searchTitle, native: searchTitle },
                         coverImage: { extraLarge: 'IMG_8035.jpeg' },
                         description: 'No description available.',
                         startDate: { year: '' },
