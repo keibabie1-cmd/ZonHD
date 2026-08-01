@@ -142,10 +142,10 @@
         }
 
         // ============================================================
-        // RESILIENT MULTI-SOURCE STREAMING PLAYER ENGINE
+        // BULLETPROOF STREAMING PLAYER ENGINE
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, anilistId, slugTitle, title } = currentMedia;
+            const { type, id, s, e, isAnime, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -171,10 +171,9 @@
 
             let url = '';
             if (isAnime) {
-                // High compatibility multi-source anime embedding fallback sequence
                 let animeId = anilistId || id;
                 let epNum = e || 1;
-                url = `https://vidsrc.cc/v2/embed/anime/${animeId}/${epNum}`;
+                url = `https://vidsrc.xyz/embed/anime/${animeId}/${epNum}`;
             } else {
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
