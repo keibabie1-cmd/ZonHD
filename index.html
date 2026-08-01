@@ -83,7 +83,7 @@
                 <button class="focusable" onclick="setFilter('genre', 28)">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)">Thriller</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
-                <button class="focusable" onclick="setFilter('anime')">Anime</button>
+                <button class="focusable" onclick="setFilter('asian_animation')">Asian Animation</button>
                 <button class="focusable" onclick="setFilter('drama')">Drama</button>
                 <button class="focusable" onclick="setFilter('scifi')">Sci-Fi</button>
                 <button class="focusable" onclick="setFilter('comedy')">Comedy</button>
@@ -128,7 +128,7 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <div id="player-brand-tag" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <div id="iframe-container" class="w-full h-full" style="position:relative;"></div>
@@ -142,10 +142,10 @@
         }
 
         // ============================================================
-        // DIRECT METADATA-TO-HLS MANIFEST RESILIENT PLAYER ENGINE
+        // DUAL-ENGINE SPECIALIZED STREAMING PLAYER ARCHITECTURE
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, anilistId } = currentMedia;
+            const { type, id, s, e, isAsianAnimation, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -176,24 +176,23 @@
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
 
-            if (isAnime) {
-                let animeId = anilistId || id;
+            if (isAsianAnimation) {
+                document.getElementById('player-brand-tag').innerText = 'Asian Animation Stream Engine';
+                let animId = anilistId || id;
                 let epNum = e || 1;
-                // High-tier multi-endpoint manifest mapper proxying AniList tracking identifiers
-                const endpoints = [
-                    `https://vidsrc.cc/v2/embed/anime/${animeId}/${epNum}`,
-                    `https://vidsrc.xyz/embed/anime/${animeId}/${epNum}`,
-                    `https://vidsrc.me/embed/anime?anilist=${animeId}&episode=${epNum}`
+                // Dedicated robust multi-fallback stream pipeline for Asian animation (Japan, China, Korea)
+                const animSources = [
+                    `https://vidsrc.cc/v2/embed/anime/${animId}/${epNum}`,
+                    `https://vidsrc.xyz/embed/anime/${animId}/${epNum}`
                 ];
-                frame.src = endpoints[0];
-                let index = 0;
+                frame.src = animSources[0];
+                let srcIdx = 0;
                 frame.onerror = () => {
-                    index++;
-                    if (index < endpoints.length) {
-                        frame.src = endpoints[index];
-                    }
+                    srcIdx++;
+                    if (srcIdx < animSources.length) frame.src = animSources[srcIdx];
                 };
             } else {
+                document.getElementById('player-brand-tag').innerText = 'Cinema Luxe Player';
                 frame.src = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
                     : `https://vidsrc.pm/embed/tv/${id}/${s || 1}/${e || 1}`;
@@ -244,7 +243,7 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            if (activeType === 'anime') { await fetchComprehensiveAnimeList(append); isLoading = false; return; }
+            if (activeType === 'asian_animation') { await fetchAsianAnimationList(append); isLoading = false; return; }
 
             if (activeType === 'list') {
                 try {
@@ -260,7 +259,6 @@
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
-            if (activeType === 'kdrama') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ko&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'drama') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=18&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'scifi') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=878&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'comedy') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=35&sort_by=popularity.desc&page=${currentPage}`;
@@ -272,7 +270,11 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        async function fetchComprehensiveAnimeList(append) {
+        // ============================================================
+        // ULTIMATE ASIAN ANIMATION ENGINE (AniList GraphQL API Integration)
+        // Fetches Japanese, Chinese, Korean series, movies, and westernized adaptations
+        // ============================================================
+        async function fetchAsianAnimationList(append) {
             const query = `
                 query ($page: Int) {
                     Page(page: $page, perPage: 24) {
@@ -308,27 +310,26 @@
                     card.dataset.media = JSON.stringify(media);
                     card.onclick = function() {
                         const mediaData = JSON.parse(this.dataset.media);
-                        openComprehensiveAnimeDetails(mediaData);
+                        openAsianAnimationDetails(mediaData);
                     };
 
                     const img = media.coverImage.extraLarge || '';
-                    const badgeText = media.format ? media.format.replace('_', ' ') : 'ANIME';
+                    const badgeText = `${media.countryOfOrigin || 'ASIAN'} • ${media.format ? media.format.replace('_', ' ') : 'ANIMATION'}`;
                     card.innerHTML = `<img src="${img}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'"><div class="origin-badge">${badgeText}</div>`;
                     grid.appendChild(card);
                 }
                 currentPage++;
                 hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) {
-                console.error("Anime Fetch Error", err);
+                console.error("Asian Animation Fetch Error", err);
             }
         }
 
-        async function openComprehensiveAnimeDetails(media) {
+        async function openAsianAnimationDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
-            let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown Anime';
-            let slugTitle = media.title.romaji || media.title.native || media.title.english || 'unknown';
+            let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown Title';
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
             const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
             const year = media.startDate && media.startDate.year ? media.startDate.year : '';
@@ -342,9 +343,8 @@
                 s: 1,
                 e: 1,
                 title: displayTitle,
-                slugTitle: slugTitle,
                 poster: poster,
-                isAnime: true
+                isAsianAnimation: true
             };
 
             document.getElementById('show-title').innerText = displayTitle;
@@ -353,17 +353,17 @@
             document.getElementById('show-rating').innerText = `★ ${rating}`;
             document.getElementById('details-poster').src = poster;
             document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
-            document.getElementById('media-type-tag').innerText = media.format ? media.format.replace('_', ' ') : 'ANIME';
+            document.getElementById('media-type-tag').innerText = `${media.countryOfOrigin || 'ASIA'} ${media.format ? media.format.replace('_', ' ') : 'ANIMATION'}`;
 
             document.getElementById('movie-action-area').classList.toggle('hidden', !isMovie);
             document.getElementById('tv-action-area-top').classList.toggle('hidden', isMovie);
             document.getElementById('tv-action-area').classList.toggle('hidden', isMovie);
 
             if (isMovie) {
-                document.getElementById('play-movie-btn').innerText = '▶ Play Anime Movie';
+                document.getElementById('play-movie-btn').innerText = '▶ Play Asian Animation Movie';
             } else {
                 document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
-                renderAnimeEpisodeList(media.episodes || 12);
+                renderAsianAnimationEpisodes(media.episodes || 12);
             }
 
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -375,7 +375,7 @@
             }, 300);
         }
 
-        function renderAnimeEpisodeList(totalEpisodes) {
+        function renderAsianAnimationEpisodes(totalEpisodes) {
             const seasonButtons = document.getElementById('season-buttons');
             seasonButtons.innerHTML = '';
             const episodeGrid = document.getElementById('episode-grid');
@@ -383,7 +383,7 @@
 
             const btn = document.createElement('button');
             btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap active-filter";
-            btn.innerText = `All Episodes (1 - ${totalEpisodes})`;
+            btn.innerText = `Episodes (1 - ${totalEpisodes})`;
             seasonButtons.appendChild(btn);
 
             for (let i = 1; i <= totalEpisodes; i++) {
@@ -391,10 +391,11 @@
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">High Definition Stream</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">Asian Animation Stream Engine</div></div>`;
                 episodeGrid.appendChild(epRow);
             }
         }
+        // ============================================================
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
@@ -416,7 +417,7 @@
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             if (!data || data.status_code) {
-                currentMedia = { id, type, s: 1, e: 1, title: 'Unknown', poster: null, isAnime: false };
+                currentMedia = { id, type, s: 1, e: 1, title: 'Unknown', poster: null, isAsianAnimation: false };
                 document.getElementById('show-title').innerText = 'Error loading details';
                 document.getElementById('show-desc').innerText = 'Could not fetch data.';
                 document.getElementById('show-year').innerText = '';
@@ -441,7 +442,7 @@
             const year = (data.release_date || data.first_air_date || '').split('-')[0];
             const rating = data.vote_average ? data.vote_average.toFixed(1) : 'N/A';
 
-            currentMedia = { id, type, s: 1, e: 1, title, poster, isAnime: false };
+            currentMedia = { id, type, s: 1, e: 1, title, poster, isAsianAnimation: false };
 
             document.getElementById('show-title').innerText = title;
             document.getElementById('show-desc').innerText = overview;
