@@ -47,6 +47,31 @@
         .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); }
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: var(--gold); font-size: 8px; text-align: center; padding: 2px; font-weight: 900; letter-spacing: 1px; }
+
+        /* Custom stylish search bar matching Luxe theme */
+        .luxe-search-container {
+            position: relative;
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(10, 10, 10, 0.95));
+            border: 1.5px solid rgba(212, 175, 55, 0.3);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 15px rgba(212, 175, 55, 0.1);
+            transition: all 0.3s ease;
+        }
+        .luxe-search-container:focus-within {
+            border-color: var(--gold);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+        .luxe-search-btn {
+            background: linear-gradient(135deg, #D4AF37, #AA7C11);
+            color: #050505;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+        .luxe-search-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -81,13 +106,16 @@
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
                 <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 bg-white/5 px-3 py-1 rounded-full border border-gold/20">☰</button>
-                <input type="search" id="search-input" 
-                       class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
-                       placeholder="Search Master Library..." 
-                       enterkeyhint="search"
-                       onsearch="triggerSearch()"
-                       onkeyup="handleSearch(event)">
-                <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
+                <div class="luxe-search-container flex-1 flex items-center rounded-full px-4 py-1.5">
+                    <svg class="w-4 h-4 text-gold/60 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="search" id="search-input" 
+                           class="focusable w-full bg-transparent text-white placeholder-zinc-500 text-xs tracking-wider outline-none border-none py-1" 
+                           placeholder="Search Master Library..." 
+                           enterkeyhint="search"
+                           onsearch="triggerSearch()"
+                           onkeyup="handleSearch(event)">
+                </div>
+                <button onclick="triggerSearch()" class="focusable luxe-search-btn px-5 py-2.5 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
@@ -117,10 +145,14 @@
             <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <div class="flex gap-5 mb-6">
-                <img id="details-poster" class="w-32 rounded-lg shadow-2xl">
-                <div class="flex flex-col justify-end">
-                    <h2 id="show-title" class="text-3xl font-extrabold mb-2 tracking-tighter"></h2>
+            <div class="flex gap-5 mb-6 items-center">
+                <img id="details-poster" class="w-32 rounded-lg shadow-2xl flex-shrink-0">
+                <div class="flex flex-col justify-center flex-1 min-w-0">
+                    <!-- Aliterate title photo container (replaces text title where blurred) -->
+                    <div id="aliterate-title-container" class="mb-3 max-h-24 flex items-center">
+                        <img id="title-logo-img" class="max-h-20 w-auto object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.9)] hidden" alt="Title Logo">
+                        <h2 id="show-title" class="text-3xl font-extrabold tracking-tighter truncate"></h2>
+                    </div>
                     <div class="flex items-center gap-3">
                         <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
                         <span id="show-rating" class="rating-badge"></span>
@@ -133,7 +165,14 @@
             <p id="show-desc" class="text-zinc-400 text-sm leading-relaxed mb-8"></p>
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
-                <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar mb-6"></div>
+                
+                <!-- FireTV & Remote friendly Season Selector with navigation arrows -->
+                <div class="relative flex items-center mb-6">
+                    <button onclick="scrollSeasons(-1)" class="focusable absolute left-0 z-20 bg-black/80 text-gold border border-gold/30 hover:bg-gold hover:text-black p-2 rounded-full shadow-lg transition-all -ml-3 flex items-center justify-center w-9 h-9 font-bold text-lg">‹</button>
+                    <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth px-6 py-2 w-full"></div>
+                    <button onclick="scrollSeasons(1)" class="focusable absolute right-0 z-20 bg-black/80 text-gold border border-gold/30 hover:bg-gold hover:text-black p-2 rounded-full shadow-lg transition-all -mr-3 flex items-center justify-center w-9 h-9 font-bold text-lg">›</button>
+                </div>
+
                 <div id="episode-grid" class="flex flex-col"></div>
             </div>
         </div>
@@ -305,6 +344,27 @@
             } catch (err) { console.error("AniList Error", err); }
         }
 
+        async function fetchAliterateLogo(id, type) {
+            const logoImg = document.getElementById('title-logo-img');
+            const titleText = document.getElementById('show-title');
+            logoImg.classList.add('hidden');
+            titleText.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}&include_image_language=en,null`);
+                const data = await res.json();
+                if (data.logos && data.logos.length > 0) {
+                    // Find highest rated English or transparent logo
+                    const logoPath = data.logos[0].file_path;
+                    logoImg.src = `https://image.tmdb.org/t/p/w500${logoPath}`;
+                    logoImg.onload = () => {
+                        logoImg.classList.remove('hidden');
+                        titleText.classList.add('hidden');
+                    };
+                }
+            } catch (e) {}
+        }
+
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
             results.forEach(m => {
@@ -332,7 +392,10 @@
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
             currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
+            
             document.getElementById('show-title').innerText = currentMedia.title;
+            fetchAliterateLogo(finalId, type);
+
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
@@ -368,6 +431,13 @@
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
+        }
+
+        function scrollSeasons(direction) {
+            const container = document.getElementById('season-buttons');
+            if (container) {
+                container.scrollBy({ left: direction * 200, behavior: 'smooth' });
+            }
         }
 
         async function loadEpisodes(showId, seasonNum) {
