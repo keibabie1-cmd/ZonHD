@@ -83,7 +83,7 @@
                 <button class="focusable" onclick="setFilter('genre', 28)">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)">Thriller</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
-                <button class="focusable" onclick="setFilter('asian_animation')">Asian Animation</button>
+                <button class="focusable" onclick="setFilter('anime')">Anime</button>
                 <button class="focusable" onclick="setFilter('drama')">Drama</button>
                 <button class="focusable" onclick="setFilter('scifi')">Sci-Fi</button>
                 <button class="focusable" onclick="setFilter('comedy')">Comedy</button>
@@ -141,11 +141,8 @@
             loadPlayerFinal();
         }
 
-        // ============================================================
-        // BULLETPROOF FALLBACK EMBED PIPELINE (Prevents Black Screens)
-        // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAsianAnimation, anilistId, title } = currentMedia;
+            const { type, id, s, e, isAnime, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -176,27 +173,11 @@
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
 
-            if (isAsianAnimation) {
-                document.getElementById('player-brand-tag').innerText = 'Asian Animation Engine';
+            if (isAnime) {
+                document.getElementById('player-brand-tag').innerText = 'Anime Engine';
                 let animId = anilistId || id;
                 let epNum = e || 1;
-                
-                // Multi-tier fallback sequence that cycles providers if one fails or blocks
-                const targetUrls = [
-                    `https://vidsrc.cc/v2/embed/anime/${animId}/${epNum}`,
-                    `https://vidsrc.xyz/embed/anime/${animId}/${epNum}`,
-                    `https://multiembed.mov/?video_type=anime&id=${animId}&s=1&e=${epNum}`
-                ];
-
-                let currentSourceIndex = 0;
-                frame.src = targetUrls[currentSourceIndex];
-                
-                frame.onerror = () => {
-                    currentSourceIndex++;
-                    if (currentSourceIndex < targetUrls.length) {
-                        frame.src = targetUrls[currentSourceIndex];
-                    }
-                };
+                frame.src = `https://vidsrc.cc/v2/embed/anime/${animId}/${epNum}`;
             } else {
                 document.getElementById('player-brand-tag').innerText = 'Cinema Luxe Player';
                 frame.src = (type === 'movie')
@@ -206,7 +187,6 @@
 
             container.appendChild(frame);
         }
-        // ============================================================
 
         function closePlayer() {
             document.getElementById('iframe-container').innerHTML = '';
@@ -249,7 +229,7 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            if (activeType === 'asian_animation') { await fetchAsianAnimationList(append); isLoading = false; return; }
+            if (activeType === 'anime') { await fetchAnimeList(append); isLoading = false; return; }
 
             if (activeType === 'list') {
                 try {
@@ -276,7 +256,7 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        async function fetchAsianAnimationList(append) {
+        async function fetchAnimeList(append) {
             const query = `
                 query ($page: Int) {
                     Page(page: $page, perPage: 24) {
@@ -312,22 +292,22 @@
                     card.dataset.media = JSON.stringify(media);
                     card.onclick = function() {
                         const mediaData = JSON.parse(this.dataset.media);
-                        openAsianAnimationDetails(mediaData);
+                        openAnimeDetails(mediaData);
                     };
 
                     const img = media.coverImage.extraLarge || '';
-                    const badgeText = `${media.countryOfOrigin || 'ASIAN'} • ${media.format ? media.format.replace('_', ' ') : 'ANIMATION'}`;
+                    const badgeText = `${media.countryOfOrigin || 'ANIME'} • ${media.format ? media.format.replace('_', ' ') : 'SERIES'}`;
                     card.innerHTML = `<img src="${img}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'"><div class="origin-badge">${badgeText}</div>`;
                     grid.appendChild(card);
                 }
                 currentPage++;
                 hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) {
-                console.error("Asian Animation Fetch Error", err);
+                console.error("Anime Fetch Error", err);
             }
         }
 
-        async function openAsianAnimationDetails(media) {
+        async function openAnimeDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
@@ -346,7 +326,7 @@
                 e: 1,
                 title: displayTitle,
                 poster: poster,
-                isAsianAnimation: true
+                isAnime: true
             };
 
             document.getElementById('show-title').innerText = displayTitle;
@@ -355,17 +335,17 @@
             document.getElementById('show-rating').innerText = `★ ${rating}`;
             document.getElementById('details-poster').src = poster;
             document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
-            document.getElementById('media-type-tag').innerText = `${media.countryOfOrigin || 'ASIA'} ${media.format ? media.format.replace('_', ' ') : 'ANIMATION'}`;
+            document.getElementById('media-type-tag').innerText = `${media.countryOfOrigin || 'JP'} ${media.format ? media.format.replace('_', ' ') : 'ANIME'}`;
 
             document.getElementById('movie-action-area').classList.toggle('hidden', !isMovie);
             document.getElementById('tv-action-area-top').classList.toggle('hidden', isMovie);
             document.getElementById('tv-action-area').classList.toggle('hidden', isMovie);
 
             if (isMovie) {
-                document.getElementById('play-movie-btn').innerText = '▶ Play Asian Animation Movie';
+                document.getElementById('play-movie-btn').innerText = '▶ Play Anime Movie';
             } else {
                 document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
-                renderAsianAnimationEpisodes(media.episodes || 12);
+                renderAnimeEpisodes(media.episodes || 12);
             }
 
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -377,7 +357,7 @@
             }, 300);
         }
 
-        function renderAsianAnimationEpisodes(totalEpisodes) {
+        function renderAnimeEpisodes(totalEpisodes) {
             const seasonButtons = document.getElementById('season-buttons');
             seasonButtons.innerHTML = '';
             const episodeGrid = document.getElementById('episode-grid');
@@ -393,7 +373,7 @@
                 epRow.className = "episode-row focusable";
                 epRow.tabIndex = 0;
                 epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">Asian Animation Stream Engine</div></div>`;
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">Anime Stream Engine</div></div>`;
                 episodeGrid.appendChild(epRow);
             }
         }
@@ -418,7 +398,7 @@
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             if (!data || data.status_code) {
-                currentMedia = { id, type, s: 1, e: 1, title: 'Unknown', poster: null, isAsianAnimation: false };
+                currentMedia = { id, type, s: 1, e: 1, title: 'Unknown', poster: null, isAnime: false };
                 document.getElementById('show-title').innerText = 'Error loading details';
                 document.getElementById('show-desc').innerText = 'Could not fetch data.';
                 document.getElementById('show-year').innerText = '';
@@ -443,7 +423,7 @@
             const year = (data.release_date || data.first_air_date || '').split('-')[0];
             const rating = data.vote_average ? data.vote_average.toFixed(1) : 'N/A';
 
-            currentMedia = { id, type, s: 1, e: 1, title, poster, isAsianAnimation: false };
+            currentMedia = { id, type, s: 1, e: 1, title, poster, isAnime: false };
 
             document.getElementById('show-title').innerText = title;
             document.getElementById('show-desc').innerText = overview;
