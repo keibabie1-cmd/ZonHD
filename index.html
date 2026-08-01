@@ -141,6 +141,9 @@
             loadPlayerFinal();
         }
 
+        // ============================================================
+        // BULLETPROOF STREAMING ENGINE (Dual-Mode: Standard vs Anime)
+        // ============================================================
         async function loadPlayerFinal() {
             const { type, id, s, e, isAnime, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
@@ -174,11 +177,11 @@
             frame.setAttribute('allowfullscreen', 'true');
 
             if (isAnime) {
-                document.getElementById('player-brand-tag').innerText = 'Anime Stream Engine';
+                document.getElementById('player-brand-tag').innerText = 'Anime Engine';
                 let animId = anilistId || id;
                 let epNum = e || 1;
-                // Using Embed.su engine which resolves AniList mappings smoothly without black screens
-                frame.src = `https://embed.su/embed/anime/${animId}/${epNum}`;
+                // Dedicated anime stream resolution engine
+                frame.src = `https://vidlink.pro/anime/${animId}/${epNum}`;
             } else {
                 document.getElementById('player-brand-tag').innerText = 'Cinema Luxe Player';
                 frame.src = (type === 'movie')
@@ -188,6 +191,7 @@
 
             container.appendChild(frame);
         }
+        // ============================================================
 
         function closePlayer() {
             document.getElementById('iframe-container').innerHTML = '';
@@ -230,7 +234,7 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            if (activeType === 'anime') { await fetchAnimeList(append); isLoading = false; return; }
+            if (activeType === 'anime') { await fetchAnimeBrickByBrick(append); isLoading = false; return; }
 
             if (activeType === 'list') {
                 try {
@@ -257,7 +261,10 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        async function fetchAnimeList(append) {
+        // ============================================================
+        // GROUND-UP ANIME ENGINE (AniList GraphQL API with Infinite Scroll)
+        // ============================================================
+        async function fetchAnimeBrickByBrick(append) {
             const query = `
                 query ($page: Int) {
                     Page(page: $page, perPage: 24) {
@@ -293,7 +300,7 @@
                     card.dataset.media = JSON.stringify(media);
                     card.onclick = function() {
                         const mediaData = JSON.parse(this.dataset.media);
-                        openAnimeDetails(mediaData);
+                        openAnimeBrickDetails(mediaData);
                     };
 
                     const img = media.coverImage.extraLarge || '';
@@ -304,11 +311,11 @@
                 currentPage++;
                 hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) {
-                console.error("Anime Fetch Error", err);
+                console.error("Brick-by-Brick Anime Fetch Error", err);
             }
         }
 
-        async function openAnimeDetails(media) {
+        async function openAnimeBrickDetails(media) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement;
 
@@ -346,7 +353,7 @@
                 document.getElementById('play-movie-btn').innerText = '▶ Play Anime Movie';
             } else {
                 document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
-                renderAnimeEpisodes(media.episodes || 12);
+                renderAnimeBrickEpisodes(media.episodes || 12);
             }
 
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -358,7 +365,7 @@
             }, 300);
         }
 
-        function renderAnimeEpisodes(totalEpisodes) {
+        function renderAnimeBrickEpisodes(totalEpisodes) {
             const seasonButtons = document.getElementById('season-buttons');
             seasonButtons.innerHTML = '';
             const episodeGrid = document.getElementById('episode-grid');
@@ -378,6 +385,7 @@
                 episodeGrid.appendChild(epRow);
             }
         }
+        // ============================================================
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
