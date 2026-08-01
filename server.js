@@ -12,7 +12,7 @@ app.get('/api/config', (req, res) => {
     res.json({ tmdb_key: TMDB_KEY });
 });
 
-// Server-side proxy endpoint to bypass iframe/CORS blocks
+// Proxy endpoint to handle backend content fetching and bypass restrictions
 app.get('/api/proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) return res.status(400).send('URL parameter missing');
@@ -26,7 +26,6 @@ app.get('/api/proxy', async (req, res) => {
             responseType: 'arraybuffer'
         });
         
-        // Forward content type and data back to client
         res.setHeader('Content-Type', response.headers['content-type'] || 'text/html');
         res.send(response.data);
     } catch (error) {
