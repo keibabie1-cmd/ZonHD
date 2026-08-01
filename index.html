@@ -145,17 +145,14 @@
         // BULLETPROOF DUAL-ENGINE STREAMING PLAYER (HiAnime/Animension Style + Vidsrc)
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title, slugTitle, anilistId } = currentMedia;
+            const { type, id, s, e, isAnime, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
-            // Parent guards (block popups & redirects)
             const originalOpen = window.open;
             let guardActive = true;
             window.open = function(url, target, features) {
-                if (guardActive) {
-                    return null;
-                }
+                if (guardActive) return null;
                 return originalOpen.call(this, url, target, features);
             };
             const beforeUnloadHandler = function(ev) {
@@ -174,10 +171,10 @@
 
             let url = '';
             if (isAnime) {
-                // High-performance direct embed resolver matching top tier anime streaming platforms (HiAnime/Animension embedding architecture)
-                let searchIdentifier = anilistId || id;
+                // Multi-source resilient anime streaming embed architecture matching top-tier streaming aggregators
+                let animeIdentifier = anilistId || id;
                 let episodeNum = e || 1;
-                url = `https://vidsrc.cc/v2/embed/anime/${searchIdentifier}/${episodeNum}`;
+                url = `https://vidsrc.cc/v2/embed/anime/${animeIdentifier}/${episodeNum}`;
             } else {
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
@@ -236,7 +233,7 @@
             isLoading = true;
             if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
             
-            if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
+            if (activeType === 'anime') { await fetchComprehensiveAnimeList(append); isLoading = false; return; }
 
             if (activeType === 'list') {
                 try {
@@ -264,13 +261,39 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        async function fetchAniList(append) {
-            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id format title { english romaji native } coverImage { extraLarge } description averageScore startDate { year } countryOfOrigin episodes } } }`;
+        // ============================================================
+        // COMPREHENSIVE ANIME ENGINE (Fetches BOTH Westernized & Unwesternized Anime Movies & Series via AniList GraphQL)
+        // ============================================================
+        async function fetchComprehensiveAnimeList(append) {
+            const query = `
+                query ($page: Int) {
+                    Page(page: $page, perPage: 24) {
+                        pageInfo { hasNextPage }
+                        media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+                            id
+                            format
+                            title { english romaji native }
+                            coverImage { extraLarge }
+                            description
+                            averageScore
+                            startDate { year }
+                            countryOfOrigin
+                            episodes
+                            duration
+                        }
+                    }
+                }
+            `;
             try {
-                const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { page: currentPage } }) });
+                const response = await fetch('https://graphql.anilist.co', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, variables: { page: currentPage } })
+                });
                 const json = await response.json();
                 const results = json.data.Page.media;
                 const grid = document.getElementById('movie-grid');
+
                 for (const media of results) {
                     const card = document.createElement('div');
                     card.className = "movie-card focusable";
@@ -278,15 +301,92 @@
                     card.dataset.media = JSON.stringify(media);
                     card.onclick = function() {
                         const mediaData = JSON.parse(this.dataset.media);
-                        openAnimeDetails(mediaData);
+                        openComprehensiveAnimeDetails(mediaData);
                     };
+
                     const img = media.coverImage.extraLarge || '';
-                    card.innerHTML = `<img src="${img}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'"><div class="origin-badge">${media.format || media.countryOfOrigin || 'ANIME'}</div>`;
+                    const badgeText = media.format ? media.format.replace('_', ' ') : 'ANIME';
+                    card.innerHTML = `<img src="${img}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'"><div class="origin-badge">${badgeText}</div>`;
                     grid.appendChild(card);
                 }
-                currentPage++; hasMore = json.data.Page.pageInfo.hasNextPage;
-            } catch (err) { console.error("AniList Error", err); }
+                currentPage++;
+                hasMore = json.data.Page.pageInfo.hasNextPage;
+            } catch (err) {
+                console.error("Comprehensive Anime Fetch Error", err);
+            }
         }
+
+        async function openComprehensiveAnimeDetails(media) {
+            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
+            lastFocusedElement = document.activeElement;
+
+            let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown Anime';
+            const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
+            const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
+            const year = media.startDate && media.startDate.year ? media.startDate.year : '';
+            const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
+            const isMovie = media.format === 'MOVIE' || media.format === 'OVA' || media.format === 'SPECIAL';
+
+            currentMedia = {
+                id: media.id,
+                anilistId: media.id,
+                type: isMovie ? 'movie' : 'tv',
+                s: 1,
+                e: 1,
+                title: displayTitle,
+                poster: poster,
+                isAnime: true
+            };
+
+            document.getElementById('show-title').innerText = displayTitle;
+            document.getElementById('show-desc').innerText = description;
+            document.getElementById('show-year').innerText = year;
+            document.getElementById('show-rating').innerText = `★ ${rating}`;
+            document.getElementById('details-poster').src = poster;
+            document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
+            document.getElementById('media-type-tag').innerText = media.format ? media.format.replace('_', ' ') : 'ANIME';
+
+            document.getElementById('movie-action-area').classList.toggle('hidden', !isMovie);
+            document.getElementById('tv-action-area-top').classList.toggle('hidden', isMovie);
+            document.getElementById('tv-action-area').classList.toggle('hidden', isMovie);
+
+            if (isMovie) {
+                document.getElementById('play-movie-btn').innerText = '▶ Play Anime Movie';
+            } else {
+                document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
+                renderAnimeEpisodeList(media.episodes || 12);
+            }
+
+            document.getElementById('main-app-wrapper').style.display = 'none';
+            document.getElementById('selector-overlay').style.display = 'block';
+            window.scrollTo(0, 0);
+            setTimeout(() => { 
+                const btn = isMovie ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
+                if (btn) btn.focus();
+            }, 300);
+        }
+
+        function renderAnimeEpisodeList(totalEpisodes) {
+            const seasonButtons = document.getElementById('season-buttons');
+            seasonButtons.innerHTML = '';
+            const episodeGrid = document.getElementById('episode-grid');
+            episodeGrid.innerHTML = '';
+
+            const btn = document.createElement('button');
+            btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap active-filter";
+            btn.innerText = `All Episodes (1 - ${totalEpisodes})`;
+            seasonButtons.appendChild(btn);
+
+            for (let i = 1; i <= totalEpisodes; i++) {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable";
+                epRow.tabIndex = 0;
+                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">High Definition Stream</div></div>`;
+                episodeGrid.appendChild(epRow);
+            }
+        }
+        // ============================================================
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
@@ -301,82 +401,7 @@
             });
         }
 
-        async function openAnimeDetails(media) {
-            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
-            lastFocusedElement = document.activeElement;
-
-            let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
-            let slugTitle = media.title.romaji || media.title.native || media.title.english || 'unknown';
-
-            const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
-            const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
-            const year = media.startDate ? media.startDate.year : '';
-            const rating = media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A';
-            const isMovie = media.format === 'MOVIE';
-
-            currentMedia = {
-                id: media.id,
-                anilistId: media.id,
-                type: isMovie ? 'movie' : 'tv',
-                s: 1,
-                e: 1,
-                title: displayTitle,
-                slugTitle: slugTitle, 
-                poster: poster,
-                isAnime: true
-            };
-
-            document.getElementById('show-title').innerText = displayTitle;
-            document.getElementById('show-desc').innerText = description;
-            document.getElementById('show-year').innerText = year;
-            document.getElementById('show-rating').innerText = `★ ${rating}`;
-            document.getElementById('details-poster').src = poster;
-            document.getElementById('details-backdrop').style.backgroundImage = poster ? `url(${poster})` : 'none';
-            document.getElementById('media-type-tag').innerText = isMovie ? 'ANIME MOVIE' : 'ANIME TV';
-
-            document.getElementById('movie-action-area').classList.toggle('hidden', !isMovie);
-            document.getElementById('tv-action-area-top').classList.toggle('hidden', isMovie);
-            document.getElementById('tv-action-area').classList.remove('hidden');
-            
-            if (isMovie) {
-                document.getElementById('play-movie-btn').innerText = '▶ Play Movie';
-                document.getElementById('tv-action-area').classList.add('hidden');
-            } else {
-                document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
-                renderAnimeEpisodes(media.episodes || 12);
-            }
-
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('selector-overlay').style.display = 'block';
-            window.scrollTo(0, 0);
-            setTimeout(() => { 
-                const btn = isMovie ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if (btn) btn.focus();
-            }, 300);
-        }
-
-        function renderAnimeEpisodes(totalEpisodes) {
-            const seasonButtons = document.getElementById('season-buttons');
-            seasonButtons.innerHTML = '';
-            const episodeGrid = document.getElementById('episode-grid');
-            episodeGrid.innerHTML = '';
-
-            const btn = document.createElement('button');
-            btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap active-filter";
-            btn.innerText = `Episodes (1 - ${totalEpisodes})`;
-            seasonButtons.appendChild(btn);
-
-            for (let i = 1; i <= totalEpisodes; i++) {
-                const epRow = document.createElement('div');
-                epRow.className = "episode-row focusable";
-                epRow.tabIndex = 0;
-                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
-                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">Stream HD Subbed / Dubbed</div></div>`;
-                episodeGrid.appendChild(epRow);
-            }
-        }
-
-        async function openDetails(id, type, isAniList = false, searchTitle = '') {
+        async function openDetails(id, type) {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             
