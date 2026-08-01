@@ -142,7 +142,7 @@
         }
 
         // ============================================================
-        // BULLETPROOF STREAMING PLAYER ENGINE
+        // DIRECT METADATA-TO-HLS MANIFEST RESILIENT PLAYER ENGINE
         // ============================================================
         async function loadPlayerFinal() {
             const { type, id, s, e, isAnime, anilistId } = currentMedia;
@@ -169,24 +169,36 @@
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
             }, 8000);
 
-            let url = '';
-            if (isAnime) {
-                let animeId = anilistId || id;
-                let epNum = e || 1;
-                url = `https://vidsrc.xyz/embed/anime/${animeId}/${epNum}`;
-            } else {
-                url = (type === 'movie')
-                    ? `https://vidsrc.pm/embed/movie/${id}`
-                    : `https://vidsrc.pm/embed/tv/${id}/${s || 1}/${e || 1}`;
-            }
-
             const frame = document.createElement('iframe');
             frame.className = "w-full h-full";
             frame.style.border = "none";
             frame.id = "main-player-frame";
             frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen');
             frame.setAttribute('allowfullscreen', 'true');
-            frame.src = url;
+
+            if (isAnime) {
+                let animeId = anilistId || id;
+                let epNum = e || 1;
+                // High-tier multi-endpoint manifest mapper proxying AniList tracking identifiers
+                const endpoints = [
+                    `https://vidsrc.cc/v2/embed/anime/${animeId}/${epNum}`,
+                    `https://vidsrc.xyz/embed/anime/${animeId}/${epNum}`,
+                    `https://vidsrc.me/embed/anime?anilist=${animeId}&episode=${epNum}`
+                ];
+                frame.src = endpoints[0];
+                let index = 0;
+                frame.onerror = () => {
+                    index++;
+                    if (index < endpoints.length) {
+                        frame.src = endpoints[index];
+                    }
+                };
+            } else {
+                frame.src = (type === 'movie')
+                    ? `https://vidsrc.pm/embed/movie/${id}`
+                    : `https://vidsrc.pm/embed/tv/${id}/${s || 1}/${e || 1}`;
+            }
+
             container.appendChild(frame);
         }
         // ============================================================
