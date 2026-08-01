@@ -53,9 +53,12 @@
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
-        <h2 class="text-gold font-bold mb-4 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Luxe Vaults</h2>
+        <div class="flex justify-between items-center mb-4 border-b border-red-900 pb-2">
+            <h2 class="text-gold font-bold italic uppercase tracking-tighter">Luxe Vaults</h2>
+            <button onclick="toggleMenu()" class="focusable text-gold text-xl px-2">✕</button>
+        </div>
         <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '24|463|380')">African American Vault</button>
+            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
         </div>
 
@@ -77,6 +80,7 @@
 
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
+                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
                 <input type="search" id="search-input" 
                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
                        placeholder="Search Master Library..." 
@@ -86,12 +90,26 @@
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
-                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
                 <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
-                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 12)" class="whitespace-nowrap">Adventure</button>
+                <button class="focusable" onclick="setFilter('genre', 16)" class="whitespace-nowrap">Animation</button>
+                <button class="focusable" onclick="setFilter('genre', 35)" class="whitespace-nowrap">Comedy</button>
+                <button class="focusable" onclick="setFilter('genre', 80)" class="whitespace-nowrap">Crime</button>
+                <button class="focusable" onclick="setFilter('genre', 99)" class="whitespace-nowrap">Documentary</button>
+                <button class="focusable" onclick="setFilter('genre', 18)" class="whitespace-nowrap">Drama</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+                <button class="focusable" onclick="setFilter('genre', 14)" class="whitespace-nowrap">Fantasy</button>
+                <button class="focusable" onclick="setFilter('genre', 36)" class="whitespace-nowrap">History</button>
+                <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
+                <button class="focusable" onclick="setFilter('genre', 10402)" class="whitespace-nowrap">Music</button>
+                <button class="focusable" onclick="setFilter('genre', 9648)" class="whitespace-nowrap">Mystery</button>
+                <button class="focusable" onclick="setFilter('genre', 10749)" class="whitespace-nowrap">Romance</button>
+                <button class="focusable" onclick="setFilter('genre', 878)" class="whitespace-nowrap">Sci-Fi</button>
+                <button class="focusable" onclick="setFilter('genre', 10770)" class="whitespace-nowrap">TV Movie</button>
+                <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+                <button class="focusable" onclick="setFilter('genre', 10752)" class="whitespace-nowrap">War</button>
+                <button class="focusable" onclick="setFilter('genre', 37)" class="whitespace-nowrap">Western</button>
                 <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
             </nav>
         </div>
@@ -143,6 +161,7 @@
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
+        let savedScrollPosition = 0;
 
         async function fetchConfig() {
             try {
@@ -168,15 +187,17 @@
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
             if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+            if (activeType === 'list') url = `https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`;
+            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(activeID)}&page=${currentPage}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
+                const results = data.results || data.items;
+                if (results && results.length > 0) {
+                    renderGrid(results);
                     currentPage++;
-                    hasMore = currentPage <= data.total_pages;
+                    hasMore = currentPage <= (data.total_pages || 1);
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
@@ -209,17 +230,19 @@
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
             results.forEach(m => {
-                if (!m.poster_path) return;
+                const poster = m.poster_path;
+                if (!poster) return;
                 const card = document.createElement('div');
                 card.className = "movie-card focusable";
                 card.tabIndex = 0;
                 card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${poster}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
+            savedScrollPosition = window.scrollY;
             let finalId = id;
             if (isAniList) {
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
@@ -231,13 +254,26 @@
             }
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
+            
+            // Fetch alternative backdrop images
+            let backdropUrl = data.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : '';
+            try {
+                const imgRes = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}/images?api_key=${API_KEY}`);
+                const imgData = await imgRes.json();
+                if (imgData.backdrops && imgData.backdrops.length > 1) {
+                    backdropUrl = `https://image.tmdb.org/t/p/original${imgData.backdrops[1].file_path}`;
+                } else if (imgData.backdrops && imgData.backdrops.length > 0) {
+                    backdropUrl = `https://image.tmdb.org/t/p/original${imgData.backdrops[0].file_path}`;
+                }
+            } catch (e) {}
+
             currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             document.getElementById('show-title').innerText = currentMedia.title;
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
+            document.getElementById('details-backdrop').style.backgroundImage = `url(${backdropUrl})`;
             document.getElementById('media-type-tag').innerText = type.toUpperCase();
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
@@ -343,7 +379,11 @@
         function closeSelector() { 
             document.getElementById('selector-overlay').style.display = 'none'; 
             document.getElementById('main-app-wrapper').style.display = 'block';
-            document.getElementById('btn-trending').focus(); 
+            window.scrollTo(0, savedScrollPosition);
+            setTimeout(() => {
+                const cards = Array.from(document.querySelectorAll('#movie-grid .focusable'));
+                if (cards.length > 0) cards[0].focus();
+            }, 100);
         }
 
         function closePlayer() { 
@@ -362,6 +402,10 @@
             activeType = type; activeID = id; 
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
             if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
+            if (type !== 'search') {
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = '';
+            }
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
@@ -369,7 +413,7 @@
 
         function triggerSearch() {
             const input = document.getElementById('search-input');
-            const query = input.value;
+            const query = input.value.trim();
             if(query) {
                 setFilter('search', query);
                 input.blur();
@@ -387,6 +431,10 @@
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
+            mc.on("swipeleft", () => {
+                const menu = document.getElementById('side-menu');
+                if (menu.classList.contains('menu-open')) toggleMenu();
+            });
         };
 
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
