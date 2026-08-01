@@ -80,7 +80,7 @@
 
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 md:hidden">☰</button>
+                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 bg-white/5 px-3 py-1 rounded-full border border-gold/20">☰</button>
                 <input type="search" id="search-input" 
                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
                        placeholder="Search Master Library..." 
@@ -90,15 +90,14 @@
                 <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
-                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 hidden md:block">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="setFilter('genre', 18)" class="whitespace-nowrap">Drama</button>
-                <button class="focusable" onclick="setFilter('genre', 10749)" class="whitespace-nowrap">Romance</button>
-                <button class="focusable" onclick="setFilter('genre', 35)" class="whitespace-nowrap">Comedy</button>
-                <button class="focusable" onclick="setFilter('genre', 80)" class="whitespace-nowrap">Crime</button>
                 <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
                 <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
+                <button class="focusable" onclick="setFilter('drama')" class="whitespace-nowrap">Drama</button>
+                <button class="focusable" onclick="setFilter('romance')" class="whitespace-nowrap">Romance</button>
+                <button class="focusable" onclick="setFilter('comedy')" class="whitespace-nowrap">Comedy</button>
+                <button class="focusable" onclick="setFilter('crime')" class="whitespace-nowrap">Crime</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
                 <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
             </nav>
@@ -152,6 +151,7 @@
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
+        let trendingIdsCache = new Set();
 
         async function fetchConfig() {
             try {
@@ -159,14 +159,29 @@
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
+                await cacheTrendingIds();
                 fetchContent();
             } catch (err) { console.error("Config load failed", err); }
         }
 
+        async function cacheTrendingIds() {
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=1`);
+                const data = await res.json();
+                if (data.results) {
+                    data.results.forEach(item => trendingIdsCache.add(item.id));
+                }
+            } catch (e) {}
+        }
+
         async function fetchContent(append = false) {
-            if (isLoading || (!hasMore && append) || !API_KEY) return;
+            if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
-            if (!append) { currentPage = 1; hasMore = true; document.getElementById('movie-grid').innerHTML = ''; }
+            if (!append) { 
+                currentPage = 1; 
+                hasMore = true; 
+                document.getElementById('movie-grid').innerHTML = ''; 
+            }
             
             if (activeType === 'anime') {
                 await fetchAniList(append);
@@ -174,22 +189,95 @@
                 return;
             }
 
+            if (activeType === 'list') {
+                await fetchTmdbList(activeID, append);
+                isLoading = false;
+                return;
+            }
+
+            if (['drama', 'romance', 'comedy', 'crime'].includes(activeType)) {
+                await fetchCuratedCategory(activeType, append);
+                isLoading = false;
+                return;
+            }
+
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&sort_by=vote_count.desc&page=${currentPage}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(activeID)}&page=${currentPage}`;
-            if (activeType === 'list') url = `https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                let results = data.results || data.items;
-                if (results && results.length > 0) {
+                let results = data.results || [];
+                
+                if (activeType === 'search') {
+                    results = results.filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+                }
+
+                if (results.length > 0) {
                     renderGrid(results);
                     currentPage++;
                     hasMore = currentPage <= (data.total_pages || 1);
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+        }
+
+        async function fetchTmdbList(listId, append) {
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/list/${listId}?api_key=${API_KEY}&page=${currentPage}`);
+                const data = await res.json();
+                if (data.items && data.items.length > 0) {
+                    renderGrid(data.items);
+                    currentPage++;
+                    hasMore = currentPage <= data.total_pages;
+                } else { hasMore = false; }
+            } catch (e) { hasMore = false; }
+        }
+
+        async function fetchCuratedCategory(category, append) {
+            let genreMap = { drama: 18, romance: 10749, comedy: 35, crime: 80 };
+            let gId = genreMap[category];
+            let results = [];
+            
+            let targetCount = 20;
+            let fetches = 0;
+            
+            while (results.length < targetCount && currentPage <= 50 && fetches < 3) {
+                fetches++;
+                let urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
+                let urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
+                
+                if (category === 'crime') {
+                    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=80,9648&sort_by=popularity.desc&page=${currentPage}`;
+                }
+
+                try {
+                    const [resM, resT] = await Promise.all([fetch(urlMovies), fetch(urlTv)]);
+                    const dataM = await resM.json();
+                    const dataT = await resT.json();
+                    
+                    let combined = [...(dataM.results || []), ...(dataT.results || [])];
+                    
+                    let filtered = combined.filter(item => {
+                        if (trendingIdsCache.has(item.id)) return false;
+                        let genres = item.genre_ids || [];
+                        if (genres.includes(16) || genres.includes(10762) || genres.includes(10751)) return false;
+                        if (!item.poster_path) return false;
+                        return true;
+                    });
+                    
+                    results.push(...filtered);
+                    currentPage++;
+                    if (!dataM.results && !dataT.results) { hasMore = false; break; }
+                } catch (e) { break; }
+            }
+
+            if (results.length > 0) {
+                renderGrid(results.slice(0, 20));
+            } else {
+                hasMore = false;
+            }
         }
 
         async function fetchAniList(append) {
@@ -220,16 +308,12 @@
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
             results.forEach(m => {
-                let poster = m.poster_path;
-                if (!poster && m.coverImage) poster = m.coverImage.extraLarge;
-                if (!poster) return;
+                if (!m.poster_path) return;
                 const card = document.createElement('div');
                 card.className = "movie-card focusable";
                 card.tabIndex = 0;
-                let mediaType = m.media_type || (m.first_air_date ? 'tv' : (m.release_date ? 'movie' : 'tv'));
-                card.onclick = () => openDetails(m.id, mediaType);
-                let imgUrl = poster.startsWith('http') ? poster : `https://image.tmdb.org/t/p/w500${poster}`;
-                card.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover">`;
+                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
@@ -376,7 +460,7 @@
 
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
-            if(type !== 'search') {
+            if (type !== 'search') {
                 document.getElementById('search-input').value = '';
             }
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
