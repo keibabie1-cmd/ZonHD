@@ -55,7 +55,7 @@
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
         <div class="flex justify-between items-center mb-4 border-b border-red-900 pb-2">
             <h2 class="text-gold font-bold italic uppercase tracking-tighter">Luxe Vaults</h2>
-            <button onclick="toggleMenu()" class="focusable text-gold text-xl font-black px-2">✕</button>
+            <button onclick="toggleMenu()" class="focusable text-gold text-xl font-bold px-2">✕</button>
         </div>
         <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
             <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
@@ -80,27 +80,27 @@
 
         <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
             <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 shrink-0">☰</button>
+                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 md:hidden">☰</button>
                 <input type="search" id="search-input" 
                        class="focusable flex-1 bg-white/5 border border-gold/20 rounded-full py-2 px-6 text-white outline-none" 
                        placeholder="Search Master Library..." 
                        enterkeyhint="search"
                        onsearch="triggerSearch()"
                        onkeyup="handleSearch(event)">
-                <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase shrink-0">Search</button>
+                <button onclick="triggerSearch()" class="focusable bg-gold text-black font-black px-4 py-2 rounded-full text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
+                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 hidden md:block">☰</button>
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
+                <button class="focusable" onclick="setFilter('genre', 18)" class="whitespace-nowrap">Drama</button>
+                <button class="focusable" onclick="setFilter('genre', 10749)" class="whitespace-nowrap">Romance</button>
+                <button class="focusable" onclick="setFilter('genre', 35)" class="whitespace-nowrap">Comedy</button>
+                <button class="focusable" onclick="setFilter('genre', 80)" class="whitespace-nowrap">Crime</button>
                 <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
                 <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
                 <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
-                <!-- Stratosphere Hand-Picked Masterpiece Tabs -->
-                <button class="focusable text-gold whitespace-nowrap" onclick="setFilter('curated', 'mindbending')">Mind-Bending</button>
-                <button class="focusable text-gold whitespace-nowrap" onclick="setFilter('curated', 'cyberpunk')">Cyberpunk & Noir</button>
-                <button class="focusable text-gold whitespace-nowrap" onclick="setFilter('curated', 'epicfantasy')">Epic Fantasy</button>
-                <button class="focusable text-gold whitespace-nowrap" onclick="setFilter('curated', 'grittydrama')">Gritty Crime</button>
             </nav>
         </div>
 
@@ -153,14 +153,6 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
 
-        // Hand-picked Stratosphere Masterpiece Collections (TMDB IDs for infinite scrolling expansion)
-        const curatedCollections = {
-            'mindbending': { type: 'movie', ids: [603, 157336, 496243, 27205, 38, 550, 78, 424, 11, 13, 680, 567, 185, 497, 120, 121, 122, 299536, 299534, 284054] },
-            'cyberpunk': { type: 'movie', ids: [335984, 603, 26451, 843, 62, 79, 109, 377, 1402, 274, 98, 808, 49051, 258480, 313369, 116, 112, 103, 105, 12] },
-            'epicfantasy': { type: 'tv', ids: [1399, 94605, 71914, 60625, 4613, 85937, 63174, 1429, 69478, 65930, 42009, 61889, 70881, 76479, 87108, 93405, 83121, 60735, 62643, 48866] },
-            'grittydrama': { type: 'tv', ids: [1396, 1398, 60059, 427, 1438, 62688, 71446, 69050, 75006, 82856, 46260, 44217, 393, 1688, 4057, 456, 3099, 1421, 2316, 1530] }
-        };
-
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/config');
@@ -182,66 +174,22 @@
                 return;
             }
 
-            if (activeType === 'curated') {
-                await fetchCuratedCollection(append);
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === 'list') {
-                await fetchTmdbList(append);
-                isLoading = false;
-                return;
-            }
-
             let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
+            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&sort_by=vote_count.desc&page=${currentPage}`;
             if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(activeID)}&page=${currentPage}`;
+            if (activeType === 'list') url = `https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    renderGrid(data.results);
+                let results = data.results || data.items;
+                if (results && results.length > 0) {
+                    renderGrid(results);
                     currentPage++;
-                    hasMore = currentPage <= data.total_pages;
+                    hasMore = currentPage <= (data.total_pages || 1);
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
-        }
-
-        async function fetchTmdbList(append) {
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`);
-                const data = await res.json();
-                if (data.items && data.items.length > 0) {
-                    renderGrid(data.items);
-                    currentPage++;
-                    hasMore = currentPage <= data.total_pages;
-                } else { hasMore = false; }
-            } catch (err) { console.error("List fetch error", err); }
-        }
-
-        async function fetchCuratedCollection(append) {
-            const collection = curatedCollections[activeID];
-            if (!collection) { hasMore = false; return; }
-            
-            const itemsPerPage = 10;
-            const startIdx = (currentPage - 1) * itemsPerPage;
-            const sliceIds = collection.ids.slice(startIdx, startIdx + itemsPerPage);
-            
-            if (sliceIds.length === 0) { hasMore = false; return; }
-
-            const promises = sliceIds.map(id => fetch(`https://api.themoviedb.org/3/${collection.type}/${id}?api_key=${API_KEY}`).then(r => r.json()));
-            try {
-                const results = await Promise.all(promises);
-                const validResults = results.filter(item => item && item.poster_path);
-                // Tag media type properly for detail fetching
-                validResults.forEach(item => { item.media_type = collection.type; });
-                renderGrid(validResults);
-                currentPage++;
-                hasMore = (startIdx + itemsPerPage) < collection.ids.length;
-            } catch (err) { console.error("Curated collection error", err); }
         }
 
         async function fetchAniList(append) {
@@ -272,12 +220,16 @@
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
             results.forEach(m => {
-                if (!m.poster_path) return;
+                let poster = m.poster_path;
+                if (!poster && m.coverImage) poster = m.coverImage.extraLarge;
+                if (!poster) return;
                 const card = document.createElement('div');
                 card.className = "movie-card focusable";
                 card.tabIndex = 0;
-                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                let mediaType = m.media_type || (m.first_air_date ? 'tv' : (m.release_date ? 'movie' : 'tv'));
+                card.onclick = () => openDetails(m.id, mediaType);
+                let imgUrl = poster.startsWith('http') ? poster : `https://image.tmdb.org/t/p/w500${poster}`;
+                card.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
         }
@@ -408,7 +360,6 @@
             document.getElementById('selector-overlay').style.display = 'none'; 
             document.getElementById('main-app-wrapper').style.display = 'block';
             window.scrollTo(0, savedScrollPosition);
-            document.getElementById('btn-trending').focus(); 
         }
 
         function closePlayer() { 
@@ -425,9 +376,8 @@
 
         function setFilter(type, id = '') { 
             activeType = type; activeID = id; 
-            if (type !== 'search') {
-                const searchInput = document.getElementById('search-input');
-                if (searchInput) searchInput.value = '';
+            if(type !== 'search') {
+                document.getElementById('search-input').value = '';
             }
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
             if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
@@ -456,10 +406,6 @@
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
-            mc.on("swipeleft", () => {
-                const menu = document.getElementById('side-menu');
-                if(menu.classList.contains('menu-open')) toggleMenu();
-            });
         };
 
         window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
