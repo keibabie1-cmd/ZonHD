@@ -142,10 +142,10 @@
         }
 
         // ============================================================
-        // DUAL-ENGINE SPECIALIZED STREAMING PLAYER ARCHITECTURE
+        // BULLETPROOF FALLBACK EMBED PIPELINE (Prevents Black Screens)
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAsianAnimation, anilistId } = currentMedia;
+            const { type, id, s, e, isAsianAnimation, anilistId, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -177,19 +177,25 @@
             frame.setAttribute('allowfullscreen', 'true');
 
             if (isAsianAnimation) {
-                document.getElementById('player-brand-tag').innerText = 'Asian Animation Stream Engine';
+                document.getElementById('player-brand-tag').innerText = 'Asian Animation Engine';
                 let animId = anilistId || id;
                 let epNum = e || 1;
-                // Dedicated robust multi-fallback stream pipeline for Asian animation (Japan, China, Korea)
-                const animSources = [
+                
+                // Multi-tier fallback sequence that cycles providers if one fails or blocks
+                const targetUrls = [
                     `https://vidsrc.cc/v2/embed/anime/${animId}/${epNum}`,
-                    `https://vidsrc.xyz/embed/anime/${animId}/${epNum}`
+                    `https://vidsrc.xyz/embed/anime/${animId}/${epNum}`,
+                    `https://multiembed.mov/?video_type=anime&id=${animId}&s=1&e=${epNum}`
                 ];
-                frame.src = animSources[0];
-                let srcIdx = 0;
+
+                let currentSourceIndex = 0;
+                frame.src = targetUrls[currentSourceIndex];
+                
                 frame.onerror = () => {
-                    srcIdx++;
-                    if (srcIdx < animSources.length) frame.src = animSources[srcIdx];
+                    currentSourceIndex++;
+                    if (currentSourceIndex < targetUrls.length) {
+                        frame.src = targetUrls[currentSourceIndex];
+                    }
                 };
             } else {
                 document.getElementById('player-brand-tag').innerText = 'Cinema Luxe Player';
@@ -270,10 +276,6 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        // ============================================================
-        // ULTIMATE ASIAN ANIMATION ENGINE (AniList GraphQL API Integration)
-        // Fetches Japanese, Chinese, Korean series, movies, and westernized adaptations
-        // ============================================================
         async function fetchAsianAnimationList(append) {
             const query = `
                 query ($page: Int) {
@@ -395,7 +397,6 @@
                 episodeGrid.appendChild(epRow);
             }
         }
-        // ============================================================
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
