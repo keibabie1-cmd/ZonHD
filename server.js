@@ -12,24 +12,30 @@ app.get('/api/config', (req, res) => {
     res.json({ tmdb_key: TMDB_KEY });
 });
 
-// Proxy endpoint to handle backend content fetching and bypass restrictions
-app.get('/api/proxy', async (req, res) => {
+// Advanced Stream Resolver & Proxy Route
+app.get('/api/resolve-stream', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) return res.status(400).send('URL parameter missing');
 
     try {
         const response = await axios.get(targetUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                'Referer': new URL(targetUrl).origin
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Referer': new URL(targetUrl).origin,
+                'Origin': new URL(targetUrl).origin
             },
-            responseType: 'arraybuffer'
+            responseType: 'stream'
         });
-        
-        res.setHeader('Content-Type', response.headers['content-type'] || 'text/html');
-        res.send(response.data);
+
+        // Forward all media headers back to the client player
+        Object.keys(response.headers).forEach(header => {
+            res.setHeader(header, response.headers[header]);
+        });
+
+        response.data.pipe(res);
     } catch (error) {
-        res.status(500).send('Proxy error: Could not fetch resource.');
+        console.error('Stream resolution error:', error.message);
+        res.status(500).send('Stream proxy failed to resolve media.');
     }
 });
 
