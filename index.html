@@ -85,7 +85,6 @@
                 <button class="focusable" onclick="setFilter('genre', 10751)">Family</button>
                 <button class="focusable" onclick="setFilter('anime')">Anime</button>
                 <button class="focusable" onclick="setFilter('drama')">Drama</button>
-                <button class="focusable" onclick="setFilter('thriller_tab')">Thriller Tab</button>
                 <button class="focusable" onclick="setFilter('scifi')">Sci-Fi</button>
                 <button class="focusable" onclick="setFilter('comedy')">Comedy</button>
             </nav>
@@ -143,10 +142,10 @@
         }
 
         // ============================================================
-        // ROBUST SMART PLAYER ENGINE (Handles Anime Movies/Series & Western/Unwesternized titles seamlessly)
+        // BULLETPROOF DUAL-ENGINE STREAMING PLAYER (HiAnime/Animension Style + Vidsrc)
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, title, slugTitle } = currentMedia;
+            const { type, id, s, e, isAnime, title, slugTitle, anilistId } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -175,16 +174,10 @@
 
             let url = '';
             if (isAnime) {
-                let resolvedSlug = slugTitle || title || '';
-                // Smart normalizer to convert titles into precise Gogoanime slug formats
-                let cleanSlug = resolvedSlug
-                    .toLowerCase()
-                    .replace(/['"]/g, '')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '');
-
-                // Fallback attempt or direct streaming construct via multi-source fallback approach
-                url = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${cleanSlug}-episode-${e || 1}`;
+                // High-performance direct embed resolver matching top tier anime streaming platforms (HiAnime/Animension embedding architecture)
+                let searchIdentifier = anilistId || id;
+                let episodeNum = e || 1;
+                url = `https://vidsrc.cc/v2/embed/anime/${searchIdentifier}/${episodeNum}`;
             } else {
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
@@ -221,17 +214,6 @@
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0, lastFocusedElement = null;
-
-        async function fetchJikanTitle(animeTitle) {
-            try {
-                const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeTitle)}&limit=1`);
-                const data = await res.json();
-                if (data.data && data.data.length > 0) return data.data[0].title;
-                return null;
-            } catch (e) {
-                return null;
-            }
-        }
 
         async function fetchConfig() {
             try {
@@ -272,7 +254,6 @@
             if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
             if (activeType === 'kdrama') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ko&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'drama') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=18&sort_by=popularity.desc&page=${currentPage}`;
-            if (activeType === 'thriller_tab') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=53&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'scifi') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=878&sort_by=popularity.desc&page=${currentPage}`;
             if (activeType === 'comedy') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=35&sort_by=popularity.desc&page=${currentPage}`;
 
@@ -326,13 +307,6 @@
 
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown';
             let slugTitle = media.title.romaji || media.title.native || media.title.english || 'unknown';
-            
-            if (media.title.english && media.title.native && media.title.native !== media.title.english) {
-                const jpTitle = await fetchJikanTitle(media.title.english);
-                if (jpTitle) displayTitle = jpTitle;
-            } else if (!media.title.english && media.title.native) {
-                displayTitle = media.title.native;
-            }
 
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
             const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
@@ -342,6 +316,7 @@
 
             currentMedia = {
                 id: media.id,
+                anilistId: media.id,
                 type: isMovie ? 'movie' : 'tv',
                 s: 1,
                 e: 1,
@@ -361,11 +336,14 @@
 
             document.getElementById('movie-action-area').classList.toggle('hidden', !isMovie);
             document.getElementById('tv-action-area-top').classList.toggle('hidden', isMovie);
-            document.getElementById('tv-action-area').classList.add('hidden');
+            document.getElementById('tv-action-area').classList.remove('hidden');
+            
             if (isMovie) {
                 document.getElementById('play-movie-btn').innerText = '▶ Play Movie';
+                document.getElementById('tv-action-area').classList.add('hidden');
             } else {
-                document.getElementById('main-tv-btn').innerText = '▶ Play Now';
+                document.getElementById('main-tv-btn').innerText = '▶ Play S1 E1';
+                renderAnimeEpisodes(media.episodes || 12);
             }
 
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -377,30 +355,31 @@
             }, 300);
         }
 
+        function renderAnimeEpisodes(totalEpisodes) {
+            const seasonButtons = document.getElementById('season-buttons');
+            seasonButtons.innerHTML = '';
+            const episodeGrid = document.getElementById('episode-grid');
+            episodeGrid.innerHTML = '';
+
+            const btn = document.createElement('button');
+            btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap active-filter";
+            btn.innerText = `Episodes (1 - ${totalEpisodes})`;
+            seasonButtons.appendChild(btn);
+
+            for (let i = 1; i <= totalEpisodes; i++) {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable";
+                epRow.tabIndex = 0;
+                epRow.onclick = () => { currentMedia.e = i; startLuxeStream(); };
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${currentMedia.poster})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">Episode ${i}</div><div class="text-zinc-500 text-xs mt-1">Stream HD Subbed / Dubbed</div></div>`;
+                episodeGrid.appendChild(epRow);
+            }
+        }
+
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
             lastFocusedElement = document.activeElement; 
             
-            if (isAniList) {
-                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
-                const data = await searchRes.json();
-                if (data.results && data.results.length > 0) {
-                    const tmdbResult = data.results[0];
-                    id = tmdbResult.id;
-                    type = tmdbResult.media_type || 'tv';
-                } else {
-                    const fallbackMedia = { 
-                        title: { english: searchTitle, romaji: searchTitle, native: searchTitle },
-                        coverImage: { extraLarge: 'IMG_8035.jpeg' },
-                        description: 'No description available.',
-                        startDate: { year: '' },
-                        averageScore: 0
-                    };
-                    openAnimeDetails(fallbackMedia);
-                    return;
-                }
-            }
-
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
             const data = await res.json();
             if (!data || data.status_code) {
