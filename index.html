@@ -31,7 +31,20 @@
         }
 
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
-        #details-backdrop { position: absolute; top: 0; width: 100%; height: 600px; opacity: 0.4; background-size: cover; background-position: center; filter: blur(30px); pointer-events: none; }
+        
+        /* Replaced blur backdrop with an alternate high-resolution photo from the movie/series */
+        #details-backdrop { 
+            position: absolute; 
+            top: 0; 
+            width: 100%; 
+            height: 600px; 
+            opacity: 0.45; 
+            background-size: cover; 
+            background-position: center; 
+            pointer-events: none; 
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0));
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0));
+        }
         
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-weight: 800; font-size: 13px; }
         .tv-tag { background: #331a1a; color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
@@ -51,14 +64,14 @@
         /* Custom stylish search bar matching Luxe theme */
         .luxe-search-container {
             position: relative;
-            background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(10, 10, 10, 0.95));
-            border: 1.5px solid rgba(212, 175, 55, 0.3);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 15px rgba(212, 175, 55, 0.1);
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.98));
+            border: 1.5px solid rgba(212, 175, 55, 0.4);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.15);
             transition: all 0.3s ease;
         }
         .luxe-search-container:focus-within {
             border-color: var(--gold);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.4);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 25px rgba(212, 175, 55, 0.5);
         }
         .luxe-search-btn {
             background: linear-gradient(135deg, #D4AF37, #AA7C11);
@@ -103,19 +116,19 @@
     <div id="main-app-wrapper">
         <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
 
-        <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
-            <div class="flex items-center w-[95%] mx-auto gap-2 py-4">
-                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl pr-2 bg-white/5 px-3 py-1 rounded-full border border-gold/20">☰</button>
-                <div class="luxe-search-container flex-1 flex items-center rounded-full px-4 py-1.5">
-                    <svg class="w-4 h-4 text-gold/60 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900 shadow-2xl">
+            <div class="flex items-center w-[95%] mx-auto gap-3 py-4">
+                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl bg-white/5 px-3 py-2 rounded-2xl border border-gold/20 flex items-center justify-center">☰</button>
+                <div class="luxe-search-container flex-1 flex items-center rounded-2xl px-5 py-2">
+                    <svg class="w-4 h-4 text-gold mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="search" id="search-input" 
-                           class="focusable w-full bg-transparent text-white placeholder-zinc-500 text-xs tracking-wider outline-none border-none py-1" 
+                           class="focusable w-full bg-transparent text-white placeholder-zinc-400 text-xs tracking-wider outline-none border-none py-1 font-medium" 
                            placeholder="Search Master Library..." 
                            enterkeyhint="search"
                            onsearch="triggerSearch()"
                            onkeyup="handleSearch(event)">
                 </div>
-                <button onclick="triggerSearch()" class="focusable luxe-search-btn px-5 py-2.5 rounded-full text-[10px] uppercase">Search</button>
+                <button onclick="triggerSearch()" class="focusable luxe-search-btn px-6 py-3 rounded-2xl text-[10px] uppercase">Search</button>
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
@@ -148,7 +161,6 @@
             <div class="flex gap-5 mb-6 items-center">
                 <img id="details-poster" class="w-32 rounded-lg shadow-2xl flex-shrink-0">
                 <div class="flex flex-col justify-center flex-1 min-w-0">
-                    <!-- Aliterate title photo container (replaces text title where blurred) -->
                     <div id="aliterate-title-container" class="mb-3 max-h-24 flex items-center">
                         <img id="title-logo-img" class="max-h-20 w-auto object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.9)] hidden" alt="Title Logo">
                         <h2 id="show-title" class="text-3xl font-extrabold tracking-tighter truncate"></h2>
@@ -166,7 +178,6 @@
             <div id="tv-action-area" class="hidden">
                 <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
                 
-                <!-- FireTV & Remote friendly Season Selector with navigation arrows -->
                 <div class="relative flex items-center mb-6">
                     <button onclick="scrollSeasons(-1)" class="focusable absolute left-0 z-20 bg-black/80 text-gold border border-gold/30 hover:bg-gold hover:text-black p-2 rounded-full shadow-lg transition-all -ml-3 flex items-center justify-center w-9 h-9 font-bold text-lg">‹</button>
                     <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth px-6 py-2 w-full"></div>
@@ -354,7 +365,6 @@
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}&include_image_language=en,null`);
                 const data = await res.json();
                 if (data.logos && data.logos.length > 0) {
-                    // Find highest rated English or transparent logo
                     const logoPath = data.logos[0].file_path;
                     logoImg.src = `https://image.tmdb.org/t/p/w500${logoPath}`;
                     logoImg.onload = () => {
@@ -363,6 +373,27 @@
                     };
                 }
             } catch (e) {}
+        }
+
+        async function fetchAlternateBackdrop(id, type, fallbackBackdrop) {
+            const backdropEl = document.getElementById('details-backdrop');
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`);
+                const data = await res.json();
+                
+                // Prioritize backdrops, select an alternate one if available (e.g., second index or highest vote/resolution)
+                if (data.backdrops && data.backdrops.length > 1) {
+                    // Pick the second backdrop to guarantee an alternate photo from the movie/series
+                    const altPath = data.backdrops[1].file_path || data.backdrops[0].file_path;
+                    backdropEl.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${altPath})`;
+                } else if (data.backdrops && data.backdrops.length === 1) {
+                    backdropEl.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrops[0].file_path})`;
+                } else {
+                    backdropEl.style.backgroundImage = fallbackBackdrop ? `url(https://image.tmdb.org/t/p/original${fallbackBackdrop})` : 'none';
+                }
+            } catch (e) {
+                backdropEl.style.backgroundImage = fallbackBackdrop ? `url(https://image.tmdb.org/t/p/original${fallbackBackdrop})` : 'none';
+            }
         }
 
         function renderGrid(results) {
@@ -395,12 +426,12 @@
             
             document.getElementById('show-title').innerText = currentMedia.title;
             fetchAliterateLogo(finalId, type);
+            fetchAlternateBackdrop(finalId, type, data.backdrop_path);
 
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
             document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('details-backdrop').style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
             document.getElementById('media-type-tag').innerText = type.toUpperCase();
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
