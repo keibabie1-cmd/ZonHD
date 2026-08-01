@@ -174,10 +174,11 @@
             frame.setAttribute('allowfullscreen', 'true');
 
             if (isAnime) {
-                document.getElementById('player-brand-tag').innerText = 'Anime Engine';
+                document.getElementById('player-brand-tag').innerText = 'Anime Stream Engine';
                 let animId = anilistId || id;
                 let epNum = e || 1;
-                frame.src = `https://vidsrc.cc/v2/embed/anime/${animId}/${epNum}`;
+                // Using Embed.su engine which resolves AniList mappings smoothly without black screens
+                frame.src = `https://embed.su/embed/anime/${animId}/${epNum}`;
             } else {
                 document.getElementById('player-brand-tag').innerText = 'Cinema Luxe Player';
                 frame.src = (type === 'movie')
