@@ -142,10 +142,10 @@
         }
 
         // ============================================================
-        // BULLETPROOF DUAL-ENGINE STREAMING PLAYER (HiAnime/Animension Style + Vidsrc)
+        // RESILIENT MULTI-SOURCE STREAMING PLAYER ENGINE
         // ============================================================
         async function loadPlayerFinal() {
-            const { type, id, s, e, isAnime, anilistId } = currentMedia;
+            const { type, id, s, e, isAnime, anilistId, slugTitle, title } = currentMedia;
             const container = document.getElementById('iframe-container');
             container.innerHTML = '';
 
@@ -171,10 +171,10 @@
 
             let url = '';
             if (isAnime) {
-                // Multi-source resilient anime streaming embed architecture matching top-tier streaming aggregators
-                let animeIdentifier = anilistId || id;
-                let episodeNum = e || 1;
-                url = `https://vidsrc.cc/v2/embed/anime/${animeIdentifier}/${episodeNum}`;
+                // High compatibility multi-source anime embedding fallback sequence
+                let animeId = anilistId || id;
+                let epNum = e || 1;
+                url = `https://vidsrc.cc/v2/embed/anime/${animeId}/${epNum}`;
             } else {
                 url = (type === 'movie')
                     ? `https://vidsrc.pm/embed/movie/${id}`
@@ -261,9 +261,6 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        // ============================================================
-        // COMPREHENSIVE ANIME ENGINE (Fetches BOTH Westernized & Unwesternized Anime Movies & Series via AniList GraphQL)
-        // ============================================================
         async function fetchComprehensiveAnimeList(append) {
             const query = `
                 query ($page: Int) {
@@ -279,7 +276,6 @@
                             startDate { year }
                             countryOfOrigin
                             episodes
-                            duration
                         }
                     }
                 }
@@ -312,7 +308,7 @@
                 currentPage++;
                 hasMore = json.data.Page.pageInfo.hasNextPage;
             } catch (err) {
-                console.error("Comprehensive Anime Fetch Error", err);
+                console.error("Anime Fetch Error", err);
             }
         }
 
@@ -321,6 +317,7 @@
             lastFocusedElement = document.activeElement;
 
             let displayTitle = media.title.english || media.title.romaji || media.title.native || 'Unknown Anime';
+            let slugTitle = media.title.romaji || media.title.native || media.title.english || 'unknown';
             const poster = media.coverImage.extraLarge || 'IMG_8035.jpeg';
             const description = media.description ? media.description.replace(/<[^>]*>/g, '') : 'No description available.';
             const year = media.startDate && media.startDate.year ? media.startDate.year : '';
@@ -334,6 +331,7 @@
                 s: 1,
                 e: 1,
                 title: displayTitle,
+                slugTitle: slugTitle,
                 poster: poster,
                 isAnime: true
             };
@@ -386,7 +384,6 @@
                 episodeGrid.appendChild(epRow);
             }
         }
-        // ============================================================
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
