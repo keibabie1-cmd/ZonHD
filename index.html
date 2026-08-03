@@ -6,7 +6,7 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <!-- HLS.js Live Stream Engine Script -->
+    <!-- Essential HLS Stream Engine -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
@@ -242,7 +242,7 @@
         </div>
     </div>
 
-    <!-- Player Overlay containing both Iframe and Native HLS Video Element -->
+    <!-- Dual Player Engine Overlay -->
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <div id="player-tag-label" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
@@ -278,7 +278,7 @@
         }
 
         function loadIPTVChannels() {
-            // Curated active public broadcast lists across all main categories
+            // High-compatibility stream channels and reliable direct streams
             allIptvChannels = [
                 { name: "Nickelodeon US Feed", categories: ["Animation"], logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0086770" },
                 { name: "Disney Channel US Feed", categories: ["Animation"], logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0363416" },
@@ -359,7 +359,6 @@
             tagLabel.innerText = `ZonTV Live • ${channelName}`;
             playerOverlay.style.display = 'block';
 
-            // Clean up previous HLS instance if active
             if (hlsPlayerInstance) {
                 hlsPlayerInstance.destroy();
                 hlsPlayerInstance = null;
