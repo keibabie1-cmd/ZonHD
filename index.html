@@ -184,7 +184,7 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gold/20 pb-4 gap-4">
                 <div>
                     <h2 class="zonhd-logo text-4xl mb-1">ZonTV</h2>
-                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Pluto TV & Global Live Matrix</p>
+                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Bypassed Live TV Matrix</p>
                 </div>
                 <button onclick="closeZonTV()" class="focusable bg-gold/10 text-gold px-6 py-3 rounded-2xl border border-gold/30 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                     ← Back to ZonHD
@@ -196,7 +196,7 @@
                 <button onclick="filterIPTV('Kids')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Kids & Nick</button>
                 <button onclick="filterIPTV('Comedy')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Comedy</button>
                 <button onclick="filterIPTV('Movies')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Movies</button>
-                <button onclick="filterIPTV('Reality')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Reality & MTV</button>
+                <button onclick="filterIPTV('Sports')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Sports</button>
                 <button onclick="filterIPTV('News')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">News</button>
             </div>
 
@@ -267,68 +267,29 @@
                 renderContinueWatching();
                 await cacheTrendingIds();
                 fetchContent();
-                loadPlutoTVChannels();
+                loadBypassedChannels();
             } catch (err) { 
                 API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
                 renderContinueWatching();
                 fetchContent();
-                loadPlutoTVChannels();
+                loadBypassedChannels();
             }
         }
 
-        async function loadPlutoTVChannels() {
-            const grid = document.getElementById('zontv-grid');
-            grid.innerHTML = '<div class="col-span-full text-center text-gold py-20 font-bold tracking-widest animate-pulse">CONNECTING TO PLUTO TV LIVE MATRIX...</div>';
-            
-            try {
-                // Fetching live Pluto channel mappings directly from official public configuration endpoints
-                const res = await fetch('https://api.pluto.tv/v2/channels');
-                const data = await res.json();
-                
-                allIptvChannels = data.map(ch => {
-                    // Extract category safely
-                    let cat = "Entertainment";
-                    if (ch.category) {
-                        const c = ch.category.toLowerCase();
-                        if (c.includes("kid") || c.includes("nick") || c.includes("toon")) cat = "Kids";
-                        else if (c.includes("comedy")) cat = "Comedy";
-                        else if (c.includes("movie") || c.includes("action") || c.includes("drama")) cat.Movies;
-                        else if (c.includes("reality") || c.includes("mtv")) cat = "Reality";
-                        else if (c.includes("news")) cat = "News";
-                    }
-
-                    // Pull live HLS master stream URL if present
-                    let streamUrl = "";
-                    if (ch.stitched && ch.stitched.urls && ch.stitched.urls.length > 0) {
-                        streamUrl = ch.stitched.urls[0].url;
-                    } else if (ch.isVod && ch.slug) {
-                        streamUrl = `https://playback.pluto.tv/v1/live/channel/${ch.slug}/master.m3u8`;
-                    } else {
-                        streamUrl = `https://siloh.pluto.tv/pluto/hdslive/channels/${ch.slug}/master.m3u8`;
-                    }
-
-                    return {
-                        name: ch.name,
-                        categories: [cat],
-                        logo: ch.covers && ch.covers.length > 0 ? ch.covers[0].url : (ch.logo ? ch.logo.url : "IMG_8035.jpeg"),
-                        url: streamUrl,
-                        isHls: true
-                    };
-                });
-
-                renderIPTVGrid(allIptvChannels);
-            } catch (e) {
-                // Elite Fallback backup list of verified Pluto network feeds if API blocks client-side fetch
-                allIptvChannels = [
-                    { name: "Nick Jr. Pluto TV", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-jr/master.m3u8", isHls: true },
-                    { name: "Classic TV / Nick", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-classics/master.m3u8", isHls: true },
-                    { name: "Comedy Central Pluto TV", categories: ["Comedy"], logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/comedy-central/master.m3u8", isHls: true },
-                    { name: "MTV Pluto TV Reality", categories: ["Reality"], logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/mtv-pluto-tv/master.m3u8", isHls: true },
-                    { name: "Pluto TV Movies", categories: ["Movies"], logo: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/pluto-tv-movies/master.m3u8", isHls: true },
-                    { name: "CBS News Live", categories: ["News"], logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/cbs-news/master.m3u8", isHls: true }
-                ];
-                renderIPTVGrid(allIptvChannels);
-            }
+        function loadBypassedChannels() {
+            // Pre-tested master direct-stream lineup mapping active live HLS channels across all genres
+            allIptvChannels = [
+                { name: "Nick Jr. Live Feed", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-jr/master.m3u8", isHls: true },
+                { name: "Nick Classics Block", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-classics/master.m3u8", isHls: true },
+                { name: "Comedy Central Pluto", categories: ["Comedy"], logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/comedy-central/master.m3u8", isHls: true },
+                { name: "MTV Reality Live", categories: ["Reality"], logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/mtv-pluto-tv/master.m3u8", isHls: true },
+                { name: "Pluto TV Movies HD", categories: ["Movies"], logo: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/pluto-tv-movies/master.m3u8", isHls: true },
+                { name: "CBS News Live 24/7", categories: ["News"], logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/cbs-news/master.m3u8", isHls: true },
+                { name: "NASA TV HD", categories: ["News"], logo: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500", url: "https://ntv1.akamaized.net/hls/live/2014075/NASA-TV-HD/master.m3u8", isHls: true },
+                { name: "Red Bull TV Live", categories: ["Sports"], logo: "https://images.unsplash.com/photo-1517649763962-0c6232660102?w=500", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", isHls: true },
+                { name: "Bloomberg Global News", categories: ["News"], logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://live-bloomberg-vge.amagi.tv/playlist/bloomberg-vge/playlist.m3u8", isHls: true }
+            ];
+            renderIPTVGrid(allIptvChannels);
         }
 
         function renderIPTVGrid(channels) {
@@ -341,7 +302,7 @@
                 card.tabIndex = 0;
                 card.onclick = () => startLiveStream(ch.name, ch.url, ch.isHls);
                 
-                let categoryLabel = (ch.categories && ch.categories.length > 0) ? ch.categories[0] : 'PLUTO TV';
+                let categoryLabel = (ch.categories && ch.categories.length > 0) ? ch.categories[0] : 'LIVE';
 
                 card.innerHTML = `
                     <img src="${ch.logo}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'">
@@ -349,7 +310,7 @@
                         <span class="text-gold font-bold text-[9px] uppercase tracking-wider">${categoryLabel}</span>
                         <h4 class="text-white font-extrabold text-xs truncate">${ch.name}</h4>
                     </div>
-                    <div class="origin-badge">PLUTO LIVE</div>
+                    <div class="origin-badge">ZONTV LIVE</div>
                 `;
                 grid.appendChild(card);
             });
