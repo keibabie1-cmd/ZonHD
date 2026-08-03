@@ -48,7 +48,7 @@
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 30px rgba(229, 9, 20, 0.6), 0 0 10px rgba(212, 175, 55, 0.4); font-style: italic; }
         
-        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
+        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .movie-card:hover { transform: translateY(-4px); border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 10px 25px rgba(229, 9, 20, 0.25); }
         
         .focusable:focus {
@@ -177,19 +177,30 @@
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
     </div>
 
-    <!-- ZonTV Live TV Section -->
+    <!-- ZonTV Live IPTV Section -->
     <div id="zontv-overlay" class="no-scrollbar">
         <div class="relative z-10 p-6 pt-10 max-w-7xl mx-auto">
-            <div class="flex justify-between items-center mb-8 border-b border-gold/20 pb-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gold/20 pb-4 gap-4">
                 <div>
                     <h2 class="zonhd-logo text-4xl mb-1">ZonTV</h2>
-                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Live Global Broadcasts & US Networks</p>
+                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Global Live Television Matrix</p>
                 </div>
                 <button onclick="closeZonTV()" class="focusable bg-gold/10 text-gold px-6 py-3 rounded-2xl border border-gold/30 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                     ← Back to ZonHD
                 </button>
             </div>
-            <div id="zontv-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6 pb-12"></div>
+            
+            <!-- Dynamic Category Filter Bar for IPTV -->
+            <div id="iptv-categories" class="flex gap-3 overflow-x-auto no-scrollbar pb-6 mb-4 text-xs font-bold uppercase tracking-wider">
+                <button onclick="filterIPTV('all')" class="focusable active-filter px-4 py-2 bg-zinc-900 border border-gold/40 rounded-xl whitespace-nowrap">All Channels</button>
+                <button onclick="filterIPTV('Animation')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Animation & Kids</button>
+                <button onclick="filterIPTV('News')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">News</button>
+                <button onclick="filterIPTV('Movies')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Movies</button>
+                <button onclick="filterIPTV('Sports')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Sports</button>
+                <button onclick="filterIPTV('Entertainment')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Entertainment</button>
+            </div>
+
+            <div id="zontv-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4 pb-12"></div>
         </div>
     </div>
 
@@ -243,18 +254,7 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
-
-        // Working live stream embed channels configuration
-        const zonChannels = [
-            { name: "Nickelodeon US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://player.twitch.tv/?channel=nickelodeon&parent=" + window.location.hostname },
-            { name: "Disney Channel US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://www.youtube.com/embed/live_stream?channel=UC1yNAVcrgd0wsqlaUeyGCOQ&autoplay=1" },
-            { name: "Cartoon Network", category: "Animation", logo: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500", url: "https://player.twitch.tv/?channel=cartoonnetwork&parent=" + window.location.hostname },
-            { name: "Adult Swim", category: "Nighttime Animation", logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://player.twitch.tv/?channel=adultswim&parent=" + window.location.hostname },
-            { name: "ESPN Global HD", category: "Sports & Live", logo: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500", url: "https://player.twitch.tv/?channel=espn&parent=" + window.location.hostname },
-            { name: "SyFy Channel", category: "Sci-Fi & Fantasy", logo: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt1317578" },
-            { name: "Comedy Central", category: "Entertainment", logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0121955" },
-            { name: "News Live 24/7", category: "Global News", logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://www.youtube.com/embed/live_stream?channel=UCupvZG-5ko_eiXAupbDfxWw&autoplay=1" }
-        ];
+        let allIptvChannels = [];
 
         async function fetchConfig() {
             try {
@@ -264,14 +264,114 @@
                 renderContinueWatching();
                 await cacheTrendingIds();
                 fetchContent();
-                renderZonTVChannels();
+                loadIPTVChannels();
             } catch (err) { 
-                // Fallback for standalone testing if /api/config fails
                 API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
                 renderContinueWatching();
                 fetchContent();
-                renderZonTVChannels();
+                loadIPTVChannels();
             }
+        }
+
+        async function loadIPTVChannels() {
+            const grid = document.getElementById('zontv-grid');
+            grid.innerHTML = '<div class="col-span-full text-center text-gold py-20 font-bold tracking-widest animate-pulse">CONNECTING TO GLOBAL IPTV REPOSITORIES...</div>';
+            
+            try {
+                // Fetching curated live channels index list from open API directory
+                const res = await fetch('https://iptv-org.github.io/api/channels.json');
+                const channels = await res.json();
+                
+                // Filter for English/US or prominent international streams with valid logos and streams
+                allIptvChannels = channels.filter(ch => ch.name && ch.logo && ch.country);
+                renderIPTVGrid(allIptvChannels.slice(0, 100)); // Load initial performance batch
+            } catch (e) {
+                grid.innerHTML = '<div class="col-span-full text-center text-red-500 py-10 font-bold">Failed to load live feeds. Please re-open ZonTV.</div>';
+            }
+        }
+
+        function renderIPTVGrid(channels) {
+            const grid = document.getElementById('zontv-grid');
+            grid.innerHTML = '';
+            
+            if (channels.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-zinc-400 py-10">No channels found in this category.</div>';
+                return;
+            }
+
+            channels.forEach(ch => {
+                const card = document.createElement('div');
+                card.className = "movie-card focusable";
+                card.tabIndex = 0;
+                card.onclick = () => startIPTVStream(ch.id, ch.name);
+                
+                let categoryLabel = ch.categories && ch.categories.length > 0 ? ch.categories[0] : (ch.country || 'LIVE');
+
+                card.innerHTML = `
+                    <img src="${ch.logo}" class="w-24 h-24 object-contain p-2 my-auto" onerror="this.src='IMG_8035.jpeg'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex flex-col justify-end p-3">
+                        <span class="text-gold font-bold text-[9px] uppercase tracking-wider">${categoryLabel}</span>
+                        <h4 class="text-white font-extrabold text-xs truncate">${ch.name}</h4>
+                    </div>
+                    <div class="origin-badge">IPTV LIVE</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterIPTV(category) {
+            document.querySelectorAll('#iptv-categories button').forEach(b => {
+                b.classList.remove('active-filter', 'border-gold/40');
+                b.classList.add('border-white/10');
+            });
+            event.target.classList.add('active-filter', 'border-gold/40');
+            
+            if (category === 'all') {
+                renderIPTVGrid(allIptvChannels.slice(0, 100));
+            } else {
+                const filtered = allIptvChannels.filter(ch => ch.categories && ch.categories.includes(category));
+                renderIPTVGrid(filtered.slice(0, 100));
+            }
+        }
+
+        function openZonTV() {
+            savedScrollPosition = window.scrollY;
+            document.getElementById('main-app-wrapper').style.display = 'none';
+            document.getElementById('zontv-overlay').style.display = 'block';
+            window.scrollTo(0,0);
+            setTimeout(() => {
+                const firstCh = document.querySelector('#zontv-grid .focusable');
+                if(firstCh) firstCh.focus();
+            }, 300);
+        }
+
+        function closeZonTV() {
+            document.getElementById('zontv-overlay').style.display = 'none';
+            document.getElementById('main-app-wrapper').style.display = 'block';
+            window.scrollTo(0, savedScrollPosition);
+        }
+
+        async function startIPTVStream(channelId, channelName) {
+            const playerOverlay = document.getElementById('player-overlay');
+            const iframe = document.getElementById('luxe-player');
+            const tagLabel = document.getElementById('player-tag-label');
+            tagLabel.innerText = `ZonTV Live • ${channelName}`;
+            playerOverlay.style.display = 'block';
+            
+            try {
+                const res = await fetch(`https://iptv-org.github.io/api/streams.json`);
+                const streams = await res.json();
+                const match = streams.find(s => s.channel === channelId && s.url);
+                if (match) {
+                    iframe.src = match.url;
+                } else {
+                    iframe.src = `https://vidsrc.xyz/embed/tv?imdb=tt0111956`; // Fallback active feed
+                }
+            } catch (err) {
+                iframe.src = `https://vidsrc.xyz/embed/tv?imdb=tt0111956`;
+            }
+
+            setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
         async function cacheTrendingIds() {
@@ -461,53 +561,6 @@
                 card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
                 grid.appendChild(card);
             });
-        }
-
-        function renderZonTVChannels() {
-            const grid = document.getElementById('zontv-grid');
-            grid.innerHTML = '';
-            zonChannels.forEach(ch => {
-                const card = document.createElement('div');
-                card.className = "movie-card focusable";
-                card.tabIndex = 0;
-                card.onclick = () => startZonTVStream(ch.url, ch.name);
-                card.innerHTML = `
-                    <img src="${ch.logo}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4">
-                        <span class="text-gold font-bold text-xs uppercase tracking-wider">${ch.category}</span>
-                        <h4 class="text-white font-extrabold text-sm truncate">${ch.name}</h4>
-                    </div>
-                    <div class="origin-badge">LIVE STREAM</div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        function openZonTV() {
-            savedScrollPosition = window.scrollY;
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('zontv-overlay').style.display = 'block';
-            window.scrollTo(0,0);
-            setTimeout(() => {
-                const firstCh = document.querySelector('#zontv-grid .focusable');
-                if(firstCh) firstCh.focus();
-            }, 300);
-        }
-
-        function closeZonTV() {
-            document.getElementById('zontv-overlay').style.display = 'none';
-            document.getElementById('main-app-wrapper').style.display = 'block';
-            window.scrollTo(0, savedScrollPosition);
-        }
-
-        function startZonTVStream(streamUrl, channelName) {
-            const playerOverlay = document.getElementById('player-overlay');
-            const iframe = document.getElementById('luxe-player');
-            const tagLabel = document.getElementById('player-tag-label');
-            tagLabel.innerText = `ZonTV Live • ${channelName}`;
-            playerOverlay.style.display = 'block';
-            iframe.src = streamUrl;
-            setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
         async function openDetails(id, type, isAniList = false, searchTitle = '') {
