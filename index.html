@@ -6,7 +6,6 @@
     <title>ZonHD Cinema Luxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -49,7 +48,7 @@
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
         .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 30px rgba(229, 9, 20, 0.6), 0 0 10px rgba(212, 175, 55, 0.4); font-style: italic; }
         
-        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
         .movie-card:hover { transform: translateY(-4px); border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 10px 25px rgba(229, 9, 20, 0.25); }
         
         .focusable:focus {
@@ -60,7 +59,7 @@
             z-index: 50;
         }
 
-        #selector-overlay, #zontv-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
+        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         
         #details-backdrop { 
             position: absolute; top: 0; width: 100%; height: 650px; opacity: 0.5; 
@@ -157,7 +156,6 @@
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable text-gold font-extrabold" onclick="openZonTV()" class="whitespace-nowrap">ZonTV</button>
                 <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
                 <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
@@ -176,32 +174,6 @@
         </section>
 
         <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
-    </div>
-
-    <!-- ZonTV Live IPTV Section -->
-    <div id="zontv-overlay" class="no-scrollbar">
-        <div class="relative z-10 p-6 pt-10 max-w-7xl mx-auto">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gold/20 pb-4 gap-4">
-                <div>
-                    <h2 class="zonhd-logo text-4xl mb-1">ZonTV</h2>
-                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Bypassed Live TV Matrix</p>
-                </div>
-                <button onclick="closeZonTV()" class="focusable bg-gold/10 text-gold px-6 py-3 rounded-2xl border border-gold/30 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                    ← Back to ZonHD
-                </button>
-            </div>
-            
-            <div id="iptv-categories" class="flex gap-3 overflow-x-auto no-scrollbar pb-6 mb-4 text-xs font-bold uppercase tracking-wider">
-                <button onclick="filterIPTV('all')" class="focusable active-filter px-4 py-2 bg-zinc-900 border border-gold/40 rounded-xl whitespace-nowrap">All Channels</button>
-                <button onclick="filterIPTV('Kids')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Kids & Nick</button>
-                <button onclick="filterIPTV('Comedy')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Comedy</button>
-                <button onclick="filterIPTV('Movies')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Movies</button>
-                <button onclick="filterIPTV('Sports')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">Sports</button>
-                <button onclick="filterIPTV('News')" class="focusable px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl whitespace-nowrap">News</button>
-            </div>
-
-            <div id="zontv-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4 pb-12"></div>
-        </div>
     </div>
 
     <div id="selector-overlay" class="no-scrollbar">
@@ -241,14 +213,12 @@
         </div>
     </div>
 
-    <!-- Dual Player Engine Overlay -->
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div id="player-tag-label" class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        <iframe id="luxe-player" class="w-full h-full hidden" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
-        <video id="hls-video-player" class="w-full h-full object-contain hidden" controls autoplay playsinline></video>
+        <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
@@ -256,8 +226,6 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
-        let allIptvChannels = [];
-        let hlsPlayerInstance = null;
 
         async function fetchConfig() {
             try {
@@ -267,128 +235,11 @@
                 renderContinueWatching();
                 await cacheTrendingIds();
                 fetchContent();
-                loadBypassedChannels();
             } catch (err) { 
                 API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
                 renderContinueWatching();
                 fetchContent();
-                loadBypassedChannels();
             }
-        }
-
-        function loadBypassedChannels() {
-            // Pre-tested master direct-stream lineup mapping active live HLS channels across all genres
-            allIptvChannels = [
-                { name: "Nick Jr. Live Feed", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-jr/master.m3u8", isHls: true },
-                { name: "Nick Classics Block", categories: ["Kids"], logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/nick-classics/master.m3u8", isHls: true },
-                { name: "Comedy Central Pluto", categories: ["Comedy"], logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/comedy-central/master.m3u8", isHls: true },
-                { name: "MTV Reality Live", categories: ["Reality"], logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/mtv-pluto-tv/master.m3u8", isHls: true },
-                { name: "Pluto TV Movies HD", categories: ["Movies"], logo: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/pluto-tv-movies/master.m3u8", isHls: true },
-                { name: "CBS News Live 24/7", categories: ["News"], logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://siloh.pluto.tv/pluto/hdslive/channels/cbs-news/master.m3u8", isHls: true },
-                { name: "NASA TV HD", categories: ["News"], logo: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500", url: "https://ntv1.akamaized.net/hls/live/2014075/NASA-TV-HD/master.m3u8", isHls: true },
-                { name: "Red Bull TV Live", categories: ["Sports"], logo: "https://images.unsplash.com/photo-1517649763962-0c6232660102?w=500", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", isHls: true },
-                { name: "Bloomberg Global News", categories: ["News"], logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://live-bloomberg-vge.amagi.tv/playlist/bloomberg-vge/playlist.m3u8", isHls: true }
-            ];
-            renderIPTVGrid(allIptvChannels);
-        }
-
-        function renderIPTVGrid(channels) {
-            const grid = document.getElementById('zontv-grid');
-            grid.innerHTML = '';
-            
-            channels.forEach(ch => {
-                const card = document.createElement('div');
-                card.className = "movie-card focusable";
-                card.tabIndex = 0;
-                card.onclick = () => startLiveStream(ch.name, ch.url, ch.isHls);
-                
-                let categoryLabel = (ch.categories && ch.categories.length > 0) ? ch.categories[0] : 'LIVE';
-
-                card.innerHTML = `
-                    <img src="${ch.logo}" class="w-full h-full object-cover" onerror="this.src='IMG_8035.jpeg'">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex flex-col justify-end p-3">
-                        <span class="text-gold font-bold text-[9px] uppercase tracking-wider">${categoryLabel}</span>
-                        <h4 class="text-white font-extrabold text-xs truncate">${ch.name}</h4>
-                    </div>
-                    <div class="origin-badge">ZONTV LIVE</div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        function filterIPTV(category) {
-            document.querySelectorAll('#iptv-categories button').forEach(b => {
-                b.classList.remove('active-filter', 'border-gold/40');
-                b.classList.add('border-white/10');
-            });
-            event.target.classList.add('active-filter', 'border-gold/40');
-            
-            if (category === 'all') {
-                renderIPTVGrid(allIptvChannels);
-            } else {
-                const filtered = allIptvChannels.filter(ch => ch.categories && ch.categories.includes(category));
-                renderIPTVGrid(filtered);
-            }
-        }
-
-        function openZonTV() {
-            savedScrollPosition = window.scrollY;
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('zontv-overlay').style.display = 'block';
-            window.scrollTo(0,0);
-            setTimeout(() => {
-                const firstCh = document.querySelector('#zontv-grid .focusable');
-                if(firstCh) firstCh.focus();
-            }, 300);
-        }
-
-        function closeZonTV() {
-            document.getElementById('zontv-overlay').style.display = 'none';
-            document.getElementById('main-app-wrapper').style.display = 'block';
-            window.scrollTo(0, savedScrollPosition);
-        }
-
-        function startLiveStream(channelName, streamUrl, isHls) {
-            const playerOverlay = document.getElementById('player-overlay');
-            const iframe = document.getElementById('luxe-player');
-            const videoElem = document.getElementById('hls-video-player');
-            const tagLabel = document.getElementById('player-tag-label');
-            
-            tagLabel.innerText = `ZonTV Live • ${channelName}`;
-            playerOverlay.style.display = 'block';
-
-            if (hlsPlayerInstance) {
-                hlsPlayerInstance.destroy();
-                hlsPlayerInstance = null;
-            }
-
-            if (isHls) {
-                iframe.classList.add('hidden');
-                videoElem.classList.remove('hidden');
-
-                if (Hls.isSupported()) {
-                    hlsPlayerInstance = new Hls();
-                    hlsPlayerInstance.loadSource(streamUrl);
-                    hlsPlayerInstance.attachMedia(videoElem);
-                    hlsPlayerInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                        videoElem.play();
-                    });
-                } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
-                    videoElem.src = streamUrl;
-                    videoElem.addEventListener('canplay', () => {
-                        videoElem.play();
-                    });
-                }
-            } else {
-                videoElem.classList.add('hidden');
-                iframe.classList.remove('hidden');
-                iframe.src = streamUrl;
-            }
-
-            setTimeout(() => { 
-                const closeBtn = document.getElementById('close-player-btn');
-                if(closeBtn) closeBtn.focus(); 
-            }, 400);
         }
 
         async function cacheTrendingIds() {
@@ -668,19 +519,8 @@
             saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
-            const videoElem = document.getElementById('hls-video-player');
-            const tagLabel = document.getElementById('player-tag-label');
-            
-            tagLabel.innerText = "Cinema Luxe Player";
             playerOverlay.style.display = 'block';
             
-            if (hlsPlayerInstance) {
-                hlsPlayerInstance.destroy();
-                hlsPlayerInstance = null;
-            }
-            videoElem.classList.add('hidden');
-            iframe.classList.remove('hidden');
-
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
@@ -730,14 +570,6 @@
         }
 
         function closePlayer() { 
-            if (hlsPlayerInstance) {
-                hlsPlayerInstance.destroy();
-                hlsPlayerInstance = null;
-            }
-            const videoElem = document.getElementById('hls-video-player');
-            videoElem.pause();
-            videoElem.src = "";
-
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
@@ -793,7 +625,6 @@
                 if (current && current.id === 'search-input') { return; }
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
-                else if (document.getElementById('zontv-overlay').style.display === 'block') closeZonTV();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
                 else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
                 return;
