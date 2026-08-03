@@ -19,7 +19,6 @@
         
         body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
         
-        /* Elite Ambient Red & Gold Shimmer Background Effect */
         body::before {
             content: '';
             position: fixed;
@@ -62,16 +61,9 @@
 
         #selector-overlay, #zontv-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         
-        /* Alternate Photo Backdrop with Premium Gradient Fade */
         #details-backdrop { 
-            position: absolute; 
-            top: 0; 
-            width: 100%; 
-            height: 650px; 
-            opacity: 0.5; 
-            background-size: cover; 
-            background-position: center; 
-            pointer-events: none; 
+            position: absolute; top: 0; width: 100%; height: 650px; opacity: 0.5; 
+            background-size: cover; background-position: center; pointer-events: none; 
             mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0));
             -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0));
         }
@@ -94,7 +86,6 @@
         
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(4px); color: var(--gold); font-size: 8px; text-align: center; padding: 3px; font-weight: 900; letter-spacing: 1.5px; border-top: 1px solid rgba(212,175,55,0.2); }
 
-        /* Custom stylish search bar matching Luxe theme */
         .luxe-search-container {
             position: relative;
             background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.98));
@@ -165,7 +156,7 @@
             </div>
             <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
                 <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable" onclick="openZonTV()" class="whitespace-nowrap text-gold">ZonTV</button>
+                <button class="focusable text-gold font-extrabold" onclick="openZonTV()" class="whitespace-nowrap">ZonTV</button>
                 <button class="focusable" onclick="setFilter('genre', 27)" class="whitespace-nowrap">Horror</button>
                 <button class="focusable" onclick="setFilter('genre', 28)" class="whitespace-nowrap">Action</button>
                 <button class="focusable" onclick="setFilter('genre', 53)" class="whitespace-nowrap">Thriller</button>
@@ -192,7 +183,7 @@
             <div class="flex justify-between items-center mb-8 border-b border-gold/20 pb-4">
                 <div>
                     <h2 class="zonhd-logo text-4xl mb-1">ZonTV</h2>
-                    <p class="text-gold tracking-[0.5s] text-[10px] font-bold uppercase">Live Global Broadcasts & US Networks</p>
+                    <p class="text-gold tracking-[0.5em] text-[10px] font-bold uppercase">Live Global Broadcasts & US Networks</p>
                 </div>
                 <button onclick="closeZonTV()" class="focusable bg-gold/10 text-gold px-6 py-3 rounded-2xl border border-gold/30 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                     ← Back to ZonHD
@@ -253,15 +244,16 @@
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
 
+        // Working live stream embed channels configuration
         const zonChannels = [
-            { name: "Nickelodeon US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0086770" },
-            { name: "Disney Channel US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0363416" },
-            { name: "Cartoon Network", category: "Animation", logo: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0111956" },
-            { name: "Adult Swim", category: "Nighttime Animation", logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0313594" },
-            { name: "HBO Live", category: "Premium Entertainment", logo: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0944947" },
-            { name: "ESPN Global HD", category: "Sports & Live", logo: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500", url: "https://vidsrc.xyz/embed/movie?imdb=tt0120737" },
+            { name: "Nickelodeon US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500", url: "https://player.twitch.tv/?channel=nickelodeon&parent=" + window.location.hostname },
+            { name: "Disney Channel US", category: "Kids & Family", logo: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500", url: "https://www.youtube.com/embed/live_stream?channel=UC1yNAVcrgd0wsqlaUeyGCOQ&autoplay=1" },
+            { name: "Cartoon Network", category: "Animation", logo: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500", url: "https://player.twitch.tv/?channel=cartoonnetwork&parent=" + window.location.hostname },
+            { name: "Adult Swim", category: "Nighttime Animation", logo: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500", url: "https://player.twitch.tv/?channel=adultswim&parent=" + window.location.hostname },
+            { name: "ESPN Global HD", category: "Sports & Live", logo: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500", url: "https://player.twitch.tv/?channel=espn&parent=" + window.location.hostname },
             { name: "SyFy Channel", category: "Sci-Fi & Fantasy", logo: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt1317578" },
-            { name: "Comedy Central", category: "Entertainment", logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0121955" }
+            { name: "Comedy Central", category: "Entertainment", logo: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500", url: "https://vidsrc.xyz/embed/tv?imdb=tt0121955" },
+            { name: "News Live 24/7", category: "Global News", logo: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500", url: "https://www.youtube.com/embed/live_stream?channel=UCupvZG-5ko_eiXAupbDfxWw&autoplay=1" }
         ];
 
         async function fetchConfig() {
@@ -273,7 +265,13 @@
                 await cacheTrendingIds();
                 fetchContent();
                 renderZonTVChannels();
-            } catch (err) { console.error("Config load failed", err); }
+            } catch (err) { 
+                // Fallback for standalone testing if /api/config fails
+                API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
+                renderContinueWatching();
+                fetchContent();
+                renderZonTVChannels();
+            }
         }
 
         async function cacheTrendingIds() {
