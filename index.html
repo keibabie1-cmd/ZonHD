@@ -155,11 +155,11 @@
                 <div class="luxe-search-container flex-1 flex items-center rounded-2xl px-5 py-2">
                     <svg class="w-4 h-4 text-gold mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="search" id="search-input" 
-                        class="focusable w-full bg-transparent text-white placeholder-zinc-400 text-xs tracking-wider outline-none border-none py-1 font-medium" 
-                        placeholder="Search Master Library..." 
-                        enterkeyhint="search"
-                        onsearch="triggerSearch()"
-                        onkeyup="handleSearch(event)">
+                           class="focusable w-full bg-transparent text-white placeholder-zinc-400 text-xs tracking-wider outline-none border-none py-1 font-medium" 
+                           placeholder="Search Master Library..." 
+                           enterkeyhint="search"
+                           onsearch="triggerSearch()"
+                           onkeyup="handleSearch(event)">
                 </div>
                 <button onclick="triggerSearch()" class="focusable luxe-search-btn px-6 py-3 rounded-2xl text-[10px] uppercase">Search</button>
             </div>
@@ -205,19 +205,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Binge Watch Toggle Option for Series Only -->
-            <div id="binge-container" class="hidden mb-4 p-4 bg-zinc-900/80 border border-gold/30 rounded-xl flex items-center justify-between">
-                <div>
-                    <h4 class="text-gold font-bold text-xs uppercase tracking-wider">Auto Binge Watch</h4>
-                    <p class="text-zinc-400 text-[10px]">Automatically prompt and transition to the next episode</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="binge-toggle" class="sr-only peer" onchange="toggleBingeSetting(this)">
-                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                </label>
-            </div>
-
             <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
             <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
             <p id="show-desc" class="text-zinc-300 text-sm leading-relaxed mb-8"></p>
@@ -240,20 +227,6 @@
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-        
-        <!-- Netflix-Style Binge Choice Prompt on Player Overlay -->
-        <div id="binge-prompt" class="hidden absolute bottom-12 right-12 z-[7500] bg-zinc-950/95 border border-gold/50 p-5 rounded-2xl shadow-2xl flex flex-col gap-3 max-w-sm backdrop-blur-md">
-            <div class="flex justify-between items-center">
-                <span class="text-gold font-bold text-xs uppercase tracking-widest">Next Episode Incoming</span>
-                <span id="binge-countdown" class="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-extrabold">10s</span>
-            </div>
-            <p id="binge-next-title" class="text-white text-xs font-semibold truncate"></p>
-            <div class="flex gap-2 mt-1">
-                <button onclick="playNextEpisode()" class="focusable flex-1 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold py-2 rounded-xl shadow-lg">Play Yes</button>
-                <button onclick="dismissBingePrompt()" class="focusable px-4 bg-zinc-800 text-zinc-300 text-xs font-bold py-2 rounded-xl">Cancel</button>
-            </div>
-        </div>
-
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
@@ -262,9 +235,6 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
-        let bingeTimer = null;
-        let countdownInterval = null;
-        let currentSeasonEpisodes = [];
 
         async function fetchConfig() {
             try {
@@ -479,12 +449,7 @@
             }
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
-            
-            const savedBingePrefs = JSON.parse(localStorage.getItem('zonhd_binge_prefs') || '{}');
-            const isBingeEnabled = savedBingePrefs[finalId] !== undefined ? savedBingePrefs[finalId] : true;
-            document.getElementById('binge-toggle').checked = isBingeEnabled;
-
-            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList, autoBinge: isBingeEnabled };
+            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             
             document.getElementById('show-title').innerText = currentMedia.title;
             fetchAliterateLogo(finalId, type);
@@ -498,8 +463,6 @@
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            document.getElementById('binge-container').classList.toggle('hidden', type !== 'tv');
-            
             if (type === 'tv') renderSeasons(data);
             
             document.getElementById('main-app-wrapper').style.display = 'none';
@@ -510,13 +473,6 @@
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(playBtn) playBtn.focus();
             }, 300);
-        }
-
-        function toggleBingeSetting(checkbox) {
-            currentMedia.autoBinge = checkbox.checked;
-            let savedBingePrefs = JSON.parse(localStorage.getItem('zonhd_binge_prefs') || '{}');
-            savedBingePrefs[currentMedia.id] = checkbox.checked;
-            localStorage.setItem('zonhd_binge_prefs', JSON.stringify(savedBingePrefs));
         }
 
         function renderSeasons(data) {
@@ -545,11 +501,10 @@
         async function loadEpisodes(showId, seasonNum) {
             const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
             const data = await res.json();
-            currentSeasonEpisodes = data.episodes || [];
             const grid = document.getElementById('episode-grid');
             grid.innerHTML = '';
-            if(currentSeasonEpisodes.length > 0) {
-                currentSeasonEpisodes.forEach(e => {
+            if(data.episodes) {
+                data.episodes.forEach(e => {
                     const epRow = document.createElement('div');
                     epRow.className = "episode-row focusable";
                     epRow.tabIndex = 0;
@@ -571,8 +526,6 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            dismissBingePrompt();
-            
             const vidsrcUrl = (type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`);
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
@@ -587,62 +540,7 @@
                 } catch (err) { iframe.src = vidsrcUrl; }
             } else { iframe.src = vidsrcUrl; }
 
-            if (type === 'tv' && currentMedia.autoBinge) {
-                setupBingeTracker();
-            }
-
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
-        }
-
-        function setupBingeTracker() {
-            clearBingeTimers();
-            // Triggers Netflix-style prompt popup after 24 minutes (simulating average show duration wind-down)
-            bingeTimer = setTimeout(() => {
-                showBingePrompt();
-            }, 1440000); 
-        }
-
-        function clearBingeTimers() {
-            if (bingeTimer) clearTimeout(bingeTimer);
-            if (countdownInterval) clearInterval(countdownInterval);
-        }
-
-        function showBingePrompt() {
-            const nextEp = currentSeasonEpisodes.find(ep => ep.episode_number === currentMedia.e + 1);
-            const promptEl = document.getElementById('binge-prompt');
-            const nextTitleEl = document.getElementById('binge-next-title');
-            const countdownEl = document.getElementById('binge-countdown');
-            
-            if (!nextEp) return; 
-
-            nextTitleEl.innerText = `S${currentMedia.s} E${nextEp.episode_number}: ${nextEp.name}`;
-            promptEl.classList.remove('hidden');
-
-            let timeLeft = 10;
-            countdownEl.innerText = `${timeLeft}s`;
-
-            countdownInterval = setInterval(() => {
-                timeLeft--;
-                countdownEl.innerText = `${timeLeft}s`;
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    playNextEpisode();
-                }
-            }, 1000);
-        }
-
-        function dismissBingePrompt() {
-            clearBingeTimers();
-            document.getElementById('binge-prompt').classList.add('hidden');
-        }
-
-        function playNextEpisode() {
-            dismissBingePrompt();
-            const nextEp = currentSeasonEpisodes.find(ep => ep.episode_number === currentMedia.e + 1);
-            if (nextEp) {
-                currentMedia.e = nextEp.episode_number;
-                startLuxeStream();
-            }
         }
 
         function saveToHistory(id, type, s, e, title, poster) {
@@ -677,8 +575,6 @@
         }
 
         function closePlayer() { 
-            clearBingeTimers();
-            dismissBingePrompt();
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
