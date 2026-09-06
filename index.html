@@ -42,7 +42,7 @@
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
 
-        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: rgba(5,5,5,0.98); backdrop-filter: blur(15px); border-right: 1px solid rgba(212, 175, 55, 0.3); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; }
+        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: rgba(5,5,5,0.98); backdrop-filter: blur(15px); border-right: 1px solid rgba(212, 175, 55, 0.3); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; display: flex; flex-direction: column; }
         .menu-open { transform: translateX(0) !important; }
 
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
@@ -109,31 +109,55 @@
             transform: translateY(-1px);
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
         }
+
+        .fav-heart-btn {
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        .fav-heart-btn:hover {
+            transform: scale(1.1);
+        }
+        .fav-heart-btn.is-fav svg {
+            fill: #E50914 !important;
+            stroke: #D4AF37 !important;
+            filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8));
+        }
     </style>
 </head>
 <body>
     <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
-        <div class="flex justify-between items-center mb-4 border-b border-red-900 pb-2">
-            <h2 class="text-gold font-bold italic uppercase tracking-tighter">Luxe Vaults</h2>
-            <button onclick="toggleMenu()" class="focusable text-gold text-xl font-bold px-2">✕</button>
-        </div>
-        <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
-            <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
+        <div class="flex-1">
+            <div class="flex justify-between items-center mb-4 border-b border-red-900 pb-2">
+                <h2 class="text-gold font-bold italic uppercase tracking-tighter">Luxe Vaults</h2>
+                <button onclick="toggleMenu()" class="focusable text-gold text-xl font-bold px-2">✕</button>
+            </div>
+            <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
+                <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
+            </div>
+
+            <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
+            <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
+                <button class="focusable text-left" onclick="setFilter('network', 213)">Netflix</button>
+                <button class="focusable text-left" onclick="setFilter('network', 453)">Hulu</button>
+                <button class="focusable text-left" onclick="setFilter('network', 2739)">Disney+</button>
+                <button class="focusable text-left" onclick="setFilter('network', 19)">Nickelodeon</button>
+                <button class="focusable text-left" onclick="setFilter('network', 243)">Boomerang</button>
+                <button class="focusable text-left" onclick="setFilter('network', 34)">Adult Swim</button>
+                <button class="focusable text-left" onclick="setFilter('network', 56)">Cartoon Network</button>
+                <button class="focusable text-left" onclick="setFilter('network', 77)">SyFy</button>
+            </div>
         </div>
 
-        <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
-        <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
-            <button class="focusable" onclick="setFilter('network', 213)">Netflix</button>
-            <button class="focusable" onclick="setFilter('network', 453)">Hulu</button>
-            <button class="focusable" onclick="setFilter('network', 2739)">Disney+</button>
-            <button class="focusable" onclick="setFilter('network', 19)">Nickelodeon</button>
-            <button class="focusable" onclick="setFilter('network', 243)">Boomerang</button>
-            <button class="focusable" onclick="setFilter('network', 34)">Adult Swim</button>
-            <button class="focusable" onclick="setFilter('network', 56)">Cartoon Network</button>
-            <button class="focusable" onclick="setFilter('network', 77)">SyFy</button>
+        <div class="pt-6 border-t border-gold/30 mt-8">
+            <button id="btn-favorites" onclick="setFilter('favorites')" class="focusable w-full flex items-center justify-between text-left py-3 px-4 rounded-xl bg-red-950/40 border border-gold/40 text-gold font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all">
+                <span class="flex items-center gap-3">
+                    <svg class="w-4 h-4 fill-red-600 stroke-gold stroke-[1.5]" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    Favorites
+                </span>
+                <span id="fav-count-badge" class="text-[10px] bg-black/60 px-2 py-0.5 rounded-full border border-gold/30">0</span>
+            </button>
         </div>
     </div>
 
@@ -149,6 +173,7 @@
                            class="focusable w-full bg-transparent text-white placeholder-zinc-400 text-xs tracking-wider outline-none border-none py-1 font-medium" 
                            placeholder="Search Master Library..." 
                            enterkeyhint="search"
+                           oninput="handleSearchInput(event)"
                            onsearch="triggerSearch()"
                            onkeyup="handleSearch(event)">
                 </div>
@@ -179,9 +204,16 @@
     <div id="selector-overlay" class="no-scrollbar">
         <div id="details-backdrop"></div>
         <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <button id="close-sel-btn" onclick="closeSelector()" class="focusable mb-6 bg-black/50 p-2 rounded-full border border-white/10">
-                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
+            <div class="flex items-center justify-between mb-6">
+                <button id="close-sel-btn" onclick="closeSelector()" class="focusable bg-black/50 p-2 rounded-full border border-white/10">
+                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+                <button id="favorite-toggle-btn" onclick="toggleFavorite()" class="focusable fav-heart-btn bg-black/60 border border-gold/40 p-3 rounded-full flex items-center justify-center shadow-lg" title="Toggle Favorite">
+                    <svg id="fav-heart-icon" class="w-6 h-6 stroke-gold stroke-[2] fill-transparent transition-all" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </button>
+            </div>
             <div class="flex gap-5 mb-6 items-center">
                 <img id="details-poster" class="w-32 rounded-lg shadow-2xl flex-shrink-0 border border-gold/20">
                 <div class="flex flex-col justify-center flex-1 min-w-0">
@@ -223,6 +255,7 @@
 
     <script>
         let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
+        let previousActiveType = 'trending', previousActiveID = '';
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
@@ -233,11 +266,13 @@
                 const data = await res.json();
                 API_KEY = data.tmdb_key;
                 renderContinueWatching();
+                updateFavBadge();
                 await cacheTrendingIds();
                 fetchContent();
             } catch (err) { 
                 API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
                 renderContinueWatching();
+                updateFavBadge();
                 fetchContent();
             }
         }
@@ -252,6 +287,79 @@
             } catch (e) {}
         }
 
+        function getFavorites() {
+            return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]');
+        }
+
+        function updateFavBadge() {
+            const favs = getFavorites();
+            const badge = document.getElementById('fav-count-badge');
+            if (badge) badge.innerText = favs.length;
+        }
+
+        function isCurrentFavorited() {
+            if (!currentMedia || !currentMedia.id) return false;
+            const favs = getFavorites();
+            return favs.some(item => String(item.id) === String(currentMedia.id));
+        }
+
+        function updateFavButtonUI() {
+            const btn = document.getElementById('favorite-toggle-btn');
+            const icon = document.getElementById('fav-heart-icon');
+            if (!btn || !icon) return;
+            if (isCurrentFavorited()) {
+                btn.classList.add('is-fav');
+                icon.style.fill = '#E50914';
+                icon.style.stroke = '#D4AF37';
+            } else {
+                btn.classList.remove('is-fav');
+                icon.style.fill = 'transparent';
+                icon.style.stroke = '#D4AF37';
+            }
+        }
+
+        function toggleFavorite() {
+            if (!currentMedia || !currentMedia.id) return;
+            let favs = getFavorites();
+            const existingIndex = favs.findIndex(item => String(item.id) === String(currentMedia.id));
+            if (existingIndex >= 0) {
+                favs.splice(existingIndex, 1);
+            } else {
+                favs.unshift({
+                    id: currentMedia.id,
+                    type: currentMedia.type || 'movie',
+                    title: currentMedia.title || '',
+                    poster_path: currentMedia.poster || ''
+                });
+            }
+            localStorage.setItem('zonhd_favorites', JSON.stringify(favs));
+            updateFavButtonUI();
+            updateFavBadge();
+            if (activeType === 'favorites') {
+                renderFavorites();
+            }
+        }
+
+        function renderFavorites() {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            const favs = getFavorites();
+            hasMore = false;
+            if (favs.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 md:col-span-5 text-center py-20 text-zinc-500 font-bold uppercase tracking-widest text-xs">No favorites added yet. Browse any title and tap the heart icon!</div>`;
+                return;
+            }
+            favs.forEach(m => {
+                const card = document.createElement('div');
+                card.className = "movie-card focusable";
+                card.tabIndex = 0;
+                card.onclick = () => openDetails(m.id, m.type || 'movie');
+                const posterSrc = m.poster_path ? (m.poster_path.startsWith('http') ? m.poster_path : `https://image.tmdb.org/t/p/w500${m.poster_path}`) : 'IMG_8035.jpeg';
+                card.innerHTML = `<img src="${posterSrc}" class="w-full h-full object-cover">`;
+                grid.appendChild(card);
+            });
+        }
+
         async function fetchContent(append = false) {
             if (isLoading || !hasMore || !API_KEY) return;
             isLoading = true;
@@ -261,6 +369,12 @@
                 document.getElementById('movie-grid').innerHTML = ''; 
             }
             
+            if (activeType === 'favorites') {
+                renderFavorites();
+                isLoading = false;
+                return;
+            }
+
             if (activeType === 'anime') {
                 await fetchAniList(append);
                 isLoading = false;
@@ -460,6 +574,8 @@
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             
+            updateFavButtonUI();
+
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
@@ -582,12 +698,18 @@
         }
 
         function setFilter(type, id = '') { 
+            if (activeType !== 'search') {
+                previousActiveType = activeType;
+                previousActiveID = activeID;
+            }
             activeType = type; activeID = id; 
             if (type !== 'search') {
                 document.getElementById('search-input').value = '';
             }
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-            if (event && event.target && event.target.tagName === 'BUTTON') event.target.classList.add('active-filter');
+            document.querySelectorAll('nav button, #side-menu button').forEach(b => b.classList.remove('active-filter'));
+            if (event && event.currentTarget && event.currentTarget.tagName === 'BUTTON') {
+                event.currentTarget.classList.add('active-filter');
+            }
             fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
@@ -597,16 +719,46 @@
             const input = document.getElementById('search-input');
             const query = input.value.trim();
             if(query) {
+                if (activeType !== 'search') {
+                    previousActiveType = activeType;
+                    previousActiveID = activeID;
+                }
                 setFilter('search', query);
                 input.blur();
                 setTimeout(() => {
                     const firstResult = document.querySelector('#movie-grid .focusable');
                     if(firstResult) firstResult.focus();
                 }, 800);
+            } else {
+                handleSearchInput();
             }
         }
 
-        function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
+        function handleSearchInput(e) {
+            const input = document.getElementById('search-input');
+            if (!input.value || input.value.trim() === '') {
+                if (activeType === 'search') {
+                    const fallbackType = previousActiveType || 'trending';
+                    const fallbackID = previousActiveID || '';
+                    activeType = fallbackType;
+                    activeID = fallbackID;
+                    
+                    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
+                    const targetBtn = document.querySelector(`nav button[onclick*="${fallbackType}"]`) || document.getElementById('btn-trending');
+                    if (targetBtn) targetBtn.classList.add('active-filter');
+                    
+                    fetchContent();
+                }
+            }
+        }
+
+        function handleSearch(e) { 
+            if (e.key === 'Enter') {
+                triggerSearch(); 
+            } else if (e.target.value.trim() === '' && activeType === 'search') {
+                handleSearchInput();
+            }
+        }
 
         window.onload = () => { 
             setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
