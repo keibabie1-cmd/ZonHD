@@ -448,7 +448,7 @@
         }
 
         async function fetchCuratedCategory(category, append) {
-            let genreMap = { drama: 18, romance: 10749, comedy: 35, document crime: 80 };
+            let genreMap = { drama: 18, romance: 10749, comedy: 35, crime: 80 };
             let gId = genreMap[category];
             let results = [];
             let targetCount = 20, fetches = 0;
@@ -590,7 +590,7 @@
             document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
             document.getElementById('media-type-tag').innerText = type.toUpperCase();
             document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
-           .getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
+            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
             
