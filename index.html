@@ -95,10 +95,11 @@
         .btn-play-red:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(229, 9, 20, 0.6); }
         
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; border: 2px solid transparent; border-radius: 8px; transition: 0.2s; }
-        .episode-row:hover { background: rgba(212, 175, 55, 0.03); padding-left: 8px; padding-right: 8px; }
-        .ep-thumbnail { width: 130px; aspect-ratio: 16/9; background-size: cover; border-radius: 6px; flex-shrink: 0; position: relative; border: 1px solid rgba(255,255,255,0.1); }
-        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: 0.2s; }
-        .episode-row:hover .ep-play-btn { background: rgba(229, 9, 20, 0.4); }
+       0 .episode-row:hover { background: rgba(212, 175, .55, 0.03); padding-left: 8px; padding-right: 8px; }
+        .ep-thumbnail { width: 130px; aspect-ratio: 16/9; background-size: cover; border-radius: 6px; flex-shrink: 0; position: relative; border: 1px solid rgba(2558,255,255,0.1); }
+        .ep-play));
+-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: 0.2s; }
+        .episode-row:hover        .ep-play-btn { background: rgba(229, 9, 20, 0.4); }
 
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -139,8 +140,7 @@
         .fav-heart-btn.is-fav svg {
             fill: #E50914 !important;
             stroke: #D4AF37 !important;
-            filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8));
-        }
+            filter: drop-shadow(0 0 8px rgba(229, 9, 20,  }
     </style>
 </head>
 <body>
@@ -266,9 +266,9 @@
         </div>
     </div>
 
-    <div id="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
+    <div id=" logoplayer-overlay">
+        <div class="absoluteImg top-6 left-6 right- =6 flex justify-between items-center z-[7000]">
+ document            <div class="bg-gold/20.getElementById text-gold px-4 py-2 rounded-full border border('-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture" referrerpolicy="no-referrer"></iframe>
@@ -281,50 +281,82 @@
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
 
-        // ---- 90s NOSTALGIA CURATED TITLES ----
+        // ---- 90s NOSTALGIA CURATED TITLES (hardwired list) ----
         const NOSTALGIA_90S_TITLES = [
-            // Nickelodeon
-            "Rugrats", "Doug", "The Ren & Stimpy Show", "Rocko's Modern Life",
-            "Aaahh!!! Real Monsters", "Hey Arnold!", "The Angry Beavers", "CatDog",
-            "KaBlam!", "The Wild Thornberrys", "SpongeBob SquarePants",
-            "Clarissa Explains It All", "Are You Afraid of the Dark?", "Kenan & Kel",
-            "All That", "The Amanda Show", "Legends of the Hidden Temple",
-            "Salute Your Shorts", "Hey Dude", "The Adventures of Pete & Pete",
-            "The Secret World of Alex Mack", "The Mystery Files of Shelby Woo",
-            "Cousin Skeeter", "Animorphs", "Figure It Out", "Guts", "Double Dare",
-            "Nickelodeon Arcade", "Nick News with Linda Ellerbee", "Weinerville",
-            "Roundhouse", "The Journey of Allen Strange", "Space Cases",
-            "Welcome Freshmen", "Fifteen", "Get the Picture", "Make the Grade",
-            "Think Fast", "What Would You Do?", "Wild & Crazy Kids",
-            "You Can't Do That on Television", "You're On", "Don't Just Sit There",
-            "Mr. Wizard's World", "My Brother and Me", "U to U", "SK8TV",
-            "Nick in the Afternoon", "Oh Yeah! Cartoons", "100 Deeds for Eddie McDowd",
-            "Rocket Power",
-            // Cartoon Network
-            "Dexter's Laboratory", "Johnny Bravo", "Cow and Chicken", "I Am Weasel",
-            "The Powerpuff Girls", "Ed, Edd n Eddy", "Courage the Cowardly Dog",
-            "Mike, Lu & Og", "Sheep in the Big City", "Time Squad",
-            "Space Ghost Coast to Coast", "What a Cartoon!", "The Moxy Show",
-            "Grim & Evil", "Whatever Happened to... Robot Jones?", "Samurai Jack",
-            // Kids' WB
-            "Animaniacs", "Pinky and the Brain", "Freakazoid!",
-            "Batman: The Animated Series", "Superman: The Animated Series",
-            "Batman Beyond", "The New Batman Adventures", "Tiny Toon Adventures",
-            "Road Rovers", "Histeria!", "The Sylvester & Tweety Mysteries",
-            "Bugs N' Daffy", "Waynehead", "Detention",
-            "Pinky, Elmyra & the Brain",
-            "The Cat&Birdy Warneroonie PinkyBrainy Big Cartoonie Show",
-            // Disney Channel / Disney Afternoon
-            "Darkwing Duck", "Gargoyles", "TaleSpin", "DuckTales",
-            "Chip 'n Dale: Rescue Rangers", "Goof Troop", "Aladdin",
-            "The Little Mermaid", "Timon and Pumbaa", "Recess", "Pepper Ann",
-            "The Weekenders", "Flash Forward", "Bug Juice",
-            "The Famous Jett Jackson", "So Weird", "The Jersey", "Mad Libs",
-            "Going Wild with Jeff Corwin", "Adventures in Wonderland",
-            "The Secret of Lost Creek", "The Torkelsons", "Eerie, Indiana",
-            "The All-New Mickey Mouse Club", "Teen Win, Lose or Draw",
-            "Good Morning, Miss Bliss", "Dumbo's Circus", "Videopolis",
-            "Off the Wall", "Totally Circus", "In a Heartbeat"
+            // Nickelodeon / Nick Jr.
+            "As Told by Ginger", "Gullah Gullah Island", "CatDog", "All That",
+            "Kenan & Kel", "Doug", "Rocko's Modern Life", "Hey Arnold!",
+            "Rugrats", "The Wild Thornberrys", "The Angry Beavers",
+            "Clarissa Explains It All", "Are You Afraid of the Dark?",
+            "The Amanda Show", "Figure It Out", "KaBlam!", "Animorphs",
+            "Cousin Skeeter", "Get the Picture", "Legends of the Hidden Temple",
+            "Aaahh!!! Real Monsters", "Salute Your Shorts", "Nickelodeon Guts",
+            "100 Deeds for Eddie McDowd", "The Adventures of Pete & Pete",
+            "Allegra's Window", "Little Bill", "Roundhouse", "Rupert",
+            "What Would You Do?", "Wild & Crazy Kids", "The Journey of Allen Strange",
+            "Don't Look Under the Bed", "Under Wraps", "Halloweentown",
+            "The Secret World of Alex Mack", "Taina", "The Mystery Files of Shelby Woo",
+
+            // Cartoon Network / Adult Swim originals
+            "The Powerpuff Girls", "Dexter's Laboratory", "Cow and Chicken",
+            "Johnny Bravo", "Ed, Edd n Eddy", "Courage the Cowardly Dog",
+            "Static Shock", "Space Ghost Coast to Coast", "The Moxy Show",
+
+            // Kids' WB / Warner Bros. Animation
+            "Pinky and the Brain", "Animaniacs", "Batman: The Animated Series",
+            "Superman: The Animated Series", "The New Batman Adventures",
+            "Batman Beyond", "Batman: Mask of the Phantasm",
+            "Teenage Mutant Ninja Turtles", "X-Men: The Animated Series",
+            "Freakazoid!", "Tiny Toon Adventures", "Histeria!",
+            "The Sylvester & Tweety Mysteries",
+
+            // Classic cartoons
+            "Looney Tunes", "Tom and Jerry", "The Flintstones", "The Jetsons",
+            "Scooby-Doo, Where Are You!",
+
+            // Disney Channel / Disney Afternoon / DCOM
+            "The Famous Jett Jackson", "Adventures in Wonderland", "Out of the Box",
+            "Aladdin", "Pepper Ann", "So Weird", "Recess", "Beauty and the Beast",
+            "The Lion King", "Mulan", "Hocus Pocus", "The Mighty Ducks",
+            "Smart Guy", "Zenon: Girl of the 21st Century", "Brink!",
+            "Smart House", "Johnny Tsunami", "The Thirteenth Year",
+            "Rodgers & Hammerstein's Cinderella", "James and the Giant Peach",
+            "A Troll in Central Park", "The Parent Trap", "101 Dalmatians",
+            "Pocahontas", "Thumbelina", "Happily Ever After",
+            "Crashbox", "Babar", "Franklin",
+
+            // Sitcoms / Teen shows
+            "Boy Meets World", "Sabrina the Teenage Witch", "Saved by the Bell",
+            "My So-Called Life", "The Fresh Prince of Bel-Air", "Family Matters",
+            "Full House", "Sister, Sister", "Moesha", "Martin",
+            "The Wayans Bros.", "The Steve Harvey Show", "The Jamie Foxx Show",
+            "Charmed", "90210", "In Living Color", "Mr. Bean",
+
+            // Talk / Reality / Daytime
+            "Maury", "The Jerry Springer Show", "Ricki Lake",
+            "The Rosie O'Donnell Show",
+
+            // Adult animation / Late night
+            "The Tick", "Beavis and Butt-Head", "The Ren & Stimpy Show",
+            "King of the Hill", "Duckman", "South Park", "The Maxx",
+            "Todd McFarlane's Spawn", "The Critic", "Æon Flux", "Exosquad",
+            "Spicy City", "The Head",
+
+            // Sci-fi / Genre TV
+            "Mystery Science Theater 3000", "Star Trek: The Next Generation",
+            "The X-Files", "Power Rangers", "Mighty Morphin Power Rangers",
+            "The Simpsons", "Goosebumps",
+
+            // Movies
+            "The Addams Family", "Home Alone", "Sister Act", "Batman Returns",
+            "Beethoven", "Sister Act 2: Back in the Habit", "Addams Family Values",
+            "Coneheads", "Cool Runnings", "Free Willy", "The Mask",
+            "The Craft", "Matilda", "The Faculty", "Scream", "Space Jam",
+            "Austin Powers: International Man of Mystery",
+            "I Know What You Did Last Summer", "Toy Story", "The Matrix",
+            "Girl, Interrupted", "Cruel Intentions", "American Beauty",
+            "Jurassic Park", "Titanic", "Terminator 2: Judgment Day",
+            "House Party", "House Party 2", "Dr. Dolittle"
         ];
 
         async function fetchConfig() {
@@ -488,7 +520,7 @@
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
         }
 
-        // ---- NEW: 90s Nostalgia fetch ----
+        // ---- 90s Nostalgia fetch (hardwired list, prefers 1990–1999 matches) ----
         async function fetch90sNostalgia(append) {
             const itemsPerPage = 20;
             const start = (currentPage - 1) * itemsPerPage;
@@ -505,9 +537,18 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data && data.results) {
+                            // Prefer a result whose release/first-air year is in the 90s
+                            const nineties = data.results.find(m => {
+                                if (m.media_type !== 'tv' && m.media_type !== 'movie') return false;
+                                if (!m.poster_path) return false;
+                                const yearStr = ((m.release_date || m.first_air_date) || '').split('-')[0];
+                                const year = parseInt(yearStr, 10);
+                                return year >= 1990 && year <= 1999;
+                            });
+                            if (nineties) return nineties;
+                            // Fall back to first valid poster result
                             return data.results.find(m =>
-                                (m.media_type === 'tv' || m.media_type === 'movie') &&
-                                m.poster_path
+                                (m.media_type === 'tv' || m.media_type === 'movie') && m.poster_path
                             ) || null;
                         }
                         return null;
@@ -613,7 +654,7 @@
         }
 
         async function fetchAliterateLogo(id, type) {
-            const logoImg = document.getElementById('title-logo-img');
+            consttitle-logo-img');
             const titleText = document.getElementById('show-title');
             logoImg.classList.add('hidden');
             titleText.classList.remove('hidden');
