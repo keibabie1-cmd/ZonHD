@@ -288,6 +288,9 @@
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
 
+        // Hardcoded fallback key — used if /api/config fails or returns no key
+        const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
+
         // ---- 90s NOSTALGIA CURATED TITLES (hardwired list, ASCII-only) ----
         const NOSTALGIA_90S_TITLES = [
             // Nickelodeon / Nick Jr.
@@ -327,9 +330,8 @@
             "The Famous Jett Jackson", "Adventures in Wonderland", "Out of the Box",
             "Aladdin", "Pepper Ann", "So Weird", "Recess", "Beauty and the Beast",
             "The Lion King", "Mulan", "Hocus Pocus", "The Mighty Ducks",
-",
-            "Smart            Guy", "Zenon: Girl of the 21st Century", " "Brink!",
-            "Smart House",King "Johnny Tsunami", "The Thirteenth Year", "Seventeen Again",
+            "Smart Guy", "Zenon: Girl of the 21st Century", "Brink!",
+            "Smart House", "Johnny Tsunami", "The Thirteenth Year", "Seventeen Again",
             "Rodgers & Hammerstein's Cinderella", "James and the Giant Peach",
             "A Troll in Central Park", "The Parent Trap", "101 Dalmatians",
             "Pocahontas", "Thumbelina", "Happily Ever After",
@@ -347,7 +349,8 @@
             "The Rosie O'Donnell Show",
 
             // Adult animation / Late night
-            "The Tick", "Beavis and Butt-Head", "The Ren & Stimpy Show of the Hill", "Duckman", "South Park", "The Maxx",
+            "The Tick", "Beavis and Butt-Head", "The Ren & Stimpy Show",
+            "King of the Hill", "Duckman", "South Park", "The Maxx",
             "Todd McFarlane's Spawn", "The Critic", "Aeon Flux", "Exosquad",
             "Spicy City", "The Head",
 
@@ -383,21 +386,28 @@
             "House Party", "House Party 2", "Dr. Dolittle"
         ];
 
+        // ---- ROBUST CONFIG LOADER ----
+        // Always ends up with a working API_KEY, no matter what /api/config returns.
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/config');
+                if (!res.ok) throw new Error("config endpoint not ok");
                 const data = await res.json();
-                API_KEY = data.tmdb_key;
-                renderContinueWatching();
-                updateFavBadge();
-                await cacheTrendingIds();
-                fetchContent();
-            } catch (err) { 
-                API_KEY = "1df5488d0113ddb270ab0027f311c1ea"; 
-                renderContinueWatching();
-                updateFavBadge();
-                fetchContent();
+                if (data && typeof data.tmdb_key === 'string' && data.tmdb_key.trim().length > 0) {
+                    API_KEY = data.tmdb_key.trim();
+                } else {
+                    API_KEY = FALLBACK_API_KEY;
+                }
+            } catch (err) {
+                API_KEY = FALLBACK_API_KEY;
             }
+            // Safety net — if API_KEY is still falsy for any reason, use the fallback
+            if (!API_KEY) API_KEY = FALLBACK_API_KEY;
+
+            try { renderContinueWatching(); } catch (e) {}
+            try { updateFavBadge(); } catch (e) {}
+            try { await cacheTrendingIds(); } catch (e) {}
+            try { fetchContent(); } catch (e) { console.error("fetchContent failed:", e); }
         }
 
         async function cacheTrendingIds() {
