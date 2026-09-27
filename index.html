@@ -209,6 +209,7 @@
                 <button class="focusable" onclick="setFilter('comedy')" class="whitespace-nowrap">Comedy</button>
                 <button class="focusable" onclick="setFilter('crime')" class="whitespace-nowrap">Crime</button>
                 <button class="focusable" onclick="setFilter('genre', 10751)" class="whitespace-nowrap">Family</button>
+                <button class="focusable" onclick="setFilter('90s_nostalgia')" class="whitespace-nowrap">90s Nostalgia</button>
                 <button class="focusable" onclick="setFilter('anime')" class="whitespace-nowrap">Anime</button>
             </nav>
         </div>
@@ -279,6 +280,52 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
+
+        // ---- 90s NOSTALGIA CURATED TITLES ----
+        const NOSTALGIA_90S_TITLES = [
+            // Nickelodeon
+            "Rugrats", "Doug", "The Ren & Stimpy Show", "Rocko's Modern Life",
+            "Aaahh!!! Real Monsters", "Hey Arnold!", "The Angry Beavers", "CatDog",
+            "KaBlam!", "The Wild Thornberrys", "SpongeBob SquarePants",
+            "Clarissa Explains It All", "Are You Afraid of the Dark?", "Kenan & Kel",
+            "All That", "The Amanda Show", "Legends of the Hidden Temple",
+            "Salute Your Shorts", "Hey Dude", "The Adventures of Pete & Pete",
+            "The Secret World of Alex Mack", "The Mystery Files of Shelby Woo",
+            "Cousin Skeeter", "Animorphs", "Figure It Out", "Guts", "Double Dare",
+            "Nickelodeon Arcade", "Nick News with Linda Ellerbee", "Weinerville",
+            "Roundhouse", "The Journey of Allen Strange", "Space Cases",
+            "Welcome Freshmen", "Fifteen", "Get the Picture", "Make the Grade",
+            "Think Fast", "What Would You Do?", "Wild & Crazy Kids",
+            "You Can't Do That on Television", "You're On", "Don't Just Sit There",
+            "Mr. Wizard's World", "My Brother and Me", "U to U", "SK8TV",
+            "Nick in the Afternoon", "Oh Yeah! Cartoons", "100 Deeds for Eddie McDowd",
+            "Rocket Power",
+            // Cartoon Network
+            "Dexter's Laboratory", "Johnny Bravo", "Cow and Chicken", "I Am Weasel",
+            "The Powerpuff Girls", "Ed, Edd n Eddy", "Courage the Cowardly Dog",
+            "Mike, Lu & Og", "Sheep in the Big City", "Time Squad",
+            "Space Ghost Coast to Coast", "What a Cartoon!", "The Moxy Show",
+            "Grim & Evil", "Whatever Happened to... Robot Jones?", "Samurai Jack",
+            // Kids' WB
+            "Animaniacs", "Pinky and the Brain", "Freakazoid!",
+            "Batman: The Animated Series", "Superman: The Animated Series",
+            "Batman Beyond", "The New Batman Adventures", "Tiny Toon Adventures",
+            "Road Rovers", "Histeria!", "The Sylvester & Tweety Mysteries",
+            "Bugs N' Daffy", "Waynehead", "Detention",
+            "Pinky, Elmyra & the Brain",
+            "The Cat&Birdy Warneroonie PinkyBrainy Big Cartoonie Show",
+            // Disney Channel / Disney Afternoon
+            "Darkwing Duck", "Gargoyles", "TaleSpin", "DuckTales",
+            "Chip 'n Dale: Rescue Rangers", "Goof Troop", "Aladdin",
+            "The Little Mermaid", "Timon and Pumbaa", "Recess", "Pepper Ann",
+            "The Weekenders", "Flash Forward", "Bug Juice",
+            "The Famous Jett Jackson", "So Weird", "The Jersey", "Mad Libs",
+            "Going Wild with Jeff Corwin", "Adventures in Wonderland",
+            "The Secret of Lost Creek", "The Torkelsons", "Eerie, Indiana",
+            "The All-New Mickey Mouse Club", "Teen Win, Lose or Draw",
+            "Good Morning, Miss Bliss", "Dumbo's Circus", "Videopolis",
+            "Off the Wall", "Totally Circus", "In a Heartbeat"
+        ];
 
         async function fetchConfig() {
             try {
@@ -401,6 +448,12 @@
                 return;
             }
 
+            if (activeType === '90s_nostalgia') {
+                await fetch90sNostalgia(append);
+                isLoading = false;
+                return;
+            }
+
             if (activeType === 'list') {
                 await fetchTmdbList(activeID, append);
                 isLoading = false;
@@ -433,6 +486,51 @@
                     hasMore = currentPage <= (data.total_pages || 1);
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+        }
+
+        // ---- NEW: 90s Nostalgia fetch ----
+        async function fetch90sNostalgia(append) {
+            const itemsPerPage = 20;
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageTitles = NOSTALGIA_90S_TITLES.slice(start, end);
+
+            if (pageTitles.length === 0) {
+                hasMore = false;
+                return;
+            }
+
+            const searchPromises = pageTitles.map(title =>
+                fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.results) {
+                            return data.results.find(m =>
+                                (m.media_type === 'tv' || m.media_type === 'movie') &&
+                                m.poster_path
+                            ) || null;
+                        }
+                        return null;
+                    })
+                    .catch(() => null)
+            );
+
+            const fetchedResults = await Promise.all(searchPromises);
+            let unique = new Map();
+            fetchedResults.forEach(m => {
+                if (m && !unique.has(m.id)) {
+                    unique.set(m.id, { ...m, media_type: m.media_type || (m.first_air_date ? 'tv' : 'movie') });
+                }
+            });
+
+            const results = Array.from(unique.values());
+            if (results.length > 0) {
+                renderGrid(results);
+                currentPage++;
+                hasMore = currentPage <= Math.ceil(NOSTALGIA_90S_TITLES.length / itemsPerPage);
+            } else {
+                hasMore = false;
+            }
         }
 
         async function fetchTmdbList(listId, append) {
@@ -657,12 +755,11 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // ---- PLAYER SOURCE CHANGED TO VIDSRC.TO ----
-            // Same player swap as the FEAR+ site: vidsrc.to (stable, TMDB-ID based, fullscreen-friendly).
+            // ---- PLAYER SOURCE: VIDSRC.TO (matches your preferred player) ----
             const vidsrcUrl = (type === 'movie' 
                 ? `https://vidsrc.to/embed/movie/${id}` 
                 : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`);
-            // --------------------------------------------
+            // ------------------------------------------------------------------
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
