@@ -150,6 +150,17 @@
             from { opacity: 0; transform: scale(0.94); }
             to { opacity: 1; transform: scale(1); }
         }
+
+        /* Toast animation */
+        #binge-toast {
+            animation: toastFade 4s ease-in-out forwards;
+        }
+        @keyframes toastFade {
+            0% { opacity: 0; transform: translateY(-6px); }
+            10% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-6px); }
+        }
     </style>
 </head>
 <body>
@@ -288,7 +299,12 @@
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
 
-        <!-- BINGE COUNTDOWN OVERLAY — centered on screen, away from player controls -->
+        <!-- BINGE ARMED TOAST (small, top-left, auto-fades in 4s) -->
+        <div id="binge-toast" class="hidden absolute top-20 left-6 z-[7000] bg-red-600/90 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-2xl border border-red-400/50">
+            ⏱ Auto-advance armed
+        </div>
+
+        <!-- BINGE COUNTDOWN OVERLAY — centered on screen -->
         <div id="binge-countdown-overlay" class="hidden absolute inset-0 flex items-center justify-center z-[7500] pointer-events-none">
             <div class="bg-black/90 border-2 border-red-600 rounded-2xl px-10 py-8 text-center shadow-2xl pointer-events-auto" style="box-shadow: 0 0 40px rgba(229,9,20,0.5);">
                 <p class="text-red-500 text-[10px] uppercase tracking-[0.4em] font-bold mb-3">Up Next</p>
@@ -316,13 +332,13 @@
         let bingeStartTimer = null;
         let bingeCountdownTimer = null;
         let bingeCountdownValue = 5;
+        let bingeToastTimer = null;
 
-        // Hardcoded fallback key — used if /api/config fails or returns no key
+        // Hardcoded fallback key
         const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
 
-        // ---- 90s NOSTALGIA CURATED TITLES (hardwired list, ASCII-only) ----
+        // ---- 90s NOSTALGIA CURATED TITLES ----
         const NOSTALGIA_90S_TITLES = [
-            // Nickelodeon / Nick Jr.
             "As Told by Ginger", "Gullah Gullah Island", "CatDog", "All That",
             "Kenan & Kel", "Doug", "Rocko's Modern Life", "Hey Arnold!",
             "Rugrats", "The Wild Thornberrys", "The Angry Beavers",
@@ -336,26 +352,18 @@
             "Don't Look Under the Bed", "Under Wraps", "Halloweentown",
             "The Secret World of Alex Mack", "Taina", "The Mystery Files of Shelby Woo",
             "Teletubbies",
-
-            // Cartoon Network / Adult Swim originals
             "The Powerpuff Girls", "Dexter's Laboratory", "Cow and Chicken",
             "Johnny Bravo", "Ed, Edd n Eddy", "Courage the Cowardly Dog",
             "Static Shock", "Space Ghost Coast to Coast", "The Moxy Show",
             "Code Lyoko", "Justice League", "Green Lantern",
-
-            // Kids WB / Warner Bros. Animation
             "Pinky and the Brain", "Animaniacs", "Batman: The Animated Series",
             "Superman: The Animated Series", "The New Batman Adventures",
             "Batman Beyond", "Batman: Mask of the Phantasm",
             "Teenage Mutant Ninja Turtles", "X-Men: The Animated Series",
             "Freakazoid!", "Tiny Toon Adventures", "Histeria!",
             "The Sylvester & Tweety Mysteries",
-
-            // Classic cartoons
             "Looney Tunes", "Tom and Jerry", "The Flintstones", "The Jetsons",
             "Scooby-Doo, Where Are You!",
-
-            // Disney Channel / Disney Afternoon / DCOM
             "The Famous Jett Jackson", "Adventures in Wonderland", "Out of the Box",
             "Aladdin", "Pepper Ann", "So Weird", "Recess", "Beauty and the Beast",
             "The Lion King", "Mulan", "Hocus Pocus", "The Mighty Ducks",
@@ -365,30 +373,20 @@
             "A Troll in Central Park", "The Parent Trap", "101 Dalmatians",
             "Pocahontas", "Thumbelina", "Happily Ever After",
             "Crashbox", "Babar", "Franklin",
-
-            // Sitcoms / Teen shows
             "Boy Meets World", "Sabrina the Teenage Witch", "Saved by the Bell",
             "My So-Called Life", "The Fresh Prince of Bel-Air", "Family Matters",
             "Full House", "Sister, Sister", "Moesha", "Martin",
             "The Wayans Bros.", "The Steve Harvey Show", "The Jamie Foxx Show",
             "Charmed", "90210", "In Living Color", "Mr. Bean",
-
-            // Talk / Reality / Daytime
             "Maury", "The Jerry Springer Show", "Ricki Lake",
             "The Rosie O'Donnell Show",
-
-            // Adult animation / Late night
             "The Tick", "Beavis and Butt-Head", "The Ren & Stimpy Show",
             "King of the Hill", "Duckman", "South Park", "The Maxx",
             "Todd McFarlane's Spawn", "The Critic", "Aeon Flux", "Exosquad",
             "Spicy City", "The Head",
-
-            // Sci-fi / Genre TV
             "Mystery Science Theater 3000", "Star Trek: The Next Generation",
             "The X-Files", "Power Rangers", "Mighty Morphin Power Rangers",
             "The Simpsons", "Goosebumps",
-
-            // Anime / Toons classics
             "Dragon Ball", "Dragon Ball Z", "Dragon Ball GT",
             "Sailor Moon", "Mobile Suit Gundam Wing",
             "Cowboy Bebop", "The Real Adventures of Jonny Quest",
@@ -396,14 +394,8 @@
             "Cardcaptor Sakura", "Zoids",
             "Yu Yu Hakusho: Ghost Files",
             "Pokemon", "Pokemon Chronicles", "One Piece",
-
-            // Transformers / CGI / Kids action
             "Beast Wars: Transformers", "ReBoot",
-
-            // Horror classics
             "Scream", "Candyman", "Candyman: Farewell to the Flesh",
-
-            // Movies
             "The Addams Family", "Home Alone", "Sister Act", "Batman Returns",
             "Beethoven", "Sister Act 2: Back in the Habit", "Addams Family Values",
             "Coneheads", "Cool Runnings", "Free Willy", "The Mask",
@@ -447,7 +439,7 @@
             } catch (e) {}
         }
 
-        // ---- BINGE AUTO-ADVANCE (always on for TV) ----
+        // ---- BINGE AUTO-ADVANCE ----
         function clearBingeTimers() {
             if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
             if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
@@ -457,6 +449,18 @@
         function hideBingeOverlay() {
             const el = document.getElementById('binge-countdown-overlay');
             if (el) el.classList.add('hidden');
+        }
+
+        function showBingeToast() {
+            const toast = document.getElementById('binge-toast');
+            if (!toast) return;
+            toast.classList.remove('hidden');
+            // Restart the animation by forcing reflow
+            toast.style.animation = 'none';
+            void toast.offsetWidth;
+            toast.style.animation = '';
+            if (bingeToastTimer) clearTimeout(bingeToastTimer);
+            bingeToastTimer = setTimeout(() => { toast.classList.add('hidden'); }, 4200);
         }
 
         async function getNextEpisodeInfo() {
@@ -470,7 +474,6 @@
                 if (currentIdx >= 0 && currentIdx < episodes.length - 1) {
                     return { s: currentMedia.s, e: episodes[currentIdx + 1].episode_number };
                 }
-                // Last episode of season — try next season
                 const showRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}?api_key=${API_KEY}`);
                 const showData = await showRes.json();
                 const validSeasons = (showData.seasons || []).filter(s => s.season_number > 0);
@@ -478,30 +481,48 @@
                 if (currentSeasonIdx >= 0 && currentSeasonIdx < validSeasons.length - 1) {
                     return { s: validSeasons[currentSeasonIdx + 1].season_number, e: 1 };
                 }
-                return null; // End of series
-            } catch (e) { return null; }
+                return null;
+            } catch (e) { console.error('[BINGE] getNextEpisodeInfo failed:', e); return null; }
         }
 
         async function scheduleBinge() {
             clearBingeTimers();
             if (!currentMedia || currentMedia.type !== 'tv') return;
 
-            let runtime = 25; // default 25 min
+            // ?bingetest=1 makes the countdown fire 8s after play for verification
+            const urlParams = new URLSearchParams(window.location.search);
+            const isTest = urlParams.get('bingetest') === '1';
+
+            let runtime = 22;
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}/episode/${currentMedia.e}?api_key=${API_KEY}`);
                 const data = await res.json();
                 if (data && data.runtime && data.runtime > 0) runtime = data.runtime;
-            } catch (e) {}
+            } catch (e) { console.log('[BINGE] runtime fetch failed, using default 22 min'); }
 
-            // Show the countdown ~30 seconds before runtime ends (credits window)
-            const ms = Math.max((runtime * 60 - 30) * 1000, 5000);
-            bingeStartTimer = setTimeout(() => showBingeCountdown(), ms);
+            // Show countdown 60 seconds before episode end (credits window)
+            const ms = isTest ? 8000 : Math.max((runtime * 60 - 60) * 1000, 5000);
+
+            console.log(`[BINGE] Armed for S${currentMedia.s} E${currentMedia.e} — runtime ${runtime} min, countdown in ${Math.round(ms/1000)}s${isTest ? ' (TEST MODE)' : ''}`);
+
+            // Show toast so user knows it's armed
+            showBingeToast();
+
+            bingeStartTimer = setTimeout(() => {
+                console.log('[BINGE] Countdown firing now');
+                showBingeCountdown();
+            }, ms);
         }
 
         async function showBingeCountdown() {
             bingeStartTimer = null;
             const next = await getNextEpisodeInfo();
-            if (!next) return; // End of series - don't show anything
+            if (!next) {
+                console.log('[BINGE] End of series — no next episode, countdown skipped');
+                return;
+            }
+
+            console.log(`[BINGE] Showing countdown → S${next.s} E${next.e}`);
 
             bingeCountdownValue = 5;
             const titleEl = document.getElementById('binge-next-title');
@@ -519,25 +540,30 @@
                     clearInterval(bingeCountdownTimer);
                     bingeCountdownTimer = null;
                     hideBingeOverlay();
+                    console.log('[BINGE] Countdown hit 0 — advancing');
                     advanceToNextEpisode();
                 }
             }, 1000);
         }
 
         function cancelBingeCountdown() {
-            clearBingeTimers();
-            // Reschedule for the same episode so it doesn't immediately fire again
-            // (but don't nag — user chose to cancel)
+            console.log('[BINGE] User cancelled countdown');
+            if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
+            hideBingeOverlay();
         }
 
         async function advanceToNextEpisode() {
             clearBingeTimers();
             const next = await getNextEpisodeInfo();
-            if (!next) return;
+            if (!next) { console.log('[BINGE] No next episode to advance to'); return; }
+            console.log(`[BINGE] Advancing to S${next.s} E${next.e}`);
             currentMedia.s = next.s;
             currentMedia.e = next.e;
             startLuxeStream();
         }
+
+        // Expose a manual trigger for desktop testing
+        window.testBinge = showBingeCountdown;
 
         function getFavorites() {
             return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]');
@@ -679,10 +705,7 @@
             const end = start + itemsPerPage;
             const pageTitles = NOSTALGIA_90S_TITLES.slice(start, end);
 
-            if (pageTitles.length === 0) {
-                hasMore = false;
-                return;
-            }
+            if (pageTitles.length === 0) { hasMore = false; return; }
 
             const searchPromises = pageTitles.map(title =>
                 fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
@@ -719,9 +742,7 @@
                 renderGrid(results);
                 currentPage++;
                 hasMore = currentPage <= Math.ceil(NOSTALGIA_90S_TITLES.length / itemsPerPage);
-            } else {
-                hasMore = false;
-            }
+            } else { hasMore = false; }
         }
 
         async function fetchTmdbList(listId, append) {
@@ -773,9 +794,7 @@
 
             if (results.length > 0) {
                 renderGrid(results.slice(0, 20));
-            } else {
-                hasMore = false;
-            }
+            } else { hasMore = false; }
         }
 
         async function fetchAniList(append) {
