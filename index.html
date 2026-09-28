@@ -142,12 +142,13 @@
             filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8));
         }
 
-        /* Binge toggle active state */
-        #binge-toggle-btn.binge-on {
-            background: rgba(212, 175, 55, 0.25) !important;
-            color: var(--gold) !important;
-            border-color: rgba(212, 175, 55, 0.7) !important;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        /* Binge countdown overlay fade-in */
+        #binge-countdown-overlay {
+            animation: bingeFade 0.3s ease-out;
+        }
+        @keyframes bingeFade {
+            from { opacity: 0; transform: scale(0.94); }
+            to { opacity: 1; transform: scale(1); }
         }
     </style>
 </head>
@@ -284,12 +285,23 @@
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-            <div class="flex items-center gap-3">
-                <button id="binge-toggle-btn" onclick="toggleBingeMode()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">🔁 BINGE: OFF</button>
-                <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        </div>
+
+        <!-- BINGE COUNTDOWN OVERLAY — centered on screen, away from player controls -->
+        <div id="binge-countdown-overlay" class="hidden absolute inset-0 flex items-center justify-center z-[7500] pointer-events-none">
+            <div class="bg-black/90 border-2 border-red-600 rounded-2xl px-10 py-8 text-center shadow-2xl pointer-events-auto" style="box-shadow: 0 0 40px rgba(229,9,20,0.5);">
+                <p class="text-red-500 text-[10px] uppercase tracking-[0.4em] font-bold mb-3">Up Next</p>
+                <p id="binge-next-title" class="text-white font-bold text-lg mb-4">Next Episode</p>
+                <p class="text-zinc-400 text-[10px] uppercase tracking-widest mb-2">Playing in</p>
+                <p id="binge-countdown-number" class="text-red-600 text-7xl font-extrabold mb-5" style="font-family: 'Playfair Display', serif;">5</p>
+                <div class="flex gap-3 justify-center">
+                    <button id="binge-cancel-btn" onclick="cancelBingeCountdown()" class="focusable bg-white/10 text-white px-5 py-2 rounded-full border border-white/30 font-bold text-xs uppercase tracking-wider">Cancel</button>
+                    <button id="binge-skip-btn" onclick="advanceToNextEpisode()" class="focusable bg-red-600 text-white px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider" style="box-shadow: 0 0 15px rgba(229,9,20,0.6);">Play Now ▸</button>
+                </div>
             </div>
         </div>
-        <button id="next-episode-btn" onclick="advanceToNextEpisode()" class="focusable hidden absolute bottom-8 right-8 z-[7000] bg-gold text-black px-6 py-3 rounded-full font-bold text-sm shadow-2xl">NEXT EPISODE ▸</button>
+
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
@@ -300,9 +312,10 @@
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
 
-        // Binge Mode state
-        let bingeMode = (localStorage.getItem('zonhd_binge') === 'true');
-        let bingeTimer = null;
+        // Binge timer handles (auto-advance is always on for TV)
+        let bingeStartTimer = null;
+        let bingeCountdownTimer = null;
+        let bingeCountdownValue = 5;
 
         // Hardcoded fallback key — used if /api/config fails or returns no key
         const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
@@ -420,7 +433,6 @@
 
             try { renderContinueWatching(); } catch (e) {}
             try { updateFavBadge(); } catch (e) {}
-            try { updateBingeButtonUI(); } catch (e) {}
             try { await cacheTrendingIds(); } catch (e) {}
             try { fetchContent(); } catch (e) { console.error("fetchContent failed:", e); }
         }
@@ -435,106 +447,96 @@
             } catch (e) {}
         }
 
-        // ---- BINGE MODE ----
-        function updateBingeButtonUI() {
-            const btn = document.getElementById('binge-toggle-btn');
-            if (!btn) return;
-            if (bingeMode) {
-                btn.textContent = '🔁 BINGE: ON';
-                btn.classList.add('binge-on');
-            } else {
-                btn.textContent = '🔁 BINGE: OFF';
-                btn.classList.remove('binge-on');
-            }
+        // ---- BINGE AUTO-ADVANCE (always on for TV) ----
+        function clearBingeTimers() {
+            if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
+            if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
+            hideBingeOverlay();
         }
 
-        function clearBingeTimer() {
-            if (bingeTimer) {
-                clearTimeout(bingeTimer);
-                bingeTimer = null;
-            }
+        function hideBingeOverlay() {
+            const el = document.getElementById('binge-countdown-overlay');
+            if (el) el.classList.add('hidden');
         }
 
-        function toggleBingeMode() {
-            bingeMode = !bingeMode;
-            localStorage.setItem('zonhd_binge', bingeMode ? 'true' : 'false');
-            updateBingeButtonUI();
-
-            const nextBtn = document.getElementById('next-episode-btn');
-            const isPlayerOpen = document.getElementById('player-overlay').style.display === 'block';
-
-            if (nextBtn) {
-                if (bingeMode && currentMedia.type === 'tv' && isPlayerOpen) {
-                    nextBtn.classList.remove('hidden');
-                } else {
-                    nextBtn.classList.add('hidden');
-                }
-            }
-
-            if (bingeMode && currentMedia.type === 'tv' && isPlayerOpen) {
-                scheduleBingeAdvance();
-            } else {
-                clearBingeTimer();
-            }
-        }
-
-        async function scheduleBingeAdvance() {
-            clearBingeTimer();
-            if (!bingeMode || currentMedia.type !== 'tv') return;
-
-            let runtime = 25; // default 25 min if unknown
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}/episode/${currentMedia.e}?api_key=${API_KEY}`);
-                const data = await res.json();
-                if (data && data.runtime && data.runtime > 0) runtime = data.runtime;
-            } catch (e) {}
-
-            // Add a small buffer for intros/credits
-            const ms = (runtime + 1) * 60 * 1000;
-            bingeTimer = setTimeout(() => {
-                if (bingeMode && currentMedia.type === 'tv') advanceToNextEpisode();
-            }, ms);
-        }
-
-        async function advanceToNextEpisode() {
-            if (!currentMedia || currentMedia.type !== 'tv') return;
-            clearBingeTimer();
+        async function getNextEpisodeInfo() {
+            if (!currentMedia || currentMedia.type !== 'tv') return null;
             try {
                 const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}?api_key=${API_KEY}`);
                 const seasonData = await seasonRes.json();
                 const episodes = (seasonData.episodes || []).filter(ep => ep.episode_number > 0);
                 const currentIdx = episodes.findIndex(ep => ep.episode_number === currentMedia.e);
 
-                let nextS = currentMedia.s;
-                let nextE = null;
-
                 if (currentIdx >= 0 && currentIdx < episodes.length - 1) {
-                    nextE = episodes[currentIdx + 1].episode_number;
-                } else {
-                    const showRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}?api_key=${API_KEY}`);
-                    const showData = await showRes.json();
-                    const validSeasons = (showData.seasons || []).filter(s => s.season_number > 0);
-                    const currentSeasonIdx = validSeasons.findIndex(s => s.season_number === currentMedia.s);
-                    if (currentSeasonIdx >= 0 && currentSeasonIdx < validSeasons.length - 1) {
-                        nextS = validSeasons[currentSeasonIdx + 1].season_number;
-                        nextE = 1;
-                    } else {
-                        // End of series — turn binge off
-                        bingeMode = false;
-                        localStorage.setItem('zonhd_binge', 'false');
-                        updateBingeButtonUI();
-                        const nextBtn = document.getElementById('next-episode-btn');
-                        if (nextBtn) nextBtn.classList.add('hidden');
-                        return;
-                    }
+                    return { s: currentMedia.s, e: episodes[currentIdx + 1].episode_number };
                 }
+                // Last episode of season — try next season
+                const showRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}?api_key=${API_KEY}`);
+                const showData = await showRes.json();
+                const validSeasons = (showData.seasons || []).filter(s => s.season_number > 0);
+                const currentSeasonIdx = validSeasons.findIndex(s => s.season_number === currentMedia.s);
+                if (currentSeasonIdx >= 0 && currentSeasonIdx < validSeasons.length - 1) {
+                    return { s: validSeasons[currentSeasonIdx + 1].season_number, e: 1 };
+                }
+                return null; // End of series
+            } catch (e) { return null; }
+        }
 
-                if (nextE !== null) {
-                    currentMedia.s = nextS;
-                    currentMedia.e = nextE;
-                    startLuxeStream();
+        async function scheduleBinge() {
+            clearBingeTimers();
+            if (!currentMedia || currentMedia.type !== 'tv') return;
+
+            let runtime = 25; // default 25 min
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}/episode/${currentMedia.e}?api_key=${API_KEY}`);
+                const data = await res.json();
+                if (data && data.runtime && data.runtime > 0) runtime = data.runtime;
+            } catch (e) {}
+
+            // Show the countdown ~30 seconds before runtime ends (credits window)
+            const ms = Math.max((runtime * 60 - 30) * 1000, 5000);
+            bingeStartTimer = setTimeout(() => showBingeCountdown(), ms);
+        }
+
+        async function showBingeCountdown() {
+            bingeStartTimer = null;
+            const next = await getNextEpisodeInfo();
+            if (!next) return; // End of series - don't show anything
+
+            bingeCountdownValue = 5;
+            const titleEl = document.getElementById('binge-next-title');
+            const numEl = document.getElementById('binge-countdown-number');
+            const overlay = document.getElementById('binge-countdown-overlay');
+
+            if (titleEl) titleEl.textContent = `S${next.s} E${next.e}`;
+            if (numEl) numEl.textContent = '5';
+            if (overlay) overlay.classList.remove('hidden');
+
+            bingeCountdownTimer = setInterval(() => {
+                bingeCountdownValue--;
+                if (numEl) numEl.textContent = String(bingeCountdownValue);
+                if (bingeCountdownValue <= 0) {
+                    clearInterval(bingeCountdownTimer);
+                    bingeCountdownTimer = null;
+                    hideBingeOverlay();
+                    advanceToNextEpisode();
                 }
-            } catch (e) { console.error('advanceToNextEpisode failed', e); }
+            }, 1000);
+        }
+
+        function cancelBingeCountdown() {
+            clearBingeTimers();
+            // Reschedule for the same episode so it doesn't immediately fire again
+            // (but don't nag — user chose to cancel)
+        }
+
+        async function advanceToNextEpisode() {
+            clearBingeTimers();
+            const next = await getNextEpisodeInfo();
+            if (!next) return;
+            currentMedia.s = next.s;
+            currentMedia.e = next.e;
+            startLuxeStream();
         }
 
         function getFavorites() {
@@ -944,21 +946,8 @@
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
 
-            // Reset any pending binge timer for the new episode
-            clearBingeTimer();
-
-            // Update binge controls visibility
-            const bingeBtn = document.getElementById('binge-toggle-btn');
-            const nextBtn = document.getElementById('next-episode-btn');
-            if (bingeBtn) {
-                if (type === 'movie') bingeBtn.classList.add('hidden');
-                else bingeBtn.classList.remove('hidden');
-            }
-            if (nextBtn) {
-                if (bingeMode && type === 'tv') nextBtn.classList.remove('hidden');
-                else nextBtn.classList.add('hidden');
-            }
-            updateBingeButtonUI();
+            // Reset any pending binge timers/overlay for the new episode
+            clearBingeTimers();
             
             // ---- PLAYER SOURCE: VIDSRC.TO ----
             const vidsrcUrl = (type === 'movie' 
@@ -978,9 +967,9 @@
                 } catch (err) { iframe.src = vidsrcUrl; }
             } else { iframe.src = vidsrcUrl; }
 
-            // Schedule auto-advance if binge is on
-            if (bingeMode && type === 'tv') {
-                scheduleBingeAdvance();
+            // Schedule the binge countdown for TV episodes
+            if (type === 'tv') {
+                scheduleBinge();
             }
 
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
@@ -1018,11 +1007,9 @@
         }
 
         function closePlayer() { 
-            clearBingeTimer();
+            clearBingeTimers();
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
-            const nextBtn = document.getElementById('next-episode-btn');
-            if (nextBtn) nextBtn.classList.add('hidden');
             document.getElementById('close-sel-btn').focus(); 
         }
         
@@ -1097,7 +1084,6 @@
 
         window.onload = () => { 
             setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
-            updateBingeButtonUI();
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
