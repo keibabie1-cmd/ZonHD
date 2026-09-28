@@ -3,836 +3,1219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZonHD Cinema Luxe</title>
+    <title>Fear+ | The Final Ritual</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Metal+Mania&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+
     <style>
-        :root { 
-            --gold: #D4AF37; 
-            --gold-light: #F3E5AB;
-            --red: #E50914; 
-            --burgundy: #58111A;
-            --crimson: #990000;
-            --black: #050505; 
-        }
-        
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
-        
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            pointer-events: none;
-            z-index: -1;
-            background: 
-                radial-gradient(circle at 10% 20%, rgba(153, 0, 0, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(88, 17, 26, 0.1) 0%, transparent 60%);
-            animation: luxeShimmer 12s infinite alternate ease-in-out;
-        }
-
-        @keyframes luxeShimmer {
-            0% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.03); }
-            100% { opacity: 0.8; transform: scale(1); }
-        }
-        
-        #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
-        .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
-        @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-
-        #side-menu { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            bottom: 0; 
-            width: 280px; 
-            background: rgba(5,5,5,0.98); 
-            backdrop-filter: blur(15px); 
-            border-right: 1px solid rgba(212, 175, 55, 0.3); 
-            z-index: 3000; 
-            transform: translateX(-100%); 
-            transition: 0.4s ease; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .menu-open { transform: translateX(0) !important; }
-
-        @media screen and (min-width: 900px) and (min-height: 500px) {
-            #side-menu {
-                zoom: 0.82;
-            }
-        }
-
-        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
-        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 30px rgba(229, 9, 20, 0.6), 0 0 10px rgba(212, 175, 55, 0.4); font-style: italic; }
-        
-        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
-        .movie-card:hover { transform: translateY(-4px); border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 10px 25px rgba(229, 9, 20, 0.25); }
-        
-        .focusable:focus {
-            outline: none;
-            border-color: var(--gold) !important;
-            transform: scale(1.08) translateY(-4px);
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.7), 0 10px 25px rgba(229, 9, 20, 0.4);
-            z-index: 50;
-        }
-
-        #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
-        
-        #details-backdrop { 
-            position: absolute; top: 0; width: 100%; height: 650px; opacity: 0.5; 
-            background-size: cover; background-position: center; pointer-events: none; 
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0));
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0));
-        }
-        
-        .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 13px; }
-        .tv-tag { background: rgba(153, 0, 0, 0.3); border: 1px solid rgba(229, 9, 20, 0.4); color: #ff6b6b; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
-        
-        .btn-play-red { background: linear-gradient(135deg, #E50914, #990000); color: white; font-weight: 700; padding: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(229, 9, 20, 0.4); transition: 0.3s; }
-        .btn-play-red:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(229, 9, 20, 0.6); }
-        
-        .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; border: 2px solid transparent; border-radius: 8px; transition: 0.2s; }
-        .episode-row:hover { background: rgba(212, 175, 55, 0.03); padding-left: 8px; padding-right: 8px; }
-        .ep-thumbnail { width: 130px; aspect-ratio: 16/9; background-size: cover; border-radius: 6px; flex-shrink: 0; position: relative; border: 1px solid rgba(255,255,255,0.1); }
-        .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: 0.2s; }
-        .episode-row:hover .ep-play-btn { background: rgba(229, 9, 20, 0.4); }
-
-        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
+        :root { --blood: #e50914; --void: #000; --ash: #1a1a1a; }
+        body { background: var(--void); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; touch-action: pan-y; zoom: 85%; }
+        .horror-font { font-family: 'Creepster', cursive; }
+        .nosifer { font-family: 'Nosifer', cursive; }
+        #loader { position: fixed; inset: 0; background: black; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.8s; }
+        .voodoo-container { width: 180px; height: 180px; border-radius: 50%; border: 3px solid var(--blood); overflow: hidden; box-shadow: 0 0 40px var(--blood); }
+        .medusa-heart { width: 100%; height: 100%; object-fit: cover; animation: thump 1s infinite; }
+        @keyframes thump { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.1); } }
+        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 300px; background: #000; border-right: 3px solid var(--blood); z-index: 4000; transform: translateX(-100%); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .menu-open { transform: translateX(0) !important; box-shadow: 20px 0 60px #000; }
+        .nav-active { border-bottom: 2px solid var(--blood); color: var(--blood) !important; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 2px solid transparent; background: #0a0a0a; position: relative; }
+        .focusable:focus { outline: none; border-color: #fff !important; transform: scale(1.08); box-shadow: 0 0 25px rgba(229, 9, 20, 0.8); z-index: 50; }
+        header { height: 45vh; background: linear-gradient(to bottom, transparent, var(--void)), url('IMG_8238.jpeg') no-repeat center top; background-size: cover; display: flex; align-items: flex-end; padding: 40px; }
+        .btn-play-blood { background: var(--blood); color: white; font-weight: 700; padding: 14px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; }
+        #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 9000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
-        
-        .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(4px); color: var(--gold); font-size: 8px; text-align: center; padding: 3px; font-weight: 900; letter-spacing: 1.5px; border-top: 1px solid rgba(212,175,55,0.2); }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .episode-row { display: flex; gap: 15px; padding: 12px; border-bottom: 1px solid #111; cursor: pointer; border: 2px solid transparent; border-radius: 8px; }
+        .ep-thumbnail { width: 120px; aspect-ratio: 16/9; background-size: cover; border-radius: 4px; flex-shrink: 0; background-color: #111; position: relative; }
+        .ep-play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: white; font-size: 1.2rem; }
+        .movie-info { position: absolute; bottom: 0; background: rgba(0,0,0,0.85); width: 100%; padding: 8px; font-size: 0.75rem; opacity: 0; transition: 0.3s; }
+        .movie-card:hover .movie-info { opacity: 1; }
+        .fade-in { animation: fadeIn 0.4s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
-        .luxe-search-container {
-            position: relative;
-            background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.98));
-            border: 1.5px solid rgba(212, 175, 55, 0.4);
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.15);
-            transition: all 0.3s ease;
-        }
-        .luxe-search-container:focus-within {
-            border-color: var(--gold);
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 25px rgba(212, 175, 55, 0.5);
-        }
-        .luxe-search-btn {
-            background: linear-gradient(135deg, #D4AF37, #AA7C11);
-            color: #050505;
-            font-weight: 900;
-            letter-spacing: 0.1em;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-            transition: all 0.3s ease;
-        }
-        .luxe-search-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
-        }
-
+        /* HEART FAVORITE BUTTON STYLING */
         .fav-heart-btn {
-            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+            background: rgba(20, 20, 20, 0.85);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
-        .fav-heart-btn:hover {
-            transform: scale(1.1);
+        .fav-heart-btn svg {
+            transition: fill 0.3s ease, stroke 0.3s ease, transform 0.3s ease;
+        }
+        .fav-heart-btn.is-fav {
+            border-color: var(--blood);
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.6);
         }
         .fav-heart-btn.is-fav svg {
-            fill: #E50914 !important;
-            stroke: #D4AF37 !important;
+            fill: var(--blood) !important;
+            stroke: var(--blood) !important;
+            transform: scale(1.15);
             filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8));
+        }
+
+        /* TARGETED FIRE TV/SMART TV ADJUSTMENT */
+        @media screen and (min-width: 1280px) {
+            body.is-tv {
+                transform: scale(0.94);
+                transform-origin: top center;
+                width: 106.38%;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="loader"><div class="loader-medusa"></div><p class="text-gold mt-6 tracking-[0.5em] font-bold uppercase">ZonHD Cinema</p></div>
-    <script>
-        // Failsafe: force-remove loader after 2s no matter what happens in the main script
-        setTimeout(function(){
-            var l = document.getElementById('loader');
-            if (l) { l.style.opacity = '0'; setTimeout(function(){ l.remove(); }, 500); }
-        }, 2000);
-    </script>
+
+    <div id="loader">
+        <div class="voodoo-container"><img src="IMG_8259.jpeg" class="medusa-heart"></div>
+        <h2 class="nosifer text-red-600 mt-6 text-xl">Entering the Ritual...</h2>
+    </div>
 
     <div id="side-menu" class="p-8 no-scrollbar overflow-y-auto">
-        <div class="flex-1">
-            <div class="flex justify-between items-center mb-4 border-b border-red-900 pb-2">
-                <h2 class="text-gold font-bold italic uppercase tracking-tighter">Luxe Vaults</h2>
-                <button onclick="toggleMenu()" class="focusable text-gold text-xl font-bold px-2">✕</button>
-            </div>
-            <div class="flex flex-col gap-4 mb-10 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('list', '8661848')">African American Vault</button>
-                <button class="focusable text-left py-2 hover:text-white" onclick="setFilter('network', '34')">Lifetime & LMN</button>
-            </div>
-
-            <h2 class="text-gold font-bold mb-8 italic border-b border-red-900 pb-2 uppercase tracking-tighter">Networks</h2>
-            <div id="nav-networks" class="flex flex-col gap-6 text-zinc-400 font-bold uppercase text-xs tracking-widest">
-                <button class="focusable text-left" onclick="setFilter('network', 213)">Netflix</button>
-                <button class="focusable text-left" onclick="setFilter('network', 453)">Hulu</button>
-                <button class="focusable text-left" onclick="setFilter('network', 2739)">Disney+</button>
-                <button class="focusable text-left" onclick="setFilter('network', 19)">Nickelodeon</button>
-                <button class="focusable text-left" onclick="setFilter('network', 243)">Boomerang</button>
-                <button class="focusable text-left" onclick="setFilter('network', 34)">Adult Swim</button>
-                <button class="focusable text-left" onclick="setFilter('network', 56)">Cartoon Network</button>
-                <button class="focusable text-left" onclick="setFilter('network', 77)">SyFy</button>
-            </div>
-        </div>
-
-        <div class="pt-6 border-t border-gold/30 mt-8">
-            <button id="btn-favorites" onclick="setFilter('favorites')" class="focusable w-full flex items-center justify-between text-left py-3 px-4 rounded-xl bg-red-950/40 border border-gold/40 text-gold font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all">
-                <span class="flex items-center gap-3">
-                    <svg class="w-4 h-4 fill-red-600 stroke-gold stroke-[1.5]" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    Favorites
-                </span>
-                <span id="fav-count-badge" class="text-[10px] bg-black/60 px-2 py-0.5 rounded-full border border-gold/30">0</span>
+        <h2 class="nosifer text-red-600 text-2xl mb-8">THE VAULTS</h2>
+        <div id="side-scroll-area" class="flex flex-col gap-2 horror-font text-xl pb-10 overflow-y-auto max-h-[70vh] no-scrollbar" style="scroll-behavior: smooth;">
+            <button class="focusable text-left py-3 border-b border-red-950 text-red-500 font-bold flex items-center justify-between" onclick="setFilter('favorites')">
+                <span>BLOOD FAVORITES</span>
+                <span>♥</span>
             </button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('list', '8661620')">STEPHEN KING</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('list', '8663550')">WES CRAVEN</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('after_dark')">AFTER DARK</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('black_horror')">BLACK HORROR</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('youth')">YOUTH HORROR</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('teen')">TEEN HORROR</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('japanese')">JAPANESE HORROR</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('k_horror')">K-HORROR</button>
+            <button class="focusable text-left py-3 border-b border-zinc-900" onclick="setFilter('african')">AFRICAN HORROR</button>
+            <button class="focusable text-left py-3 mt-10 text-zinc-600" onclick="toggleMenu()">CLOSE [X]</button>
         </div>
     </div>
 
     <div id="main-app-wrapper">
-        <header class="hero-banner"><h1 class="zonhd-logo">ZonHD</h1><p class="text-gold tracking-[0.8em] text-[10px] font-bold uppercase">Cinema Luxe</p></header>
+        <header><h1 class="nosifer text-red-600 text-6xl md:text-8xl">FEAR+</h1></header>
 
-        <div class="sticky top-0 z-[1000] bg-black/95 backdrop-blur-md border-b border-zinc-900 shadow-2xl">
-            <div class="flex items-center w-[95%] mx-auto gap-3 py-4">
-                <button id="menu-btn-mobile" onclick="toggleMenu()" class="focusable text-gold text-2xl bg-white/5 px-3 py-2 rounded-2xl border border-gold/20 flex items-center justify-center">☰</button>
-                <div class="luxe-search-container flex-1 flex items-center rounded-2xl px-5 py-2">
-                    <svg class="w-4 h-4 text-gold mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="search" id="search-input" 
-                           class="focusable w-full bg-transparent text-white placeholder-zinc-400 text-xs tracking-wider outline-none border-none py-1 font-medium" 
-                           placeholder="Search Master Library..." 
-                           enterkeyhint="search"
-                           oninput="handleSearchInput(event)"
-                           onsearch="triggerSearch()"
-                           onkeyup="handleSearch(event)">
-                </div>
-                <button onclick="triggerSearch()" class="focusable luxe-search-btn px-6 py-3 rounded-2xl text-[10px] uppercase">Search</button>
+        <div class="sticky top-0 z-[1000] bg-black/95 border-b border-zinc-900">
+            <div class="flex items-center w-[95%] mx-auto gap-4 py-4">
+                <button id="menu-btn" onclick="toggleMenu()" class="focusable text-red-600 text-3xl px-2">☰</button>
+                <input type="search" id="search-input" 
+                    class="focusable flex-1 bg-zinc-900 border border-zinc-800 rounded-lg py-3 px-6 text-white horror-font text-lg outline-none" 
+                    placeholder="Search the Graves..." 
+                    enterkeyhint="search"
+                    onsearch="triggerSearch()"
+                    onkeyup="handleSearch(event)">
+                <button id="search-action-btn" onclick="triggerSearch()" class="focusable bg-red-600 text-white font-bold px-6 py-3 rounded-lg horror-font text-lg tracking-wider whitespace-nowrap">SEARCH</button>
             </div>
-            <nav id="nav-main" class="flex p-4 gap-8 overflow-x-auto no-scrollbar items-center justify-start px-6 text-[10px] font-bold tracking-widest uppercase">
-                <button id="btn-trending" onclick="setFilter('trending')" class="focusable active-filter whitespace-nowrap">Trending</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('genre', 27)">Horror</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('genre', 28)">Action</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('genre', 53)">Thriller</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('drama')">Drama</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('romance')">Romance</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('comedy')">Comedy</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('crime')">Crime</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('genre', 10751)">Family</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('90s_nostalgia')">90s Nostalgia</button>
-                <button class="focusable whitespace-nowrap" onclick="setFilter('anime')">Anime</button>
-            </nav>
+            <div id="top-nav-container" class="relative w-full flex items-center">
+                <nav id="top-nav-menu" class="flex px-12 pb-2 gap-8 overflow-x-auto no-scrollbar horror-font text-lg tracking-widest uppercase w-full" style="scroll-behavior: smooth;">
+                    <button id="btn-trending" onclick="setFilter('trending_theaters')" class="focusable nav-active whitespace-nowrap">TRENDING</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('horror_movies')">HORROR FILMS</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('ghastly_series')">GHASTLY SERIES</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('cult_classic')">CULT CLASSIC</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('slasher')">SLASHER FILMS</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('psychological')">PSYCHOLOGICAL HORROR</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('black_magic')">BLACK MAGIC</button>
+                    <button class="focusable whitespace-nowrap" onclick="setFilter('unrated')">UNRATED</button>
+                </nav>
+            </div>
         </div>
 
-        <section id="continue-section" class="hidden px-4 pt-6">
-            <h3 class="text-gold font-bold uppercase tracking-widest text-xs mb-4">Continue Watching</h3>
-            <div id="continue-grid" class="flex gap-4 overflow-x-auto no-scrollbar pb-4"></div>
-        </section>
+        <div id="continue-watching-section" class="px-6 pt-6 hidden">
+            <h2 class="horror-font text-red-600 text-2xl mb-4 uppercase">Continue Ritual</h2>
+            <div id="continue-watching-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+        </div>
 
-        <main id="movie-grid" class="p-4 grid grid-cols-2 md:grid-cols-5 gap-4"></main>
+        <main id="movie-grid" class="p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></main>
+        <div id="sentinel" class="h-20"></div>
     </div>
 
-    <div id="selector-overlay" class="no-scrollbar">
-        <div id="details-backdrop"></div>
-        <div class="relative z-10 p-6 pt-10 max-w-4xl mx-auto">
-            <div class="flex items-center justify-between mb-6">
-                <button id="close-sel-btn" onclick="closeSelector()" class="focusable bg-black/50 p-2 rounded-full border border-white/10">
-                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                </button>
-                <button id="favorite-toggle-btn" onclick="toggleFavorite()" class="focusable fav-heart-btn bg-black/60 border border-gold/40 p-3 rounded-full flex items-center justify-center shadow-lg" title="Toggle Favorite">
-                    <svg id="fav-heart-icon" class="w-6 h-6 stroke-gold stroke-[2] fill-transparent transition-all" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="flex gap-5 mb-6 items-center">
-                <img id="details-poster" class="w-32 rounded-lg shadow-2xl flex-shrink-0 border border-gold/20">
-                <div class="flex flex-col justify-center flex-1 min-w-0">
-                    <div id="aliterate-title-container" class="mb-3 max-h-24 flex items-center">
-                        <img id="title-logo-img" class="max-h-20 w-auto object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.9)] hidden" alt="Title Logo">
-                        <h2 id="show-title" class="text-3xl font-extrabold tracking-tighter truncate"></h2>
+    <div id="selector-overlay" class="hidden fixed inset-0 bg-black z-[5000] overflow-y-auto no-scrollbar">
+        <div id="details-backdrop" class="absolute top-0 w-full h-[60vh] opacity-40 bg-cover bg-center"></div>
+        <div class="relative z-10 p-6 max-w-5xl mx-auto">
+            <button onclick="closeSelector()" class="focusable mb-8 bg-white/10 p-3 rounded-full border border-white/20">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="flex flex-col md:flex-row gap-8 mb-10">
+                <img id="details-poster" class="w-48 rounded-xl shadow-2xl border border-red-900/30">
+                <div class="flex flex-col justify-end flex-1">
+                    <h2 id="show-title" class="nosifer text-3xl md:text-5xl text-white mb-4 leading-tight"></h2>
+                    <div class="flex items-center gap-4 horror-font text-xl text-zinc-400">
+                        <span id="show-year"></span>
+                        <span class="border border-red-600 text-red-600 px-2 py-1 rounded">★ <span id="show-rating"></span></span>
+                        <span id="media-type-tag" class="text-zinc-500"></span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span id="show-year" class="text-zinc-400 text-sm font-bold"></span>
-                        <span id="show-rating" class="rating-badge"></span>
-                        <span id="media-type-tag" class="tv-tag">TV</span>
+                    <div class="flex items-center gap-4 mt-6">
+                        <button id="main-play-trigger" onclick="startLuxeStream()" class="focusable btn-play-blood horror-font text-2xl tracking-widest flex-1 max-w-[340px]">▶ COMMENCE</button>
+                        <button id="fav-toggle-btn" onclick="toggleCurrentFavorite()" class="focusable fav-heart-btn p-4 rounded-xl cursor-pointer" title="Add to Favorites">
+                            <svg id="fav-heart-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
-            <div id="movie-action-area" class="hidden"><button id="play-movie-btn" onclick="startLuxeStream()" class="focusable btn-play-red">▶ Play Now</button></div>
-            <div id="tv-action-area-top" class="hidden"><button id="main-tv-btn" onclick="playCurrentEpisode()" class="focusable btn-play-red">▶ Play S1 E1</button></div>
-            <p id="show-desc" class="text-zinc-300 text-sm leading-relaxed mb-8"></p>
-            <div id="tv-action-area" class="hidden">
-                <h3 class="text-lg font-bold mb-4 border-b border-zinc-800 pb-2">Episodes</h3>
-                
-                <div class="relative flex items-center mb-6">
-                    <button onclick="scrollSeasons(-1)" class="focusable absolute left-0 z-20 bg-black/80 text-gold border border-gold/30 hover:bg-gold hover:text-black p-2 rounded-full shadow-lg transition-all -ml-3 flex items-center justify-center w-9 h-9 font-bold text-lg">‹</button>
-                    <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth px-6 py-2 w-full"></div>
-                    <button onclick="scrollSeasons(1)" class="focusable absolute right-0 z-20 bg-black/80 text-gold border border-gold/30 hover:bg-gold hover:text-black p-2 rounded-full shadow-lg transition-all -mr-3 flex items-center justify-center w-9 h-9 font-bold text-lg">›</button>
+            <p id="show-desc" class="text-zinc-400 text-lg leading-relaxed mb-10 max-w-3xl"></p>
+            <div id="tv-controls" class="hidden">
+                <h3 class="horror-font text-red-600 text-2xl mb-4 uppercase">Epitaphs</h3>
+                <div id="season-controls-wrapper" class="relative w-full flex items-center mb-6">
+                    <button id="season-arrow-left" onclick="scrollSeasons(-200)" class="focusable hidden z-30 bg-black/90 text-red-600 font-bold px-3 py-2 border border-red-900/40 rounded-r-lg shadow-2xl flex-shrink-0">❮</button>
+                    <div id="season-buttons" class="flex gap-3 overflow-x-auto no-scrollbar w-full px-2" style="scroll-behavior: smooth;"></div>
+                    <button id="season-arrow-right" onclick="scrollSeasons(200)" class="focusable hidden z-30 bg-black/90 text-red-600 font-bold px-3 py-2 border border-red-900/40 rounded-l-lg shadow-2xl flex-shrink-0">❯</button>
                 </div>
-
-                <div id="episode-grid" class="flex flex-col"></div>
+                <div id="episode-grid" class="flex flex-col gap-2"></div>
             </div>
         </div>
     </div>
 
     <div id="player-overlay">
-        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[9001]">
+            <div class="horror-font text-red-600 bg-black/80 px-4 py-2 rounded border border-red-900 uppercase">Now Consuming</div>
+            <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-red-600 text-white px-6 py-2 rounded font-bold">✕ CEASE</button>
         </div>
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <script>
-        let API_KEY = '', activeType = 'trending', activeID = '', currentMedia = {};
-        let previousActiveType = 'trending', previousActiveID = '';
-        let currentPage = 1, isLoading = false, hasMore = true;
-        let savedScrollPosition = 0;
-        let trendingIdsCache = new Set();
+        const API_KEY = 'b9c746781e1e9b084c4cc4f0420156d4';
+        const HORROR_ID = 27;
+        let activeType = 'trending_theaters', activeID = '', currentMedia = {};
+        let currentPage = 1, isLoading = false;
+        let savedScrollPosition = 0, lastFocusedElement = null;
 
-        // Hardcoded fallback key — used if /api/config fails or returns no key
-        const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
-
-        // ---- 90s NOSTALGIA CURATED TITLES (hardwired list, ASCII-only) ----
-        const NOSTALGIA_90S_TITLES = [
-            // Nickelodeon / Nick Jr.
-            "As Told by Ginger", "Gullah Gullah Island", "CatDog", "All That",
-            "Kenan & Kel", "Doug", "Rocko's Modern Life", "Hey Arnold!",
-            "Rugrats", "The Wild Thornberrys", "The Angry Beavers",
-            "Clarissa Explains It All", "Are You Afraid of the Dark?",
-            "The Amanda Show", "Figure It Out", "KaBlam!", "Animorphs",
-            "Cousin Skeeter", "Get the Picture", "Legends of the Hidden Temple",
-            "Aaahh!!! Real Monsters", "Salute Your Shorts", "Nickelodeon Guts",
-            "100 Deeds for Eddie McDowd", "The Adventures of Pete & Pete",
-            "Allegra's Window", "Little Bill", "Roundhouse", "Rupert",
-            "What Would You Do?", "Wild & Crazy Kids", "The Journey of Allen Strange",
-            "Don't Look Under the Bed", "Under Wraps", "Halloweentown",
-            "The Secret World of Alex Mack", "Taina", "The Mystery Files of Shelby Woo",
-            "Teletubbies",
-
-            // Cartoon Network / Adult Swim originals
-            "The Powerpuff Girls", "Dexter's Laboratory", "Cow and Chicken",
-            "Johnny Bravo", "Ed, Edd n Eddy", "Courage the Cowardly Dog",
-            "Static Shock", "Space Ghost Coast to Coast", "The Moxy Show",
-            "Code Lyoko", "Justice League", "Green Lantern",
-
-            // Kids WB / Warner Bros. Animation
-            "Pinky and the Brain", "Animaniacs", "Batman: The Animated Series",
-            "Superman: The Animated Series", "The New Batman Adventures",
-            "Batman Beyond", "Batman: Mask of the Phantasm",
-            "Teenage Mutant Ninja Turtles", "X-Men: The Animated Series",
-            "Freakazoid!", "Tiny Toon Adventures", "Histeria!",
-            "The Sylvester & Tweety Mysteries",
-
-            // Classic cartoons
-            "Looney Tunes", "Tom and Jerry", "The Flintstones", "The Jetsons",
-            "Scooby-Doo, Where Are You!",
-
-            // Disney Channel / Disney Afternoon / DCOM
-            "The Famous Jett Jackson", "Adventures in Wonderland", "Out of the Box",
-            "Aladdin", "Pepper Ann", "So Weird", "Recess", "Beauty and the Beast",
-            "The Lion King", "Mulan", "Hocus Pocus", "The Mighty Ducks",
-            "Smart Guy", "Zenon: Girl of the 21st Century", "Brink!",
-            "Smart House", "Johnny Tsunami", "The Thirteenth Year", "Seventeen Again",
-            "Rodgers & Hammerstein's Cinderella", "James and the Giant Peach",
-            "A Troll in Central Park", "The Parent Trap", "101 Dalmatians",
-            "Pocahontas", "Thumbelina", "Happily Ever After",
-            "Crashbox", "Babar", "Franklin",
-
-            // Sitcoms / Teen shows
-            "Boy Meets World", "Sabrina the Teenage Witch", "Saved by the Bell",
-            "My So-Called Life", "The Fresh Prince of Bel-Air", "Family Matters",
-            "Full House", "Sister, Sister", "Moesha", "Martin",
-            "The Wayans Bros.", "The Steve Harvey Show", "The Jamie Foxx Show",
-            "Charmed", "90210", "In Living Color", "Mr. Bean",
-
-            // Talk / Reality / Daytime
-            "Maury", "The Jerry Springer Show", "Ricki Lake",
-            "The Rosie O'Donnell Show",
-
-            // Adult animation / Late night
-            "The Tick", "Beavis and Butt-Head", "The Ren & Stimpy Show",
-            "King of the Hill", "Duckman", "South Park", "The Maxx",
-            "Todd McFarlane's Spawn", "The Critic", "Aeon Flux", "Exosquad",
-            "Spicy City", "The Head",
-
-            // Sci-fi / Genre TV
-            "Mystery Science Theater 3000", "Star Trek: The Next Generation",
-            "The X-Files", "Power Rangers", "Mighty Morphin Power Rangers",
-            "The Simpsons", "Goosebumps",
-
-            // Anime / Toons classics
-            "Dragon Ball", "Dragon Ball Z", "Dragon Ball GT",
-            "Sailor Moon", "Mobile Suit Gundam Wing",
-            "Cowboy Bebop", "The Real Adventures of Jonny Quest",
-            "Tenchi Muyo!", "Outlaw Star", "The Big O",
-            "Cardcaptor Sakura", "Zoids",
-            "Yu Yu Hakusho: Ghost Files",
-            "Pokemon", "Pokemon Chronicles", "One Piece",
-
-            // Transformers / CGI / Kids action
-            "Beast Wars: Transformers", "ReBoot",
-
-            // Horror classics
-            "Scream", "Candyman", "Candyman: Farewell to the Flesh",
-
-            // Movies
-            "The Addams Family", "Home Alone", "Sister Act", "Batman Returns",
-            "Beethoven", "Sister Act 2: Back in the Habit", "Addams Family Values",
-            "Coneheads", "Cool Runnings", "Free Willy", "The Mask",
-            "The Craft", "Matilda", "The Faculty", "Space Jam",
-            "Austin Powers: International Man of Mystery",
-            "I Know What You Did Last Summer", "Toy Story", "The Matrix",
-            "Girl, Interrupted", "Cruel Intentions", "American Beauty",
-            "Jurassic Park", "Titanic", "Terminator 2: Judgment Day",
-            "House Party", "House Party 2", "Dr. Dolittle"
-        ];
-
-        // ---- ROBUST CONFIG LOADER ----
-        // Always ends up with a working API_KEY, no matter what /api/config returns.
-        async function fetchConfig() {
-            try {
-                const res = await fetch('/api/config');
-                if (!res.ok) throw new Error("config endpoint not ok");
-                const data = await res.json();
-                if (data && typeof data.tmdb_key === 'string' && data.tmdb_key.trim().length > 0) {
-                    API_KEY = data.tmdb_key.trim();
-                } else {
-                    API_KEY = FALLBACK_API_KEY;
-                }
-            } catch (err) {
-                API_KEY = FALLBACK_API_KEY;
-            }
-            // Safety net — if API_KEY is still falsy for any reason, use the fallback
-            if (!API_KEY) API_KEY = FALLBACK_API_KEY;
-
-            try { renderContinueWatching(); } catch (e) {}
-            try { updateFavBadge(); } catch (e) {}
-            try { await cacheTrendingIds(); } catch (e) {}
-            try { fetchContent(); } catch (e) { console.error("fetchContent failed:", e); }
-        }
-
-        async function cacheTrendingIds() {
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=1`);
-                const data = await res.json();
-                if (data.results) {
-                    data.results.forEach(item => trendingIdsCache.add(item.id));
-                }
-            } catch (e) {}
-        }
-
+        // FAVORITES STORAGE LOGIC
         function getFavorites() {
-            return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]');
+            try {
+                return JSON.parse(localStorage.getItem('fear_plus_favorites') || '[]');
+            } catch (e) {
+                return [];
+            }
         }
 
-        function updateFavBadge() {
+        function isFavorite(id) {
             const favs = getFavorites();
-            const badge = document.getElementById('fav-count-badge');
-            if (badge) badge.innerText = favs.length;
+            return favs.some(f => String(f.id) === String(id));
         }
 
-        function isCurrentFavorited() {
-            if (!currentMedia || !currentMedia.id) return false;
-            const favs = getFavorites();
-            return favs.some(item => String(item.id) === String(currentMedia.id));
-        }
-
-        function updateFavButtonUI() {
-            const btn = document.getElementById('favorite-toggle-btn');
-            const icon = document.getElementById('fav-heart-icon');
-            if (!btn || !icon) return;
-            if (isCurrentFavorited()) {
+        function updateFavoriteHeartUI() {
+            const btn = document.getElementById('fav-toggle-btn');
+            if (!btn || !currentMedia.id) return;
+            if (isFavorite(currentMedia.id)) {
                 btn.classList.add('is-fav');
-                icon.style.fill = '#E50914';
-                icon.style.stroke = '#D4AF37';
             } else {
                 btn.classList.remove('is-fav');
-                icon.style.fill = 'transparent';
-                icon.style.stroke = '#D4AF37';
             }
         }
 
-        function toggleFavorite() {
+        function toggleCurrentFavorite() {
             if (!currentMedia || !currentMedia.id) return;
             let favs = getFavorites();
-            const existingIndex = favs.findIndex(item => String(item.id) === String(currentMedia.id));
-            if (existingIndex >= 0) {
-                favs.splice(existingIndex, 1);
+            const existsIndex = favs.findIndex(f => String(f.id) === String(currentMedia.id));
+
+            if (existsIndex > -1) {
+                favs.splice(existsIndex, 1);
             } else {
                 favs.unshift({
                     id: currentMedia.id,
-                    type: currentMedia.type || 'movie',
-                    title: currentMedia.title || '',
-                    poster_path: currentMedia.poster || ''
+                    media_type: currentMedia.type,
+                    title: currentMedia.title,
+                    name: currentMedia.title,
+                    poster_path: currentMedia.poster,
+                    release_date: currentMedia.year || ''
                 });
             }
-            localStorage.setItem('zonhd_favorites', JSON.stringify(favs));
-            updateFavButtonUI();
-            updateFavBadge();
+            localStorage.setItem('fear_plus_favorites', JSON.stringify(favs));
+            updateFavoriteHeartUI();
             if (activeType === 'favorites') {
-                renderFavorites();
+                renderFavoritesGrid();
             }
         }
 
-        function renderFavorites() {
+        function renderFavoritesGrid() {
             const grid = document.getElementById('movie-grid');
             grid.innerHTML = '';
             const favs = getFavorites();
-            hasMore = false;
             if (favs.length === 0) {
-                grid.innerHTML = '<div class="col-span-2 md:col-span-5 text-center py-20 text-zinc-500 font-bold uppercase tracking-widest text-xs">No favorites added yet. Browse any title and tap the heart icon!</div>';
+                grid.innerHTML = `<div class="col-span-full py-20 text-center horror-font text-2xl text-zinc-500 uppercase tracking-wider">No Cursed Souls Favorited Yet...</div>`;
                 return;
             }
-            favs.forEach(m => {
+            renderGrid(favs);
+        }
+
+        // Initialize Continue Watching
+        function loadContinueWatching() {
+            const watched = JSON.parse(localStorage.getItem('fear_plus_continue') || 'null');
+            if (watched) {
+                const section = document.getElementById('continue-watching-section');
+                const grid = document.getElementById('continue-watching-grid');
+                section.classList.remove('hidden');
+                grid.innerHTML = '';
                 const card = document.createElement('div');
-                card.className = "movie-card focusable";
-                card.tabIndex = 0;
-                card.onclick = () => openDetails(m.id, m.type || 'movie');
-                const posterSrc = m.poster_path ? (m.poster_path.startsWith('http') ? m.poster_path : `https://image.tmdb.org/t/p/w500${m.poster_path}`) : 'IMG_8035.jpeg';
-                card.innerHTML = `<img src="${posterSrc}" class="w-full h-full object-cover">`;
+                card.className = "movie-card focusable fade-in"; card.tabIndex = 0;
+                card.onclick = () => { 
+                    currentMedia = watched; 
+                    startLuxeStream(); 
+                };
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${watched.poster}" class="w-full h-full object-cover"><div class="movie-info horror-font"><h3 class="text-red-600 font-bold truncate">${watched.title}</h3><p>Continue</p></div>`;
                 grid.appendChild(card);
+            }
+        }
+
+        function saveToContinue(media) {
+            localStorage.setItem('fear_plus_continue', JSON.stringify(media));
+            loadContinueWatching();
+        }
+
+        let unratedPage = 1, loadedUnratedIds = new Set();
+        let blackHorrorPage = 1, loadedBlackHorrorIds = new Set();
+        let youthHorrorPage = 1, loadedYouthHorrorIds = new Set();
+        let teenHorrorPage = 1, loadedTeenHorrorIds = new Set();
+        let blackMagicPage = 1, loadedBlackMagicIds = new Set();
+        let africanPage = 1, loadedAfricanIds = new Set();
+        let japanesePage = 1, loadedJapaneseIds = new Set();
+        let ghastlyPage = 1, loadedGhastlyIds = new Set();
+        let kHorrorPage = 1, loadedKHorrorIds = new Set();
+
+        const EXTREME_UNRATED_TITLES = [
+            "Terrifier", "Terrifier 2", "Terrifier 3", "All Hallows' Eve", "Seed", "Inside", "Martyrs", "Grotesque", 
+            "Rohtenburg", "High Tension", "Frontier(s)", "The Sadness", "Baskin", "Raw", "Bone Tomahawk", "The Green Inferno", 
+            "Cannibal Holocaust", "Cannibal Ferox", "Eaten Alive!", "Jungle Holocaust", "The Human Centipede", 
+            "The Human Centipede 2", "The Human Centipede 3", "A Serbian Film", "Salò, or the 120 Days of Sodom", 
+            "Nekromantik", "Nekromantik 2", "Schramm", "Der Todesking", "August Underground", "August Underground's Mordum", 
+            "August Underground's Penance", "Faces of Death", "Faces of Death II", "Faces of Death III", "Traces of Death", 
+            "Traces of Death II", "Traces of Death III", "Orozco the Embalmer", "Shocking Asia", "Africa Addio", "Mondo Cane", 
+            "Slaughtered Vomit Dolls", "ReGOREgitated Sacrifice", "Slow Torture Puke Chamber", "Black Metal Veins", 
+            "The Bunny Game", "Snuff 102", "Men Behind the Sun", "Men Behind the Sun 2", "Men Behind the Sun 3", 
+            "Philosophy of a Knife", "American Guinea Pig: Bouquet of Guts and Gore", "American Guinea Pig: Bloodshock", 
+            "American Guinea Pig: The Song of Solomon", "American Guinea Pig: Sacrifice", "Guinea Pig: Devil's Experiment", 
+            "Guinea Pig: Flower of Flesh and Blood", "Guinea Pig: He Never Dies", "Guinea Pig: Mermaid in a Manhole", 
+            "Guinea Pig: Android of Notre Dame", "Guinea Pig: Devil Woman Doctor", "Tumbling Doll of Flesh", "Naked Blood", 
+            "Splatter: Naked Blood", "Evil Dead Trap", "Evil Dead Trap 2", "Ichi the Killer", "Audition", "Visitor Q", "Imprint", 
+            "Tokyo Gore Police", "Meatball Machine", "The Machine Girl", "Dead Sushi", "Mutant Girls Squad", "Adam Chaplin", 
+            "Taeter City", "Hotel Inferno", "Atroz", "Thanatomorphose", "Contracted", "Contracted: Phase II", "The Poughkeepsie Tapes", 
+            "Megan Is Missing", "The Girl Next Door", "Snowtown", "The Golden Glove", "Angst", "Henry: Portrait of a Serial Killer", 
+            "Maniac", "The House That Jack Built", "Antichrist", "Irréversible", "Baise-moi", "Trouble Every Day", "Sombre", 
+            "Calvaire", "Vinyan", "Sheitan", "Mutants", "Macabre", "The Devil's Rejects", "House of 1000 Corpses", "31", 
+            "100 Tears", "Headless", "Gutterballs", "Hanger", "Porkchop", "The Gateway Meat", "Hate Crime", "Torched", 
+            "Carcinoma", "Voyage to Agatis", "Melancholie der Engel", "Cannibal", "Debris Documentar", "Scrapbook", 
+            "The Great American Snuff Film", "Fetus", "Where the Dead Go to Die", "When Black Birds Fly", "Subconscious Cruelty", 
+            "Aftermath", "Genesis", "The Strange Thing About the Johnsons", "Murder Set Pieces", "Chaos", "The Last House on the Left", 
+            "The Texas Chain Saw Massacre", "The Texas Chainsaw Massacre 2", "I Spit on Your Grave", "I Spit on Your Grave 2", 
+            "I Spit on Your Grave III", "Thriller: A Cruel Picture", "Ilsa: She Wolf of the SS", "Ilsa: Harem Keeper of the Oil Sheiks", 
+            "Blood Feast", "Two Thousand Maniacs!", "Color Me Blood Red", "The Wizard of Gore", "The Gore Gore Girls", "Bloodsucking Freaks", 
+            "Pieces", "The New York Ripper", "Anthropophagous", "Zombie Holocaust", "Make Them Die Slowly", "Cut and Run", 
+            "Night of the Zombies", "Burial Ground", "Absurd", "Beyond the Darkness", "Giallo in Venice", "The Beyond", 
+            "City of the Living Dead", "The House by the Cemetery", "Tenebrae", "Zombie Flesh Eaters", "Demons", "Demons 2", 
+            "Opera", "Deep Red", "Inferno", "The Bird with the Crystal Plumage", "A Blade in the Dark", "Torso", "StageFright", 
+            "The Wax Mask", "The Stendhal Syndrome", "Sleepless", "Trauma", "The Card Player", "Blood and Black Lace", 
+            "Hatchet", "Hatchet II", "Hatchet III", "Victor Crowley", "Laid to Rest", "Chromeskull: Laid to Rest 2", "The Orphan Killer", 
+            "Found", "Mask Maker", "The Town That Dreaded Sundown", "Slumber Party Massacre", "The Mutilator", "The Driller Killer", 
+            "Don't Go in the Woods", "The Burning", "My Bloody Valentine", "Maniac Cop", "Intruder", "The Prowler", "Blood Rage", 
+            "The Zero Boys", "Slaughter High", "Happy Birthday to Me", "Edge of the Axe", "Sleepaway Camp", "Sleepaway Camp II", 
+            "Sleepaway Camp III", "The Hills Have Eyes", "In My Skin", "Demonlover", "Excision", "Bite", "The Ruins", "Starry Eyes", 
+            "Cabin Fever", "The Descent", "Hostel", "Hostel: Part II"
+        ];
+
+        const JAPANESE_HORROR_TITLES = [
+            "Ju-on: The Grudge", "Ringu", "Dark Water", "Pulse", "Cure", "Noroi: The Curse", "Audition", 
+            "One Missed Call", "Ju-on: The Grudge 2", "Ringu 2", "Ringu 0: Birthday", "Sadako vs. Kayako",
+            "Ju-on: The Curse", "Ju-on: White Ghost", "Ju-on: Black Ghost", "Retribution", "Creepy", 
+            "Charisma", "Seance", "Doppelganger", "Occult", "A Record of Sweet Murder", "Cult", "Shirome",
+            "Ichi the Killer", "Gozu", "Visitor Q", "As the Gods Will", "Over Your Dead Body", "Lesson of the Evil",
+            "Suicide Club", "Noriko's Dinner Table", "Strange Circus", "Cold Fish", "Guilty of Romance", "Tag", 
+            "Exte: Hair Extensions", "Infection", "Premonition", "Reincarnation", "Howling Village", 
+            "Suicide Forest Village", "Ox-Head Village", "Marebito", "Uzumaki", "Tomie", "Tomie: Replay", 
+            "Tomie: Re-birth", "Tomie: Forbidden Fruit", "Battle Royale", "Confessions", "Liverleaf", 
+            "The Forest of Love", "Tokyo Gore Police", "Meatball Machine", "The Machine Girl", 
+            "Vampire Girl vs. Frankenstein Girl", "Mutant Girls Squad", "RoboGeisha", "Helldriver", "Dead Sushi", 
+            "Gothic & Lolita Psycho", "Grotesque", "Evil Dead Trap", "Evil Dead Trap 2", "Entrails of a Virgin", 
+            "Entrails of a Beautiful Woman", "Naked Blood", "Tetsuo: The Iron Man", "Tetsuo II: Body Hammer", 
+            "Tetsuo: The Bullet Man", "Hiruko the Goblin", "Kotoko", "Gemini", "Nightmare Detective", 
+            "Nightmare Detective 2", "Vital", "Wild Zero", "Versus", "Junk", "Bio Zombie", "Stacy", 
+            "Hellevator", "The Complex", "Kuime", "It Comes", "Sweet Home", "Matango", "Goke, Body Snatcher from Hell", 
+            "The Ghost of Yotsuya", "Jigoku", "A Page of Madness", "The Face of Another", "Woman in the Dunes", 
+            "Vampire Doll", "Lake of Dracula", "Evil of Dracula", "Kuroneko", "Onibaba", "Kwaidan", 
+            "Hausu", "Blind Beast", "Horrors of Malformed Men", "School of the Holy Beast", "Flower and Snake", 
+            "Flower and Snake 2", "Female Prisoner #701: Scorpion", "Female Convict Scorpion: Jailhouse 41", 
+            "Female Convict Scorpion: Beast Cell", "Lady Snowblood", "Lady Snowblood: Love Song of Vengeance", 
+            "Sex & Fury", "Hanzo the Razor", "Bohachi Bushido", "Inferno of Torture", "Orgies of Edo", 
+            "The Discarnates", "Living Skeleton", "Snake Girl and the Silver-Haired Demon", "St. John's Wort", 
+            "Another Heaven", "Isola: Multiple Personality Girl", "Pyrokinesis", "Parasite Eve", "The Inerasable", 
+            "Siren", "Kakashi", "Shikoku", "Eko Eko Azarak: Wizard of Darkness", "Eko Eko Azarak II", 
+            "Eko Eko Azarak III", "Eko Eko Azarak IV", "Death Tube", "The Booth", "The Slit-Mouthed Woman", 
+            "Carved: The Slit-Mouthed Woman", "Teketeke", "TekeTeke 2", "Hanako of the Toilet", "Kokkuri-san", 
+            "Gakko no Kaidan", "Haunted School", "Shibuya Kaidan", "Ju-Rei: The Uncanny", "Apartment 1303", 
+            "Ju-on: The Final Curse", "Sadako", "Sadako DX", "The Room", "Corpse Party", "Ao Oni", 
+            "Zombie Ass", "Rape Zombie: Lust of the Dead", "Bloody Muscle Body Builder in Hell", "Deadball", 
+            "Museum", "The Snow White Murder Case", "Monsterz", "Chronicle of My Mother", "Killers", 
+            "Real Onigokko", "Kisaragi Station", "Homunculus", "Haze", "Bullet Ballet", "Tokyo Fist", "Tetsuo"
+        ];
+
+        const K_HORROR_TITLES = [
+            "Train to Busan", "The Wailing", "A Tale of Two Sisters", "Gonjiam: Haunted Asylum", "I Saw the Devil", "Thirst", "The Host", "#Alive", "Peninsula", "The Call",
+            "Bedevilled", "R-Point", "Death Bell", "White: The Melody of the Curse", "Whispering Corridors", "Memento Mori", "Wishing Stairs", "Voice", "A Blood Pledge", "Mourning Grave",
+            "The Silenced", "Exhuma", "The Medium", "Sleep", "The Divine Fury", "Svaha: The Sixth Finger", "The Mimic", "Warning: Do Not Play", "0.0 MHz", "Guimoon: The Lightless Door",
+            "The Closet", "Metamorphosis", "The Wrath", "Monstrum", "Horror Stories", "Horror Stories II", "Horror Stories III", "Epitaph", "Acacia", "Cinderella",
+            "Hansel and Gretel", "The Red Shoes", "Loner", "Spider Forest", "Phone", "Bunshinsaba", "Dead Friend", "Yoga Hakwon", "Possessed", "Living Death",
+            "Nightmare", "The Ring Virus", "Into the Mirror", "Sorum", "Say Yes", "Uninvited", "The Doll Master", "Face", "Cello", "The Wig",
+            "Arang", "Muoi: The Legend of a Portrait", "Black House", "Evil Twin", "Blood and Ties", "Killer Toon", "The Piper", "Rampant", "The Odd Family: Zombie On Sale", "Seoul Station",
+            "Doomsday Book", "The Cursed: Dead Man's Prey", "The 8th Night", "Seire", "The Grotesque Mansion", "Urban Myths", "Ghost Mansion", "Midnight", "Blind", "Hide and Seek",
+            "The Cat", "Don't Click", "The Chosen: Forbidden Cave", "The Guest", "The Tunnel", "Black Light", "Neighbor Zombie", "Alien Zombie", "Zombie School", "Mad Sad Bad",
+            "The Flu", "Deranged", "Sector 7", "The Tower", "Pandemic", "Ashfall", "Tidal Wave", "Haeundae", "Chaw", "To Sir, With Love",
+            "Bloody Reunion", "Death Bell 2: Bloody Camp", "Ghost", "The Record", "The Cut", "A Record of Sweet Murder", "Bestseller", "Someone Behind You", "Shadows in the Palace", "The Guard Post",
+            "Kingdom: Ashin of the North", "Sweet Home", "Hellbound", "All of Us Are Dead", "Gyeongseong Creature", "Strangers from Hell", "The Bequeathed", "Monstrous", "The Cursed", "Search",
+            "Priest", "Hometown", "Dark Hole", "Save Me", "Coma", "Goedam", "Nightmare Teacher", "White Day: Broken Boundary", "The Labyrinth",
+            "Tomb of the River", "Seobok", "The Witch: Part 1. The Subversion", "The Witch: Part 2. The Other One", "The Chase", "Forgotten", "Memoir of a Murderer", "V.I.P.", "Bluebeard", "The Deal",
+            "The Truth Beneath", "Missing You", "Office", "The Treacherous", "Manhole", "The Phone", "Alice: Boy from Wonderland", "Fatal Intuition", "The Exclusive: Beat the Devil's Tattoo", "Dark Figure of Crime",
+            "Door Lock", "Deja Vu", "The Witness", "Marionette", "The Vanished", "Bargain", "The Anchor", "The Flinch", "The Devil's Deal"
+        ];
+
+        const HARD_WIRED_IMDB_IDS = [
+            "tt0071095","tt7544954","tt3743358","tt13365348","tt0160016","tt16997558",
+            "tt4798836","tt0120603","tt12298506","tt15475330","tt0193013","tt26453917",
+            "tt5184138","tt8520140","tt2274248","tt8110652","tt0103919","tt0165662",
+            "tt9347730","tt0119988","tt0285487","tt0090888","tt3104930","tt23648404",
+            "tt9331416","tt7631568","tt6803212","tt0074430","tt0119080","tt28088571",
+            "tt9088954","tt11057594","tt2583620","tt9813792","tt0068619","tt7475988",
+            "tt0338094","tt1695843","tt8508734","tt11668454","tt0372975","tt0449599",
+            "tt9567548","tt0130018","tt20859392","tt22496012","tt9742392","tt6131712",
+            "tt0209095","tt6905686","tt9472334","tt0365519","tt32916093","tt1289419",
+            "tt0475989","tt10931784","tt12308018","tt9289116","tt2011159","tt10954984",
+            "tt0361417","tt2579836","tt5505722","tt0265537","tt1395783","tt0238546",
+            "tt0183714","tt8656686","tt0427848","tt15726046","tt0397101","tt4411234",
+            "tt0499573","tt0033075","tt14961048","tt10638522","tt0114609","tt0277370",
+            "tt19896150","tt11703244","tt10772662","tt0112625","tt8559532","tt1449394",
+            "tt14074602","tt12921446","tt6133466","tt21905744","tt1457765","tt0264696",
+            "tt6722030","tt2221362","tt7928156","tt26569323","tt21365986","tt3862750",
+            "tt15507512","tt13358022","tt1678042","tt7320482","tt31022076","tt16437278",
+            "tt9064858","tt9873892","tt4991112","tt7671414","tt18394428","tt0100791",
+            "tt3859272","tt12545262","tt9177040","tt0285869","tt14191916","tt28239363",
+            "tt14349100","tt0188694","tt0415348","tt0428251","tt14921402","tt8417466",
+            "tt29275554","tt4287470","tt1389139","tt31314296","tt21821538","tt1342115",
+            "tt1112697","tt0099395","tt0074703","tt0114608","tt0196181","tt0430066",
+            "tt0089593","tt0119099","tt0078078","tt33049264","tt15146646","tt37543196",
+            "tt32560625","tt15532464","tt0220506","tt0070893","tt6535880","tt0133751",
+            "tt0462160","tt6133466","tt37521114","tt35684711","tt31777631","tt12776978",
+            "tt38090790","tt4065260","tt39094274"
+        ];
+
+        const UNIQUE_BLACK_IDS = [...new Set([
+            147, 20810, 2963, 16582, 134, 17259, 538, 78029, 521, 17697,
+            76748, 97169, 25619, 2372, 64235, 34503, 15313, 856, 16214,
+            68812, 586, 2178, 3497, 6807, 52039, 17522, 537, 13021, 1245,
+            8691, 1813, 714, 1264, 5049, 15860, 335, 5463, 36196, 65731,
+            15001, 10205, 9281, 56159, 1103, 77801, 16484, 4247, 12138,
+            12000, 9775, 1566, 438, 10750, 5921, 11109, 3547, 15090, 14344,
+            5443, 16307, 822, 6949, 10860, 291, 17838, 141251
+        ])];
+
+        const YOUTH_HORROR_TITLES = [
+            "Twitches", "Twitches Too", "Hocus Pocus", "Hocus Pocus 2", "The Addams Family", "Addams Family Values", "Wednesday",
+            "Scooby-Doo", "Scooby-Doo 2: Monsters Unleashed", "Scooby-Doo on Zombie Island", "Scooby-Doo! and the Witch's Ghost",
+            "Scooby-Doo and the Cyber Chase", "Scooby-Doo! and the Alien Invaders", "Goosebumps", "Goosebumps 2: Haunted Halloween",
+            "Goosebumps", "The Nightmare Room", "Halloweentown", "Halloweentown II: Kalabar's Revenge", "Halloweentown High",
+            "Return to Halloweentown", "Beetlejuice", "Beetlejuice Beetlejuice", "Courage the Cowardly Dog", "Are You Afraid of the Dark?",
+            "Monster House", "Little Shop of Horrors", "The Haunted Mansion", "Haunted Mansion", "Ghostbusters", "Ghostbusters II",
+            "Ghostbusters: Afterlife", "Ghostbusters: Frozen Empire", "Coraline", "The Witches", "The Nightmare Before Christmas",
+            "Corpse Bride", "Frankenweenie", "ParaNorman", "Casper", "Casper Meets Wendy", "Casper: A Spirited Beginning",
+            "Gremlins", "Gremlins 2: The New Batch", "E.T. the Extra-Terrestrial", "The Dark Crystal", "Labyrinth",
+            "The NeverEnding Story", "The Spiderwick Chronicles", "Spirited Away", "Hotel Transylvania", "Hotel Transylvania 2",
+            "Hotel Transylvania 3: Summer Vacation", "Hotel Transylvania: Transformania", "The House with a Clock in Its Walls",
+            "A Quiet Place", "A Quiet Place Part II", "A Quiet Place: Day One", "Monster High: The Movie", "Toy Story of Terror!",
+            "Scared Shrekless", "It's the Great Pumpkin, Charlie Brown", "Mom's Got a Date with a Vampire", "Phantom of the Megaplex",
+            "Don't Look Under the Bed", "Girl vs. Monster", "Invisible Sister", "Cry Baby Lane", "The Boy Who Cried Werewolf",
+            "Liar, Liar, Vampire", "R.L. Stine's The Haunting Hour", "Mostly Ghostly", "Mostly Ghostly: Have You Met My Ghoulfriend?",
+            "Mostly Ghostly: One Night in Doom House", "R.L. Stine's Cabinet of Souls", "Eerie, Indiana", "Gravity Falls",
+            "Over the Garden Wall", "The Owl House", "Invader Zim", "Danny Phantom", "Aaahh!!! Real Monsters",
+            "The Grim Adventures of Billy & Mandy", "Beetlejuice", "The Real Ghostbusters", "Extreme Ghostbusters",
+            "Casper the Friendly Ghost", "Scooby-Doo, Where Are You!", "What's New, Scooby-Doo?", "Scooby-Doo! Mystery Incorporated",
+            "A Pup Named Scooby-Doo", "Be Cool, Scooby-Doo!", "Shaggy & Scooby-Doo Get a Clue!", "Scooby-Doo and Guess Who?",
+            "The 13 Ghosts of Scooby-Doo", "Scooby's All-Star Laff-A-Lympics", "The New Scooby-Doo Movies", "Scooby-Doo Meets Batman",
+            "Scooby-Doo Meets the Boo Brothers", "Scooby-Doo and the Ghost School", "Scooby-Doo and the Reluctant Werewolf",
+            "Scooby-Doo! in Arabian Nights", "The Addams Family", "Addams Family Reunion", "Halloween Is Grinch Night",
+            "The Halloween Tree", "Something Wicked This Way Comes", "The Watcher in the Woods", "The Hole", "The Gate",
+            "The Monster Squad", "Return to Oz", "The Mummy", "The Mummy Returns", "The Mummy: Tomb of the Dragon Emperor",
+            "Jumanji", "Zathura: A Space Adventure", "Goosebumps", "Secrets of Sulphur Springs", "Locke & Key", "Just Beyond",
+            "Creeped Out", "Deadtime Stories", "Tales from the Cryptkeeper", "The Secret of Crickley Hall", "House of Anubis",
+            "So Weird", "Scaredy Camp", "My Babysitter's a Vampire", "The Vampire's Assistant", "The Little Vampire",
+            "Vampire Dog", "Best Friends Whenever", "Avalon High", "Wizards of Waverly Place", "Sabrina the Teenage Witch",
+            "Sabrina: The Animated Series", "Sabrina, Down Under", "Sabrina Goes to Rome", "Archie's Weird Mysteries",
+            "Martin Mystery", "Tales from the Darkside", "Bone Chillers", "Ghostwriter", "The Ghost and Molly McGee",
+            "Amphibia", "Kipo and the Age of Wonderbeasts", "Infinity Train", "Trollhunters: Tales of Arcadia",
+            "Star vs. the Forces of Evil", "The Secret of NIMH", "Willy Wonka & the Chocolate Factory", "Matilda",
+            "The BFG", "James and the Giant Peach", "City of Ember", "The Sorcerer's Apprentice", "Bedknobs and Broomsticks",
+            "Escape to Witch Mountain", "Blackbeard's Ghost", "Mr. Boogedy", "The Ghosts of Buxley Hall", "Child of Glass",
+            "The Canterville Ghost", "The Halloween That Almost Wasn't", "Mad Monster Party?", "Frankenweenie", "Vincent",
+            "The Legend of Sleepy Hollow", "The Paul Lynde Halloween Special", "Witch's Night Out", "The Worst Witch",
+            "Double, Double, Toil and Trouble", "A Simple Wish", "Under Wraps", "Can of Worms", "The Scream Team",
+            "Tower of Terror", "Smart House", "Stepsister from Planet Weird", "Up, Up, and Away!", "The Luck of the Irish",
+            "The Famous Jett Jackson", "Zenon: Girl of the 21st Century", "Zenon: The Zequel", "Zenon: Z3", "Now You See It...",
+            "Read It and Weep", "Minutemen", "Wendy Wu: Homecoming Warrior", "Cadet Kelly", "The Color of Friendship",
+            "Rip Girls", "Alvin and the Chipmunks Meet Frankenstein", "Alvin and the Chipmunks Meet the Wolfman",
+            "Mickey's House of Villains", "Pooh's Heffalump Halloween Movie", "The Black Cauldron", "Pete's Dragon",
+            "Harry Potter and the Sorcerer's Stone", "Harry Potter and the Chamber of Secrets", "Harry Potter and the Prisoner of Azkaban",
+            "Monster High: Ghouls Rule!", "Monster High: Frights, Camera, Action!", "Monster High: Haunted", "Monster High: Boo York, Boo York",
+            "Vampirina", "Super Monsters", "Kiki's Delivery Service", "Howl's Moving Castle", "My Neighbor Totoro",
+            "Ponyo", "Mary and the Witch's Flower", "The Willoughbys", "Nightbooks", "Ruby Gloom", "Mona the Vampire",
+            "Growing Up Creepie", "Toonsylvania", "The Secret Saturdays", "Camp Lakebottom", "Detentionaire",
+            "Monster Allergy", "School for Vampires", "Zombie Hotel", "Creepschool", "Igor", "Monster Family",
+            "Monster Family 2", "Gnome Alone", "The House of Magic", "Spookley the Square Pumpkin", "Dear Dracula",
+            "Daddy, I'm a Zombie", "Dixie and the Zombie Rebellion", "The Canterville Ghost", "The Boy Who Cried Werewolf",
+            "Monster Mutt", "My Mom's a Werewolf", "The Ghost Club", "Ghost Patrol", "Halloween High", "Ghost Trackers"
+        ];
+
+        const TEEN_HORROR_TITLES = [
+            "IT", "It Chapter Two", "Poltergeist", "Totem", "I Know What You Did Last Summer", "I Still Know What You Did Last Summer",
+            "I'll Always Know What You Did Last Summer", "Fear Street: 1994", "Fear Street: 1978", "Fear Street: 1666",
+            "Fear", "The Faculty", "Happy Death Day", "Happy Death Day 2U", "Totally Killer", "Jennifer's Body",
+            "Haunt", "The Midnight Man", "Scream", "Scream 2", "Scream 3", "Scream 4", "Scream", "Scream VI",
+            "Scream: The TV Series", "The Craft", "The Craft: Legacy", "Final Destination", "Final Destination 2",
+            "Final Destination 3", "The Final Destination", "Final Destination 5", "Chilling Adventures of Sabrina",
+            "Freaky", "Ginger Snaps", "Ginger Snaps 2: Unleashed", "Ginger Snaps Back: The Beginning",
+            "Scary Stories to Tell in the Dark", "Bodies Bodies Bodies", "Urban Legend", "Urban Legends: Final Cut",
+            "Urban Legends: Bloody Mary", "Carrie", "The Rage: Carrie 2", "Carrie", "Christine", "The Lost Boys",
+            "Lost Boys: The Tribe", "Lost Boys: The Thirst", "Fright Night", "Fright Night Part 2", "Fright Night",
+            "Fright Night 2: New Blood", "Buffy the Vampire Slayer", "The Cabin in the Woods", "Tucker and Dale vs. Evil",
+            "The Evil Dead", "Evil Dead II", "Army of Darkness", "Evil Dead", "Evil Dead Rise", "Ash vs Evil Dead",
+            "A Nightmare on Elm Street", "A Nightmare on Elm Street 2: Freddy's Revenge", "A Nightmare on Elm Street 3: Dream Warriors",
+            "A Nightmare on Elm Street 4: The Dream Master", "A Nightmare on Elm Street 5: The Dream Child",
+            "Freddy's Dead: The Final Nightmare", "Wes Craven's New Nightmare", "Freddy vs. Jason", "A Nightmare on Elm Street",
+            "Friday the 13th", "Friday the 13th Part 2", "Friday the 13th Part III", "Friday the 13th: The Final Chapter",
+            "Friday the 13th: A New Beginning", "Friday the 13th Part VI: Jason Lives", "Friday the 13th Part VII: The New Blood",
+            "Friday the 13th Part VIII: Jason Takes Manhattan", "Jason Goes to Hell: The Final Friday", "Jason X",
+            "Friday the 13th", "Halloween", "Halloween II", "Halloween III: Season of the Witch",
+            "Halloween 4: The Return of Michael Myers", "Halloween 5: The Revenge of Michael Myers",
+            "Halloween: The Curse of Michael Myers", "Halloween H20: 20 Years Later", "Halloween: Resurrection",
+            "Halloween", "Halloween II", "Halloween", "Halloween Kills", "Halloween Ends",
+            "The Texas Chain Saw Massacre", "The Texas Chainsaw Massacre 2", "Leatherface: Texas Chainsaw Massacre III",
+            "Texas Chainsaw Massacre: The Next Generation", "The Texas Chainsaw Massacre", "The Texas Chainsaw Massacre: The Beginning",
+            "Texas Chainsaw 3D", "Leatherface", "Texas Chainsaw Massacre", "Child's Play", "Child's Play 2",
+            "Child's Play 3", "Bride of Chucky", "Seed of Chucky", "Curse of Chucky", "Cult of Chucky",
+            "Child's Play", "Chucky", "Hellraiser", "Hellbound: Hellraiser II", "Hellraiser III: Hell on Earth",
+            "Hellraiser: Bloodline", "Hellraiser: Inferno", "Hellraiser: Hellseeker", "Hellraiser: Deader",
+            "Hellraiser: Hellworld", "Hellraiser: Revelations", "Hellraiser: Judgment", "Hellraiser", "Candyman",
+            "Candyman: Farewell to the Flesh", "Candyman: Day of the Dead", "Candyman", "The Ring", "The Ring Two",
+            "Rings", "The Grudge", "The Grudge 2", "The Grudge 3", "The Grudge", "Smile", "Talk to Me",
+            "Insidious", "Insidious: Chapter 2", "Insidious: Chapter 3", "Insidious: The Last Key", "Insidious: The Red Door",
+            "The Conjuring", "The Conjuring 2", "The Conjuring: The Devil Made Me Do It", "Annabelle", "Annabelle: Creation",
+            "Annabelle Comes Home", "The Nun", "The Nun II", "The Curse of La Llorona", "Sinister", "Sinister 2",
+            "The Purge", "The Purge: Anarchy", "The Purge: Election Year", "The First Purge", "The Forever Purge",
+            "The Purge", "It Follows", "Truth or Dare", "Unfriended", "Unfriended: Dark Web", "Ouija",
+            "Ouija: Origin of Evil", "The Boy", "Brahms: The Boy II", "Black Christmas", "Black Christmas",
+            "Black Christmas", "House of Wax", "My Bloody Valentine", "My Bloody Valentine 3D", "Prom Night",
+            "Prom Night", "Sorority Row", "The Slumber Party Massacre", "Slumber Party Massacre II", "Slumber Party Massacre III",
+            "Slumber Party Massacre", "Sleepaway Camp", "Sleepaway Camp II: Unhappy Campers", "Sleepaway Camp III: Teenage Wasteland",
+            "Return to Sleepaway Camp", "The Hills Have Eyes", "The Hills Have Eyes Part II", "The Hills Have Eyes",
+            "The Hills Have Eyes 2", "Wrong Turn", "Wrong Turn 2: Dead End", "Wrong Turn 3: Left for Dead",
+            "Wrong Turn 4: Bloody Beginnings", "Wrong Turn 5: Bloodlines", "Wrong Turn 6: Last Resort", "Wrong Turn",
+            "Saw", "Saw II", "Saw III", "Saw IV", "Saw V", "Saw VI", "Saw 3D", "Jigsaw", "Spiral: From the Book of Saw",
+            "Saw X", "Hostel", "Hostel: Part II", "Hostel: Part III", "The Strangers", "The Strangers: Prey at Night",
+            "The Strangers: Chapter 1", "Hush", "Don't Breathe", "Don't Breathe 2", "The Descent", "The Descent: Part 2",
+            "You're Next", "Ready or Not", "Escape Room", "Escape Room: Tournament of Champions", "Ma", "M3GAN",
+            "Five Nights at Freddy's", "The Black Phone", "Orphan", "Orphan: First Kill", "The Babysitter",
+            "The Babysitter: Killer Queen", "Sick", "Thanksgiving", "There's Someone Inside Your House",
+            "Vampires vs. the Bronx", "Assassination Nation", "Tragedy Girls", "The Final Girls", "All Cheerleaders Die",
+            "Detention", "Cooties", "Better Watch Out", "Bloody Birthday", "The Hole", "Cry Wolf", "Valentine",
+            "Cherry Falls", "Teaching Mrs. Tingle", "Disturbing Behavior", "Idle Hands", "The Skulls",
+            "I Am Not a Serial Killer", "Hell Fest", "Blood Fest", "Trick", "Monster Party", "Initiation", "The Dare",
+            "Student Body", "Seance", "Head Count", "Ruin Me", "Pledge", "The Row", "Witches in the Woods",
+            "Kristy", "The Belko Experiment", "Nerve", "Nighthawks", "Spontaneous", "Super Dark Times",
+            "Vicious Fun", "We Summon the Darkness", "Deadgirl", "Kristy", "Smiley Face Killers", "The Furies",
+            "The Gallows", "The Gallows Act II", "Friend Request", "Countdown", "Polaroid", "Wish Upon", "Viral",
+            "Slender Man", "Bye Bye Man", "Boogeyman", "Lights Out", "Oculus", "Apparition", "Mirrors",
+            "The Crazies", "Drag Me to Hell", "Thirteen Ghosts", "Ghost Ship", "Gothika", "The Reaping", "The Invasion",
+            "The Unborn", "April Fool's Day", "The Grudge 2", "My Soul to Take", "The Collector",
+            "The Collection", "See No Evil", "See No Evil 2", "The Forest", "The Lazarus Effect", "The 47 Meters Down",
+            "The 5th Wave", "The Quiet Ones", "The Possession", "The Pyramid", "As Above So Below", "The Vatican Tapes",
+            "The Visit", "Deliver Us from Evil",
+            "Paranormal Activity", "Paranormal Activity 2", "Paranormal Activity 3", "Paranormal Activity 4",
+            "Paranormal Activity: The Marked Ones", "Paranormal Activity: The Ghost Dimension", "Paranormal Activity: Next of Kin",
+            "The Ritual", "Hereditary", "Midsommar", "The Witch", "The Lighthouse", "X", "Pearl", "Infinity Pool",
+            "Barbarian", "Late Night with the Devil", "Fresh", "Watcher", "The Menu", "Significant Other", "The Invitation",
+            "Sissy", "Coming Home in the Dark", "Resurrection", "Speak No Evil"
+        ];
+
+        const GHASTLY_SERIES_TITLES = [
+            "American Horror Story", "The Haunting of Hill House", "The Haunting of Bly Manor", "Midnight Mass", "The Fall of the House of Usher",
+            "The Walking Dead", "Fear the Walking Dead", "The Walking Dead: Dead City", "The Walking Dead: Daryl Dixon", "The Walking Dead: The Ones Who Live",
+            "Stranger Things", "Supernatural", "The X-Files", "Twin Peaks", "Hannibal",
+            "Penny Dreadful", "Penny Dreadful: City of Angels", "True Blood", "The Vampire Diaries", "The Originals",
+            "Legacies", "Charmed", "Charmed", "Buffy the Vampire Slayer", "Angel",
+            "Grimm", "Fringe", "The Twilight Zone", "The Twilight Zone", "Tales from the Crypt",
+            "Masters of Horror", "Fear Itself", "Channel Zero", "Slasher", "American Horror Stories",
+            "Guillermo del Toro's Cabinet of Curiosities", "Lovecraft Country", "Love, Death & Robots", "Black Mirror", "Inside No. 9",
+            "The Outer Limits", "The Outer Limits", "Night Gallery", "Monsters", "Tales from the Darkside",
+            "Alfred Hitchcock Presents", "The Alfred Hitchcock Hour", "From", "Yellowjackets", "Evil",
+            "Servant", "The Stand", "The Stand", "Castle Rock", "The Outsider",
+            "Under the Dome", "11.22.63", "Chapelwaite", "Mr. Mercedes", "The Mist",
+            "Archive 81", "Brand New Cherry Flavor", "The Midnight Club", "The Purge", "Scream: The TV Series",
+            "Chucky", "Ash vs Evil Dead", "Stan Against Evil", "Todd and the Book of Pure Evil", "What We Do in the Shadows",
+            "Wellington Paranormal", "Preacher", "Outcast", "The Exorcist", "Damien",
+            "Rosemary's Baby", "Bates Motel", "The Strain", "Hemlock Grove", "Helix",
+            "Between", "The Returned", "Resurrection", "Les Revenants", "Glitch",
+            "The Feeding", "The Passage", "Midnight, Texas", "Dracula",
+            "Dracula", "Penny Dreadful", "Salem", "Sleepy Hollow", "Witches of East End",
+            "A Discovery of Witches", "Mayfair Witches", "Interview with the Vampire", "The Magicians", "The Order",
+            "The Midnight Room", "The Bastard Son & The Devil Himself", "Locke & Key", "The Sandman", "Constantine",
+            "Swamp Thing", "Doom Patrol", "Titans", "The Ghost Whisperer", "Medium",
+            "Medium", "Dead Like Me", "Pushing Daisies", "Reaper", "New Amsterdam",
+            "Forever", "iZombie", "In the Flesh", "Z Nation", "Black Summer",
+            "Daybreak", "All of Us Are Dead", "Kingdom", "Sweet Home", "The Rain",
+            "To the Lake", "Dark", "1899", "1899", "The Kettle",
+            "The Whispers", "The Event", "Flashforward", "Manifest", "The Leftovers",
+            "The 100", "The Society", "The Society", "Yellowjackets", "The Wilds",
+            "Cruel Summer", "Pretty Little Liars", "Pretty Little Liars: Original Sin", "Pretty Little Liars: Summer School", "Ravenswood",
+            "The Lying Game", "The Secret Circle", "The Nine Lives of Chloe King", "Teen Wolf", "Wolf Pack",
+            "Shadowhunters", "Bitten", "Lost Girl", "Being Human", "Being Human",
+            "The Tomorrow People", "The Messengers", "Star-Crossed", "Roswell", "Roswell, New Mexico",
+            "The strains", "The Terror",
+            "The Terror: Infamy", "The Alienist", "The Alienist: Angel of Darkness", "The Frankenstein Chronicles", "Taboo",
+            "Ripper Street", "Penny Dreadful", "Carnival Row", "American Gods", "Good Omens",
+            "The Dead Zone", "Haven", "Alcatraz", "Wayward Pines", "Persons Unknown",
+            "Harper's Island", "The River", "Siberia", "The Deep", "Surface",
+            "Invasion", "Threshold", "The Triangle", "The Lost Room", "The Langoliers"
+        ];
+
+        async function fetchWithRetry(url, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) return await res.json();
+                    if (res.status === 429) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); 
+                        continue;
+                    }
+                    break;
+                } catch(e) {
+                    if (i === retries - 1) return null;
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            return null;
+        }
+
+        const imdbCache = new Map();
+        async function fetchTMDBFromIMDb(imdbId) {
+            if (imdbCache.has(imdbId)) return imdbCache.get(imdbId);
+            try {
+                const data = await fetchWithRetry(`https://api.themoviedb.org/3/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id`);
+                if (data && data.movie_results && data.movie_results.length > 0) {
+                    const result = { id: data.movie_results[0].id, type: 'movie' };
+                    imdbCache.set(imdbId, result);
+                    return result;
+                } else if (data && data.tv_results && data.tv_results.length > 0) {
+                    const result = { id: data.tv_results[0].id, type: 'tv' };
+                    imdbCache.set(imdbId, result);
+                    return result;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        async function resolveItemsFromImdbList(imdbIds, idSet) {
+            const promises = imdbIds.map(async (imdbId) => {
+                const tmdb = await fetchTMDBFromIMDb(imdbId);
+                if (tmdb && !idSet.has(tmdb.id)) {
+                    try {
+                        const data = await fetchWithRetry(`https://api.themoviedb.org/3/${tmdb.type}/${tmdb.id}?api_key=${API_KEY}`);
+                        if (data && data.poster_path) {
+                            idSet.add(tmdb.id);
+                            return { ...data, media_type: tmdb.type, id: tmdb.id };
+                        }
+                    } catch (e) {}
+                }
+                return null;
             });
+            const items = await Promise.all(promises);
+            return items.filter(Boolean);
         }
 
         async function fetchContent(append = false) {
-            if (isLoading || !hasMore || !API_KEY) return;
+            if (isLoading) return;
+            if (activeType === 'favorites') return;
             isLoading = true;
+            const grid = document.getElementById('movie-grid');
+            
             if (!append) { 
                 currentPage = 1; 
-                hasMore = true; 
-                document.getElementById('movie-grid').innerHTML = ''; 
+                grid.innerHTML = ''; 
+                loadedBlackHorrorIds.clear();
+                blackHorrorPage = 1;
+                loadedUnratedIds.clear();
+                unratedPage = 1;
+                loadedYouthHorrorIds.clear();
+                youthHorrorPage = 1;
+                loadedTeenHorrorIds.clear();
+                teenHorrorPage = 1;
+                loadedBlackMagicIds.clear();
+                blackMagicPage = 1;
+                loadedAfricanIds.clear();
+                africanPage = 1;
+                loadedJapaneseIds.clear();
+                japanesePage = 1;
+                loadedGhastlyIds.clear();
+                ghastlyPage = 1;
+                loadedKHorrorIds.clear();
+                kHorrorPage = 1;
             }
+
+            let results = [];
             
-            if (activeType === 'favorites') {
-                renderFavorites();
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === 'anime') {
-                await fetchAniList(append);
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === '90s_nostalgia') {
-                await fetch90sNostalgia(append);
-                isLoading = false;
-                return;
-            }
-
             if (activeType === 'list') {
-                await fetchTmdbList(activeID, append);
+                const url = `https://api.themoviedb.org/3/list/${activeID}?api_key=${API_KEY}&page=${currentPage}`;
+                const data = await fetchWithRetry(url);
+                const listItems = data?.items || data?.results || [];
+                renderGrid(listItems);
+                currentPage++;
                 isLoading = false;
                 return;
-            }
-
-            if (['drama', 'romance', 'comedy', 'crime'].includes(activeType)) {
-                await fetchCuratedCategory(activeType, append);
-                isLoading = false;
-                return;
-            }
-
-            let url = `https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=${currentPage}`;
-            if (activeType === 'genre') url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${activeID}&page=${currentPage}`;
-            if (activeType === 'network') url = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_networks=${activeID}&page=${currentPage}`;
-            if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(activeID)}&page=${currentPage}`;
-
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                let results = data.results || [];
-                
-                if (activeType === 'search') {
-                    results = results.filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+            } else if (activeType === 'trending_theaters') {
+                const url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27&primary_release_date.gte=2024-01-01&with_release_type=2%7C3&sort_by=popularity.desc&page=${currentPage}`;
+                const data = await fetchWithRetry(url);
+                results = data?.results || [];
+            } else if (activeType === 'cult_classic') {
+                if (!append) {
+                    await fetchCultClassics();
                 }
+                isLoading = false; 
+                return;
+            } else if (activeType === 'slasher') {
+                const url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27&with_keywords=12339&sort_by=popularity.desc&page=${currentPage}`;
+                const data = await fetchWithRetry(url);
+                results = data?.results || [];
+            } else if (activeType === 'psychological') {
+                const url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27,53&sort_by=popularity.desc&page=${currentPage}`;
+                const data = await fetchWithRetry(url);
+                results = data?.results || [];
+            } else if (activeType === 'black_magic') {
+                if (!append) {
+                    results = await fetchBlackMagicInitial();
+                } else {
+                    results = await fetchBlackMagicMore(blackMagicPage);
+                }
+                if (results && results.length > 0) blackMagicPage++;
+            } else if (activeType === 'japanese') {
+                const itemsPerPage = 16;
+                const start = (japanesePage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = JAPANESE_HORROR_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(m => m.original_language === 'ja' && m.poster_path && m.genre_ids && !m.genre_ids.includes(16) && !m.genre_ids.includes(10749));
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(m => {
+                        if (m && !loadedJapaneseIds.has(m.id)) {
+                            unique.set(m.id, { ...m, media_type: 'movie' });
+                            loadedJapaneseIds.add(m.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    japanesePage++;
+                }
+            } else if (activeType === 'k_horror') {
+                const itemsPerPage = 16;
+                const start = (kHorrorPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = K_HORROR_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(m => m.poster_path && (m.media_type === 'movie' || m.media_type === 'tv'));
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(m => {
+                        if (m && !loadedKHorrorIds.has(m.id)) {
+                            unique.set(m.id, { ...m, media_type: m.media_type || (m.first_air_date ? 'tv' : 'movie') });
+                            loadedKHorrorIds.add(m.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    kHorrorPage++;
+                }
+            } else if (activeType === 'african') {
+                const africanExcludedGenres = "16,35,10749"; 
+                const africanKeywords = "3254|3365|11865|10466|15001";
+                const urls = [
+                    `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_origin_country=NG|GH&with_genres=27|53&without_genres=${africanExcludedGenres}&sort_by=popularity.desc&page=${africanPage}`,
+                    `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_origin_country=NG|GH&with_genres=10765&without_genres=${africanExcludedGenres}&sort_by=popularity.desc&page=${africanPage}`,
+                    `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_origin_country=NG|GH&with_keywords=${africanKeywords}&without_genres=${africanExcludedGenres}&sort_by=popularity.desc&page=${africanPage}`
+                ];
+                const responses = await Promise.all(urls.map(url => fetchWithRetry(url)));
+                let items = [];
+                responses[0]?.results && responses[0].results.forEach(m => { if (m.poster_path && !loadedAfricanIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+                responses[1]?.results && responses[1].results.forEach(t => { if (t.poster_path && !loadedAfricanIds.has(t.id)) items.push({...t, media_type:'tv'}); });
+                responses[2]?.results && responses[2].results.forEach(m => { if (m.poster_path && !loadedAfricanIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+                
+                let unique = new Map();
+                items.forEach(item => { if (!unique.has(item.id)) { unique.set(item.id, item); loadedAfricanIds.add(item.id); } });
+                results = Array.from(unique.values());
+                
+                if (results.length > 0 || (responses[0]?.total_pages > africanPage || responses[1]?.total_pages > africanPage || responses[2]?.total_pages > africanPage)) {
+                    africanPage++;
+                }
+            } else if (activeType === 'black_horror') {
+                if (!append) {
+                    const hardwiredItems = await resolveItemsFromImdbList(HARD_WIRED_IMDB_IDS, loadedBlackHorrorIds);
+                    results = hardwiredItems;
+                } else {
+                    const actorIdsParam = UNIQUE_BLACK_IDS.join('|');
+                    const urls = [
+                        `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27&with_people=${actorIdsParam}&with_keywords=233306|209825&sort_by=popularity.desc&page=${blackHorrorPage}`,
+                        `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=10765&with_people=${actorIdsParam}&with_keywords=233306|209825&sort_by=popularity.desc&page=${blackHorrorPage}`,
+                        `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27&with_keywords=233306&sort_by=popularity.desc&page=${blackHorrorPage}`,
+                        `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=27&with_keywords=209825&sort_by=popularity.desc&page=${blackHorrorPage}`,
+                    ];
+                    const responses = await Promise.all(urls.map(url => fetchWithRetry(url)));
+                    let items = [];
+                    responses[0]?.results && responses[0].results.forEach(m => { if (m.poster_path && !loadedBlackHorrorIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+                    responses[1]?.results && responses[1].results.forEach(t => { if (t.poster_path && !loadedBlackHorrorIds.has(t.id)) items.push({...t, media_type:'tv'}); });
+                    responses[2]?.results && responses[2].results.forEach(m => { if (m.poster_path && !loadedBlackHorrorIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+                    responses[3]?.results && responses[3].results.forEach(m => { if (m.poster_path && !loadedBlackHorrorIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+                    let unique = new Map();
+                    items.forEach(item => { if (!unique.has(item.id)) { unique.set(item.id, item); loadedBlackHorrorIds.add(item.id); } });
+                    results = Array.from(unique.values());
+                    blackHorrorPage++;
+                }
+            } else if (activeType === 'youth') {
+                const itemsPerPage = 16;
+                const start = (youthHorrorPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = YOUTH_HORROR_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(m => m.poster_path && (m.media_type === 'movie' || m.media_type === 'tv'));
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(m => {
+                        if (m && !loadedYouthHorrorIds.has(m.id)) {
+                            unique.set(m.id, { ...m, media_type: m.media_type || (m.first_air_date ? 'tv' : 'movie') });
+                            loadedYouthHorrorIds.add(m.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    youthHorrorPage++;
+                }
+            } else if (activeType === 'teen') {
+                const itemsPerPage = 16;
+                const start = (teenHorrorPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = TEEN_HORROR_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(m => {
+                                    if (!m.poster_path) return false;
+                                    if (m.media_type !== 'movie' && m.media_type !== 'tv') return false;
+                                    if (m.genre_ids && m.genre_ids.includes(16)) return false;
+                                    if (title === "Totem") {
+                                        return (m.release_date || "").startsWith("2017");
+                                    }
+                                    if (title === "Bodies Bodies Bodies") {
+                                        return (m.release_date || "").startsWith("2022");
+                                    }
+                                    if (title === "The Midnight Man") {
+                                        return (m.release_date || "").startsWith("2016");
+                                    }
+                                    return true;
+                                });
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(m => {
+                        if (m && !loadedTeenHorrorIds.has(m.id)) {
+                            unique.set(m.id, { ...m, media_type: m.media_type || (m.first_air_date ? 'tv' : 'movie') });
+                            loadedTeenHorrorIds.add(m.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    teenHorrorPage++;
+                }
+            } else if (activeType === 'ghastly_series') {
+                const itemsPerPage = 16;
+                const start = (ghastlyPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = GHASTLY_SERIES_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(t => t.poster_path && t.original_language === 'en');
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(t => {
+                        if (t && !loadedGhastlyIds.has(t.id)) {
+                            unique.set(t.id, { ...t, media_type: 'tv' });
+                            loadedGhastlyIds.add(t.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    ghastlyPage++;
+                }
+            } else if (activeType === 'after_dark') {
+                await fetchAfterDark();
+                isLoading = false; return;
+            } else if (activeType === 'unrated') {
+                const itemsPerPage = 16;
+                const start = (unratedPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageTitles = EXTREME_UNRATED_TITLES.slice(start, end);
+                
+                if (pageTitles.length > 0) {
+                    const searchPromises = pageTitles.map(title => 
+                        fetchWithRetry(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                        .then(data => {
+                            if (data && data.results) {
+                                return data.results.find(m => m.poster_path && m.genre_ids && !m.genre_ids.includes(16) && !m.genre_ids.includes(35) && !m.genre_ids.includes(10749));
+                            }
+                            return null;
+                        })
+                    );
+                    const fetchedResults = await Promise.all(searchPromises);
+                    let unique = new Map();
+                    fetchedResults.forEach(m => {
+                        if (m && !loadedUnratedIds.has(m.id)) {
+                            unique.set(m.id, { ...m, media_type: 'movie' });
+                            loadedUnratedIds.add(m.id);
+                        }
+                    });
+                    results = Array.from(unique.values());
+                    unratedPage++;
+                }
+            } else {
+                let url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${HORROR_ID}&page=${currentPage}`;
+                if (activeType === 'search') url = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${activeID}&page=${currentPage}`;
+                const data = await fetchWithRetry(url);
+                results = data?.results || [];
+                currentPage++;
+            }
 
-                if (results.length > 0) {
-                    renderGrid(results);
-                    currentPage++;
-                    hasMore = currentPage <= (data.total_pages || 1);
-                } else { hasMore = false; }
-            } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+            renderGrid(results);
+            if (!['black_magic', 'african', 'japanese', 'unrated', 'youth', 'teen', 'ghastly_series', 'k_horror'].includes(activeType)) currentPage++;
+            isLoading = false;
         }
 
-        // ---- 90s Nostalgia fetch (hardwired list, prefers 1990-1999 matches) ----
-        async function fetch90sNostalgia(append) {
-            const itemsPerPage = 20;
-            const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            const pageTitles = NOSTALGIA_90S_TITLES.slice(start, end);
-
-            if (pageTitles.length === 0) {
-                hasMore = false;
-                return;
-            }
-
-            const searchPromises = pageTitles.map(title =>
-                fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data && data.results) {
-                            const nineties = data.results.find(m => {
-                                if (m.media_type !== 'tv' && m.media_type !== 'movie') return false;
-                                if (!m.poster_path) return false;
-                                const yearStr = ((m.release_date || m.first_air_date) || '').split('-')[0];
-                                const year = parseInt(yearStr, 10);
-                                return year >= 1990 && year <= 1999;
-                            });
-                            if (nineties) return nineties;
-                            return data.results.find(m =>
-                                (m.media_type === 'tv' || m.media_type === 'movie') && m.poster_path
-                            ) || null;
-                        }
-                        return null;
-                    })
-                    .catch(() => null)
+        async function fetchBlackMagicInitial() {
+            const queries = [
+                "The Haunting of", "The Possession of", "The Exorcism of",
+                "David Blaine", "Criss Angel", "Ouija", "The Conjuring"
+            ];
+            const forbiddenGenres = [16, 35, 18, 10749, 9648, 53, 14];
+            let promises = queries.map(q => 
+                fetchWithRetry(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(q)}`)
             );
-
-            const fetchedResults = await Promise.all(searchPromises);
+            const responses = await Promise.all(promises);
+            let items = [];
+            
+            responses.forEach(data => {
+                if (data && data.results) {
+                    data.results.forEach(item => {
+                        if (item.genre_ids && item.genre_ids.some(g => forbiddenGenres.includes(g))) return;
+                        if (item.media_type === 'person') return;
+                        if (item.poster_path) items.push({...item, media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie')});
+                    });
+                }
+            });
+            
             let unique = new Map();
-            fetchedResults.forEach(m => {
-                if (m && !unique.has(m.id)) {
-                    unique.set(m.id, { ...m, media_type: m.media_type || (m.first_air_date ? 'tv' : 'movie') });
+            items.forEach(item => { if (!unique.has(item.id)) { unique.set(item.id, item); loadedBlackMagicIds.add(item.id); } });
+            return Array.from(unique.values());
+        }
+
+        async function fetchBlackMagicMore(page) {
+            const excludedGenres = "16,35,18,10749,9648,53,14";
+            const magicKeywords = "11865|3254|3365|6152|10466"; 
+            
+            const urls = [
+                `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&without_genres=${excludedGenres}&with_keywords=${magicKeywords}&sort_by=popularity.desc&page=${page}`,
+                `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&without_genres=${excludedGenres}&with_keywords=${magicKeywords}&sort_by=popularity.desc&page=${page}`
+            ];
+            
+            const responses = await Promise.all(urls.map(url => fetchWithRetry(url)));
+            let items = [];
+            responses[0]?.results && responses[0].results.forEach(m => { if (m.poster_path && !loadedBlackMagicIds.has(m.id)) items.push({...m, media_type:'movie'}); });
+            responses[1]?.results && responses[1].results.forEach(t => { if (t.poster_path && !loadedBlackMagicIds.has(t.id)) items.push({...t, media_type:'tv'}); });
+            
+            let unique = new Map();
+            items.forEach(item => { if (!unique.has(item.id)) { unique.set(item.id, item); loadedBlackMagicIds.add(item.id); } });
+            return Array.from(unique.values());
+        }
+
+        async function fetchAfterDark() {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            const darkTitles = [
+                // Horrorfest 2006 (Series 1)
+                "The Abandoned", "Dark Ride", "The Gravedancers", "The Hamiltons", "Penny Dreadful", "Reincarnation", "Snoop Dogg's Hood of Horror", "Unrest", "Wicked Little Things",
+                // Horrorfest II (2007)
+                "Borderland", "Crazy Eights", "The Deaths of Ian Stone", "Frontier(s)", "Lake Dead", "Mulberry Street", "Nightmare Man", "Tooth & Nail", "Unearthed",
+                // Horrorfest III (2008/2009)
+                "Autopsy", "The Broken", "The Butterfly Effect 3: Revelations", "Dying Breed", "From Within", "Perkins' 14", "Slaughter", "Voices",
+                // Horrorfest 4 (2010)
+                "Dread", "The Final", "The Graves", "Hidden", "Kill Theory", "Lake Mungo", "The Reeds", "Zombies of Mass Destruction",
+                // 8 Films to Die For (2015 Revival)
+                "Murder in the Dark", "Wind Walkers", "Suspension", "Unnatural", "The Wicked Within", "Re-Kill", "Lumberjack Man", "Bastard",
+                // Additional requested item
+                "Mum & Dad"
+            ];
+            const searchPromises = darkTitles.map(title => 
+                fetchWithRetry(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                .then(data => {
+                    if (data && data.results) {
+                        return data.results.find(m => {
+                            if (!m.poster_path) return false;
+                            if (title === "Reincarnation") {
+                                return (m.release_date || "").startsWith("2006");
+                            }
+                            if (title === "Bastard") {
+                                return (m.release_date || "").startsWith("2015");
+                            }
+                            if (title === "Nightmare Man") {
+                                return (m.release_date || "").startsWith("2006");
+                            }
+                            if (title === "Voices") {
+                                return (m.release_date || "").startsWith("2007");
+                            }
+                            if (title === "Hidden") {
+                                return (m.release_date || "").startsWith("2009");
+                            }
+                            if (title === "Dread") {
+                                return (m.release_date || "").startsWith("2009");
+                            }
+                            if (title === "The Final") {
+                                return (m.release_date || "").startsWith("2010");
+                            }
+                            if (title === "Mum & Dad") {
+                                return (m.release_date || "").startsWith("2008");
+                            }
+                            return true;
+                        }) || data.results[0];
+                    }
+                    return null;
+                })
+            );
+            const results = await Promise.all(searchPromises);
+            
+            let unique = new Map();
+            results.forEach(m => {
+                if (m && m.poster_path && !unique.has(m.id)) {
+                    unique.set(m.id, m);
                 }
             });
 
-            const results = Array.from(unique.values());
-            if (results.length > 0) {
-                renderGrid(results);
-                currentPage++;
-                hasMore = currentPage <= Math.ceil(NOSTALGIA_90S_TITLES.length / itemsPerPage);
-            } else {
-                hasMore = false;
-            }
+            renderGrid(Array.from(unique.values()));
         }
 
-        async function fetchTmdbList(listId, append) {
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/list/${listId}?api_key=${API_KEY}&page=${currentPage}`);
-                const data = await res.json();
-                if (data.items && data.items.length > 0) {
-                    renderGrid(data.items);
-                    currentPage++;
-                    hasMore = currentPage <= data.total_pages;
-                } else { hasMore = false; }
-            } catch (e) { hasMore = false; }
-        }
-
-        async function fetchCuratedCategory(category, append) {
-            let genreMap = { drama: 18, romance: 10749, comedy: 35, crime: 80 };
-            let gId = genreMap[category];
-            let results = [];
-            let targetCount = 20, fetches = 0;
+        async function fetchCultClassics() {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            const classicTitles = [
+                "Halloween", "A Nightmare on Elm Street", "Friday the 13th", "Candyman", "Carrie", 
+                "Final Destination", "Get Out", "Misery", "Scream", "The Texas Chain Saw Massacre", 
+                "Child's Play", "The Exorcist", "The Shining", "The Thing", "Poltergeist", 
+                "Hellraiser", "The Evil Dead", "Rosemary's Baby", "The Amityville Horror", 
+                "The Omen", "Night of the Living Dead", "Saw", "The Ring", "The Blair Witch Project", 
+                "Psycho", "The Silence of the Lambs", "An American Werewolf in London", "Sleepaway Camp", 
+                "My Bloody Valentine", "The Descent", "28 Days Later", "The Cabin in the Woods", 
+                "Dawn of the Dead", "Day of the Dead", "Evil Dead II", "Army of Darkness", 
+                "Pet Sematary", "Christine", "The Fly", "Phantasm", "The Return of the Living Dead", 
+                "Re-Animator", "Suspiria", "The Wicker Man"
+            ];
             
-            while (results.length < targetCount && currentPage <= 50 && fetches < 3) {
-                fetches++;
-                let urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
-                let urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
-                
-                if (category === 'crime') {
-                    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=80,9648&sort_by=popularity.desc&page=${currentPage}`;
+            const searchPromises = classicTitles.map(title => 
+                fetchWithRetry(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                .then(data => data && data.results ? data.results[0] : null)
+            );
+            
+            const results = await Promise.all(searchPromises);
+            
+            let unique = new Map();
+            results.forEach(m => {
+                if (m && m.poster_path && !unique.has(m.id)) {
+                    unique.set(m.id, m);
                 }
-
-                try {
-                    const [resM, resT] = await Promise.all([fetch(urlMovies), fetch(urlTv)]);
-                    const dataM = await resM.json();
-                    const dataT = await resT.json();
-                    
-                    let combined = [...(dataM.results || []), ...(dataT.results || [])];
-                    let filtered = combined.filter(item => {
-                        if (trendingIdsCache.has(item.id)) return false;
-                        let genres = item.genre_ids || [];
-                        if (genres.includes(16) || genres.includes(10762) || genres.includes(10751)) return false;
-                        if (!item.poster_path) return false;
-                        return true;
-                    });
-                    
-                    results.push(...filtered);
-                    currentPage++;
-                    if (!dataM.results && !dataT.results) { hasMore = false; break; }
-                } catch (e) { break; }
-            }
-
-            if (results.length > 0) {
-                renderGrid(results.slice(0, 20));
-            } else {
-                hasMore = false;
-            }
-        }
-
-        async function fetchAniList(append) {
-            const query = `query ($page: Int) { Page(page: $page, perPage: 20) { pageInfo { hasNextPage } media(type: ANIME, sort: TRENDING_DESC) { id title { english romaji native } coverImage { extraLarge } countryOfOrigin averageScore } } }`;
-            try {
-                const response = await fetch('https://graphql.anilist.co', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, variables: { page: currentPage } })
-                });
-                const json = await response.json();
-                const results = json.data.Page.media;
-                const grid = document.getElementById('movie-grid');
-                results.forEach(m => {
-                    const card = document.createElement('div');
-                    card.className = "movie-card focusable";
-                    card.tabIndex = 0;
-                    const searchTitle = m.title.english || m.title.romaji;
-                    card.onclick = () => openDetails(m.id, 'tv', true, searchTitle);
-                    card.innerHTML = `<img src="${m.coverImage.extraLarge}" class="w-full h-full object-cover"><div class="origin-badge">${m.countryOfOrigin || 'ANIME'}</div>`;
-                    grid.appendChild(card);
-                });
-                currentPage++;
-                hasMore = json.data.Page.pageInfo.hasNextPage;
-            } catch (err) { console.error("AniList Error", err); }
-        }
-
-        async function fetchAliterateLogo(id, type) {
-            const logoImg = document.getElementById('title-logo-img');
-            const titleText = document.getElementById('show-title');
-            logoImg.classList.add('hidden');
-            titleText.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}&include_image_language=en,null`);
-                const data = await res.json();
-                if (data.logos && data.logos.length > 0) {
-                    const logoPath = data.logos[0].file_path;
-                    logoImg.src = `https://image.tmdb.org/t/p/w500${logoPath}`;
-                    logoImg.onload = () => {
-                        logoImg.classList.remove('hidden');
-                        titleText.classList.add('hidden');
-                    };
-                }
-            } catch (e) {}
-        }
-
-        async function fetchAlternateBackdrop(id, type, fallbackBackdrop) {
-            const backdropEl = document.getElementById('details-backdrop');
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`);
-                const data = await res.json();
-                if (data.backdrops && data.backdrops.length > 1) {
-                    const altPath = data.backdrops[1].file_path || data.backdrops[0].file_path;
-                    backdropEl.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${altPath})`;
-                } else if (data.backdrops && data.backdrops.length === 1) {
-                    backdropEl.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrops[0].file_path})`;
-                } else {
-                    backdropEl.style.backgroundImage = fallbackBackdrop ? `url(https://image.tmdb.org/t/p/original${fallbackBackdrop})` : 'none';
-                }
-            } catch (e) {
-                backdropEl.style.backgroundImage = fallbackBackdrop ? `url(https://image.tmdb.org/t/p/original${fallbackBackdrop})` : 'none';
-            }
+            });
+            
+            renderGrid(Array.from(unique.values()));
         }
 
         function renderGrid(results) {
             const grid = document.getElementById('movie-grid');
+            if (!results) return;
             results.forEach(m => {
                 if (!m.poster_path) return;
                 const card = document.createElement('div');
-                card.className = "movie-card focusable";
-                card.tabIndex = 0;
-                card.onclick = () => openDetails(m.id, m.media_type || (m.first_air_date ? 'tv' : 'movie'));
-                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">`;
+                card.className = "movie-card focusable fade-in"; card.tabIndex = 0;
+                const type = m.media_type || (m.first_air_date ? 'tv' : 'movie');
+                card.onclick = () => openDetails(m.id, type);
+                card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover"><div class="movie-info horror-font"><h3 class="text-red-600 font-bold truncate">${m.title || m.name}</h3><p>${(m.release_date || m.first_air_date || '').split('-')[0]}</p></div>`;
                 grid.appendChild(card);
             });
         }
 
-        async function openDetails(id, type, isAniList = false, searchTitle = '') {
-            savedScrollPosition = window.scrollY;
-            let finalId = id;
-            if (isAniList) {
-                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchTitle)}`);
-                const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    finalId = searchData.results[0].id;
-                    type = searchData.results[0].media_type || 'tv';
-                }
+        async function openDetails(id, type) {
+            savedScrollPosition = window.scrollY || document.documentElement.scrollTop; 
+            lastFocusedElement = document.activeElement; 
+
+            const data = await fetchWithRetry(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}`);
+            if (!data) return;
+            
+            const images = await fetchWithRetry(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`);
+            let backdropUrl = `https://image.tmdb.org/t/p/original${data.backdrop_path}`;
+            if (images && images.backdrops && images.backdrops.length > 0) {
+                const bestImage = images.backdrops[1] || images.backdrops[0];
+                backdropUrl = `https://image.tmdb.org/t/p/original${bestImage.file_path}`;
             }
-            const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
-            const data = await res.json();
-            currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
             
+            const isAnime = data.original_language === 'ja' && data.genres && data.genres.some(g => g.name === 'Animation');
+
+            currentMedia = { 
+                id, 
+                type, 
+                s: 1, 
+                e: 1, 
+                title: data.name || data.title, 
+                poster: data.poster_path, 
+                isAnime,
+                year: (data.release_date || data.first_air_date || '').split('-')[0]
+            };
             document.getElementById('show-title').innerText = currentMedia.title;
-            fetchAliterateLogo(finalId, type);
-            fetchAlternateBackdrop(finalId, type, data.backdrop_path);
-
-            document.getElementById('show-desc').innerText = data.overview || "No description available.";
-            document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
-            document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
-            document.getElementById('details-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'IMG_8035.jpeg';
-            document.getElementById('media-type-tag').innerText = type.toUpperCase();
-            document.getElementById('movie-action-area').classList.toggle('hidden', type !== 'movie');
-            document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
-            document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
-            if (type === 'tv') renderSeasons(data);
+            document.getElementById('show-desc').innerText = data.overview || "";
+            document.getElementById('show-year').innerText = currentMedia.year;
+            document.getElementById('show-rating').innerText = data.vote_average ? data.vote_average.toFixed(1) : '★';
+            document.getElementById('details-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             
-            updateFavButtonUI();
+            const backdrop = document.getElementById('details-backdrop');
+            backdrop.style.backgroundImage = `url(${backdropUrl})`;
+            backdrop.classList.remove('blur-2xl');
 
-            document.getElementById('main-app-wrapper').style.display = 'none';
-            document.getElementById('selector-overlay').style.display = 'block';
+            document.getElementById('media-type-tag').innerText = type.toUpperCase();
+            
+            updateFavoriteHeartUI();
+
+            const tvArea = document.getElementById('tv-controls');
+            if (type === 'tv') { tvArea.classList.remove('hidden'); renderSeasons(data); } else { tvArea.classList.add('hidden'); }
+            
+            document.getElementById('main-app-wrapper').classList.add('hidden');
+            document.getElementById('selector-overlay').classList.remove('hidden');
             window.scrollTo(0, 0);
-
-            setTimeout(() => {
-                const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
-                if(playBtn) playBtn.focus();
-            }, 300);
+            setTimeout(() => document.getElementById('main-play-trigger').focus(), 300);
         }
 
         function renderSeasons(data) {
-            const container = document.getElementById('season-buttons');
+            const container = document.getElementById('season-buttons'); 
             container.innerHTML = '';
             if(!data.seasons) return;
-            data.seasons.forEach(s => {
-                if (s.season_number === 0) return;
+
+            const validSeasons = data.seasons.filter(s => s.season_number > 0);
+            const leftArrow = document.getElementById('season-arrow-left');
+            const rightArrow = document.getElementById('season-arrow-right');
+
+            // MULTI-SEASON CHECK: Show arrows only if more than 1 season exists
+            if (validSeasons.length > 1) {
+                leftArrow.classList.remove('hidden');
+                rightArrow.classList.remove('hidden');
+            } else {
+                leftArrow.classList.add('hidden');
+                rightArrow.classList.add('hidden');
+            }
+
+            validSeasons.forEach(s => {
                 const btn = document.createElement('button');
-                btn.className = "focusable px-4 py-2 bg-zinc-900 rounded-lg text-xs font-bold border border-white/5 whitespace-nowrap";
+                btn.className = "focusable px-6 py-2 bg-zinc-900 rounded horror-font text-lg border border-zinc-800 whitespace-nowrap flex-shrink-0";
                 btn.innerText = `Season ${s.season_number}`;
-                btn.tabIndex = 0;
                 btn.onclick = () => loadEpisodes(data.id, s.season_number);
+                
+                // Keep active season focused into view for Smart TV / Fire TV
+                btn.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        container.scrollLeft = this.offsetLeft - (container.offsetWidth / 2) + (this.offsetWidth / 2);
+                    }, 50);
+                });
+
                 container.appendChild(btn);
             });
             if(container.firstChild) container.firstChild.click();
         }
 
-        function scrollSeasons(direction) {
+        function scrollSeasons(amount) {
             const container = document.getElementById('season-buttons');
-            if (container) {
-                container.scrollBy({ left: direction * 200, behavior: 'smooth' });
+            if(container) {
+                container.scrollBy({ left: amount, behavior: 'smooth' });
             }
         }
 
         async function loadEpisodes(showId, seasonNum) {
-            const res = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
-            const data = await res.json();
-            const grid = document.getElementById('episode-grid');
-            grid.innerHTML = '';
-            if(data.episodes) {
-                data.episodes.forEach(e => {
-                    const epRow = document.createElement('div');
-                    epRow.className = "episode-row focusable";
-                    epRow.tabIndex = 0;
-                    epRow.onclick = () => { currentMedia.s = seasonNum; currentMedia.e = e.episode_number; startLuxeStream(); };
-                    const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
-                    epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-btn">▶</div></div><div class="flex-1"><div class="text-white font-bold text-sm">E${e.episode_number} ${e.name}</div><div class="text-zinc-400 text-xs line-clamp-2 mt-1">${e.overview}</div></div>`;
-                    grid.appendChild(epRow);
-                });
-            }
-            document.getElementById('main-tv-btn').innerText = `▶ Play S${seasonNum} E1`;
+            const data = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNum}?api_key=${API_KEY}`);
+            if(!data) return;
+            const grid = document.getElementById('episode-grid'); grid.innerHTML = '';
+            data.episodes.forEach(e => {
+                const epRow = document.createElement('div');
+                epRow.className = "episode-row focusable"; epRow.tabIndex = 0;
+                epRow.onclick = () => { 
+                    currentMedia.s = seasonNum; 
+                    currentMedia.e = e.episode_number; 
+                    saveToContinue(currentMedia); 
+                    startLuxeStream(); 
+                };
+                const thumb = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : '';
+                epRow.innerHTML = `<div class="ep-thumbnail" style="background-image:url(${thumb})"><div class="ep-play-icon">▶</div></div><div class="flex-1"><div class="text-white font-bold">E${e.episode_number} ${e.name}</div><div class="text-zinc-500 text-xs line-clamp-1">${e.overview}</div></div>`;
+                grid.appendChild(epRow);
+            });
         }
 
-        function playCurrentEpisode() { currentMedia.e = 1; startLuxeStream(); }
-
         async function startLuxeStream() {
-            const { type, id, s, e, isAnime, title } = currentMedia;
-            saveToHistory(id, type, s, e, currentMedia.title, currentMedia.poster); 
+            const { type, id, s, e, isAnime, title, poster } = currentMedia;
+            saveToContinue(currentMedia);
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
             
-            // ---- PLAYER SOURCE: VIDSRC.TO ----
+            // ---- PLAYER SOURCE RESTORED TO VIDSRC.TO ----
+            // vidsrc.to: the version that was working best for this site.
             const vidsrcUrl = (type === 'movie' 
                 ? `https://vidsrc.to/embed/movie/${id}` 
                 : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`);
-            // ----------------------------------
+            // --------------------------------------------
+            
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
@@ -841,71 +1224,46 @@
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 1200); 
                     const response = await fetch(consumetUrl, { method: 'HEAD', signal: controller.signal });
-                    clearTimeout(timeoutId);
+                    setTimeout(() => clearTimeout(timeoutId), 0);
                     iframe.src = response.ok ? consumetUrl : vidsrcUrl;
                 } catch (err) { iframe.src = vidsrcUrl; }
-            } else { iframe.src = vidsrcUrl; }
+            } else { 
+                iframe.src = vidsrcUrl; 
+            }
 
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
-        function saveToHistory(id, type, s, e, title, poster) {
-            let history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            history = history.filter(item => item.id !== id);
-            history.unshift({ id, type, s, e, title, poster });
-            localStorage.setItem('zonhd_history', JSON.stringify(history.slice(0, 10)));
-            renderContinueWatching();
-        }
-
-        function renderContinueWatching() {
-            const history = JSON.parse(localStorage.getItem('zonhd_history') || '[]');
-            const section = document.getElementById('continue-section');
-            const grid = document.getElementById('continue-grid');
-            if (history.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            grid.innerHTML = '';
-            history.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "min-w-[120px] max-w-[120px] cursor-pointer focusable movie-card";
-                card.tabIndex = 0;
-                card.onclick = () => openDetails(item.id, item.type);
-                card.innerHTML = `<div class="aspect-[2/3] rounded-lg overflow-hidden border border-white/10 mb-2"><img src="https://image.tmdb.org/t/p/w300${item.poster}" class="w-full h-full object-cover"></div><p class="text-[10px] font-bold truncate text-zinc-400 uppercase tracking-tighter">${item.title}</p><p class="text-[8px] text-gold font-bold">${item.type === 'tv' ? `S${item.s} E${item.e}` : 'MOVIE'}</p>`;
-                grid.appendChild(card);
-            });
-        }
-
+        function toggleMenu() { document.getElementById('side-menu').classList.toggle('menu-open'); }
+        
         function closeSelector() { 
-            document.getElementById('selector-overlay').style.display = 'none'; 
-            document.getElementById('main-app-wrapper').style.display = 'block';
-            window.scrollTo(0, savedScrollPosition);
-        }
-
-        function closePlayer() { 
-            document.getElementById('luxe-player').src = "about:blank";
-            document.getElementById('player-overlay').style.display = 'none'; 
-            document.getElementById('close-sel-btn').focus(); 
+            document.getElementById('selector-overlay').classList.add('hidden'); 
+            document.getElementById('main-app-wrapper').classList.remove('hidden'); 
+            window.scrollTo(0, savedScrollPosition); 
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            } else {
+                document.getElementById('btn-trending').focus(); 
+            }
         }
         
-        function toggleMenu() { 
-            const menu = document.getElementById('side-menu');
-            menu.classList.toggle('menu-open'); 
-            if(menu.classList.contains('menu-open')) setTimeout(() => { const firstNet = document.querySelector('#side-menu .focusable'); if(firstNet) firstNet.focus(); }, 300);
+        function closePlayer() { 
+            document.getElementById('luxe-player').src = "about:blank"; 
+            document.getElementById('player-overlay').style.display = 'none'; 
+            document.getElementById('main-play-trigger').focus();
         }
-
-        function setFilter(type, id = '') { 
-            if (activeType !== 'search') {
-                previousActiveType = activeType;
-                previousActiveID = activeID;
+        
+        function setFilter(type, id = '') {
+            activeType = type; activeID = id;
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active'));
+            if(window.event && window.event.target && window.event.target.tagName === 'BUTTON') {
+                window.event.target.classList.add('nav-active');
             }
-            activeType = type; activeID = id; 
-            if (type !== 'search') {
-                document.getElementById('search-input').value = '';
+            if (type === 'favorites') {
+                renderFavoritesGrid();
+            } else {
+                fetchContent();
             }
-            document.querySelectorAll('nav button, #side-menu button').forEach(b => b.classList.remove('active-filter'));
-            if (event && event.currentTarget && event.currentTarget.tagName === 'BUTTON') {
-                event.currentTarget.classList.add('active-filter');
-            }
-            fetchContent(); 
             document.getElementById('side-menu').classList.remove('menu-open');
             window.scrollTo(0,0);
         }
@@ -914,10 +1272,6 @@
             const input = document.getElementById('search-input');
             const query = input.value.trim();
             if(query) {
-                if (activeType !== 'search') {
-                    previousActiveType = activeType;
-                    previousActiveID = activeID;
-                }
                 setFilter('search', query);
                 input.blur();
                 setTimeout(() => {
@@ -925,60 +1279,30 @@
                     if(firstResult) firstResult.focus();
                 }, 800);
             } else {
-                handleSearchInput();
+                input.blur();
+                setFilter('trending_theaters');
+                document.getElementById('btn-trending').classList.add('nav-active');
             }
         }
 
-        function handleSearchInput(e) {
-            const input = document.getElementById('search-input');
-            if (!input.value || input.value.trim() === '') {
-                if (activeType === 'search') {
-                    const fallbackType = previousActiveType || 'trending';
-                    const fallbackID = previousActiveID || '';
-                    activeType = fallbackType;
-                    activeID = fallbackID;
-                    
-                    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
-                    const targetBtn = document.querySelector(`nav button[onclick*="${fallbackType}"]`) || document.getElementById('btn-trending');
-                    if (targetBtn) targetBtn.classList.add('active-filter');
-                    
-                    fetchContent();
-                }
-            }
-        }
-
-        function handleSearch(e) { 
-            if (e.key === 'Enter') {
-                triggerSearch(); 
-            } else if (e.target.value.trim() === '' && activeType === 'search') {
-                handleSearchInput();
-            }
-        }
-
-        window.onload = () => { 
-            setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
-            fetchConfig();
-            const mc = new Hammer(document.body);
-            mc.on("swiperight", () => toggleMenu());
-        };
-
-        window.addEventListener('scroll', () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true); });
+        function handleSearch(e) { if (e.key === 'Enter') triggerSearch(); }
 
         document.addEventListener('keydown', function(e) {
             const current = document.activeElement;
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                if (current && current.id === 'search-input') { return; }
+                if (current && current.id === 'search-input') return; 
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
-                else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
+                else if (!document.getElementById('selector-overlay').classList.contains('hidden')) closeSelector();
                 else if (document.getElementById('side-menu').classList.contains('menu-open')) toggleMenu();
                 return;
             }
 
             if (e.key === 'Enter' || e.keyCode === 13) { 
                 if (current && current.id === 'search-input') { triggerSearch(); return; }
+                if (current && current.id === 'search-action-btn') { triggerSearch(); return; }
                 if (current && current.classList.contains('focusable')) { current.click(); return; }
             }
 
@@ -993,17 +1317,95 @@
 
         function findNext(cur, targets, dir) {
             if (!cur || cur === document.body) return targets[0];
-            const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+            const r1 = cur.getBoundingClientRect(), c1 = { x: r1.left + r1.width/2, y: r1.top + r1.height/2 };
             let best = null, min = Infinity;
             targets.forEach(t => {
                 if (t === cur) return;
-                const r2 = t.getBoundingClientRect(), c2 = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
-                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return; if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
+                const r2 = t.getBoundingClientRect(), c2 = { x: r2.left + r2.width/2, y: r2.top + r2.height/2 };
+                if (dir === 'up' && c2.y >= c1.y) return; if (dir === 'down' && c2.y <= c1.y) return;
+                if (dir === 'left' && c2.x >= c1.x) return; if (dir === 'right' && c2.x <= c1.x) return;
                 const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
                 if (d < min) { min = d; best = t; }
             });
             return best;
         }
+
+        // Setup custom dynamic navigation arrows for both menus
+        function setupNavigationArrows() {
+            // 1. Top Navigation Menu Setup
+            const topNavMenu = document.getElementById('top-nav-menu');
+            const topNavContainer = document.getElementById('top-nav-container');
+            
+            if (topNavMenu && topNavContainer) {
+                const leftArrow = document.createElement('button');
+                leftArrow.className = 'focusable absolute left-0 z-50 bg-black/90 text-red-600 font-bold px-3 py-2 border border-red-900/40 rounded-r-lg shadow-2xl';
+                leftArrow.innerHTML = '❮';
+                leftArrow.onclick = () => topNavMenu.scrollBy({ left: -200, behavior: 'smooth' });
+
+                const rightArrow = document.createElement('button');
+                rightArrow.className = 'focusable absolute right-0 z-50 bg-black/90 text-red-600 font-bold px-3 py-2 border border-red-900/40 rounded-l-lg shadow-2xl';
+                rightArrow.innerHTML = '❯';
+                rightArrow.onclick = () => topNavMenu.scrollBy({ left: 200, behavior: 'smooth' });
+
+                topNavContainer.appendChild(leftArrow);
+                topNavContainer.appendChild(rightArrow);
+
+                // Auto-center view when elements receive focus via D-Pad
+                topNavMenu.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('focus', function() {
+                        setTimeout(() => {
+                            topNavMenu.scrollLeft = this.offsetLeft - (topNavMenu.offsetWidth / 2) + (this.offsetWidth / 2);
+                        }, 100);
+                    });
+                });
+            }
+
+            // 2. Side Menu Setup
+            const sideScrollArea = document.getElementById('side-scroll-area');
+            const sideMenu = document.getElementById('side-menu');
+            
+            if (sideScrollArea && sideMenu) {
+                const upArrow = document.createElement('button');
+                upArrow.className = 'focusable absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-red-600 font-bold px-6 py-1 border border-red-900/40 rounded-full shadow-2xl';
+                upArrow.innerHTML = '▲';
+                upArrow.onclick = () => sideScrollArea.scrollBy({ top: -150, behavior: 'smooth' });
+
+                const downArrow = document.createElement('button');
+                downArrow.className = 'focusable absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-red-600 font-bold px-6 py-1 border border-red-900/40 rounded-full shadow-2xl';
+                downArrow.innerHTML = '▼';
+                downArrow.onclick = () => sideScrollArea.scrollBy({ top: 150, behavior: 'smooth' });
+
+                sideMenu.appendChild(upArrow);
+                sideMenu.appendChild(downArrow);
+
+                // Track changes during vertical navigation inside vaults list
+                sideScrollArea.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('focus', function() {
+                        setTimeout(() => {
+                            sideScrollArea.scrollTop = this.offsetTop - (sideScrollArea.offsetHeight / 2) + (this.offsetHeight / 2);
+                        }, 100);
+                    });
+                });
+            }
+        }
+
+        window.onload = () => {
+            /* SAFE TELEVISION BROWSER DETECTION */
+            const ua = navigator.userAgent.toLowerCase();
+            if (ua.includes('firetv') || ua.includes('aftb') || ua.includes('afts') || ua.includes('smarttv') || ua.includes('appletv')) {
+                document.body.classList.add('is-tv');
+            }
+
+            setupNavigationArrows();
+            fetchContent();
+            loadContinueWatching();
+            setTimeout(() => { 
+                const loader = document.getElementById('loader');
+                if(loader) { loader.style.opacity = '0'; setTimeout(()=>loader.remove(), 800); }
+            }, 1200);
+            const obs = new IntersectionObserver(e => { if(e[0].isIntersecting && activeType !== 'after_dark' && activeType !== 'favorites') fetchContent(true); });
+            obs.observe(document.getElementById('sentinel'));
+        };
     </script>
 </body>
 </html>
