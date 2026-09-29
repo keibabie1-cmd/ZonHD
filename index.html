@@ -60,9 +60,7 @@
         .menu-open { transform: translateX(0) !important; }
 
         @media screen and (min-width: 900px) and (min-height: 500px) {
-            #side-menu {
-                zoom: 0.82;
-            }
+            #side-menu { zoom: 0.82; }
         }
 
         .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
@@ -125,43 +123,20 @@
             box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
             transition: all 0.3s ease;
         }
-        .luxe-search-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
-        }
+        .luxe-search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
 
-        .fav-heart-btn {
-            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-        }
-        .fav-heart-btn:hover {
-            transform: scale(1.1);
-        }
-        .fav-heart-btn.is-fav svg {
-            fill: #E50914 !important;
-            stroke: #D4AF37 !important;
-            filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8));
-        }
+        .fav-heart-btn { transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
+        .fav-heart-btn:hover { transform: scale(1.1); }
+        .fav-heart-btn.is-fav svg { fill: #E50914 !important; stroke: #D4AF37 !important; filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8)); }
 
-        #binge-countdown-overlay {
-            animation: bingeFade 0.3s ease-out;
-        }
-        @keyframes bingeFade {
-            from { opacity: 0; transform: scale(0.94); }
-            to { opacity: 1; transform: scale(1); }
-        }
+        #binge-countdown-overlay { animation: bingeFade 0.3s ease-out; }
+        @keyframes bingeFade { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
 
-        #binge-toast {
-            animation: toastFade 4s ease-in-out forwards;
-        }
-        @keyframes toastFade {
-            0% { opacity: 0; transform: translateY(-6px); }
-            10% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-6px); }
-        }
-
-        #player-event-status {
-            transition: opacity 0.6s ease;
+        #autonext-toggle-btn.autonext-on {
+            background: rgba(212, 175, 55, 0.25) !important;
+            color: var(--gold) !important;
+            border-color: rgba(212, 175, 55, 0.8) !important;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
         }
     </style>
 </head>
@@ -298,13 +273,9 @@
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
             <div class="flex items-center gap-3">
                 <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-                <div id="player-event-status" class="hidden bg-black/70 text-gold px-3 py-1 rounded-full border border-gold/30 font-bold text-[9px] tracking-widest uppercase">🔍 Listening for player events…</div>
+                <button id="autonext-toggle-btn" onclick="toggleAutoNext()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-[10px] tracking-widest uppercase">⏭ AUTO-NEXT: OFF</button>
             </div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
-        </div>
-
-        <div id="binge-toast" class="hidden absolute top-20 left-6 z-[7000] bg-red-600/90 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-2xl border border-red-400/50">
-            ⏱ Auto-advance armed
         </div>
 
         <div id="binge-countdown-overlay" class="hidden absolute inset-0 flex items-center justify-center z-[7500] pointer-events-none">
@@ -330,14 +301,14 @@
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
 
-        // Binge timer handles
+        // Auto-next state
+        let autoNextEnabled = localStorage.getItem('zonhd_autonext') === 'true';
         let bingeStartTimer = null;
         let bingeCountdownTimer = null;
         let bingeCountdownValue = 5;
-        let bingeToastTimer = null;
         let bingeCountdownShowing = false;
-        let bingeEventsDetected = false;
-        let bingeEventStatusTimer = null;
+        let playerEventsSeen = false;
+        let playerEventsCheckTimer = null;
 
         const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
 
@@ -411,24 +382,14 @@
         ];
 
         // ============================================================
-        // CROSS-ORIGIN PLAYER EVENT LISTENER (postMessage)
-        // ============================================================
-        // This listens for messages that vidsrc.to MAY emit to the parent page.
-        // If vidsrc.to supports it, we get REAL end-of-video detection.
-        // If it doesn't, the timer fallback in scheduleBinge() takes over.
-        //
-        // TO VERIFY: open DevTools → Console, play a TV episode, look for
-        // [IFRAME MSG] logs. If they appear, this is working.
+        // PLAYER EVENT LISTENER (postMessage) — used for real end-detection
         // ============================================================
         window.addEventListener('message', function(e) {
             try {
                 let data = e.data;
                 if (typeof data === 'string') {
-                    try { data = JSON.parse(data); } catch(_) { /* not JSON */ }
+                    try { data = JSON.parse(data); } catch(_) {}
                 }
-                // Log every message so you can see what vidsrc.to sends
-                console.log('[IFRAME MSG]', e.origin, data);
-
                 if (!data) return;
 
                 let eventType = '';
@@ -436,11 +397,9 @@
                 let duration = null;
 
                 if (typeof data === 'object') {
-                    eventType = String(data.event || data.type || data.action || data.name || data.message || '').toLowerCase();
+                    eventType = String(data.event || data.type || data.action || data.name || '').toLowerCase();
                     currentTime = data.currentTime ?? data.current_time ?? data.time ?? data.position ?? data.progress ?? null;
                     duration = data.duration ?? data.totalDuration ?? data.total ?? data.length ?? null;
-
-                    // Sometimes events are nested
                     if (!eventType && data.data && typeof data.data === 'object') {
                         eventType = String(data.data.event || data.data.type || '').toLowerCase();
                         currentTime = currentTime ?? data.data.currentTime ?? null;
@@ -450,57 +409,60 @@
                     eventType = data.toLowerCase();
                 }
 
-                // Mark that we're receiving events
-                if (!bingeEventsDetected) {
-                    bingeEventsDetected = true;
-                    showPlayerEventStatus('✅ Player events detected');
-                    console.log('[BINGE] postMessage events are being received — real end-detection is ACTIVE');
+                if (!playerEventsSeen) {
+                    playerEventsSeen = true;
+                    console.log('[AUTO-NEXT] Player events detected — real end-detection ACTIVE');
                 }
 
-                // Handle "ended" event
+                if (!autoNextEnabled) return;
+                if (!currentMedia || currentMedia.type !== 'tv') return;
+
+                // Real end event
                 if (eventType === 'ended' || eventType === 'end' || eventType === 'complete' || eventType === 'videoended' || eventType === 'finished') {
-                    console.log('[BINGE] ⚡ Ended event received via postMessage');
-                    if (!bingeCountdownShowing && currentMedia.type === 'tv') {
-                        triggerBingeCountdownFromEvent();
-                    }
+                    console.log('[AUTO-NEXT] ⚡ Ended event received');
+                    if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
+                    if (!bingeCountdownShowing) showBingeCountdown();
                     return;
                 }
 
-                // Handle timeupdate — check if we're in the last 60s
+                // Near-end via timeupdate
                 if (eventType === 'timeupdate' || eventType === 'time' || eventType === 'progress') {
                     if (currentTime != null && duration != null && duration > 0) {
                         const remaining = duration - currentTime;
-                        if (remaining <= 60 && remaining > 0 && !bingeCountdownShowing && currentMedia.type === 'tv') {
-                            console.log(`[BINGE] ⚡ Near-end detected via postMessage (${remaining.toFixed(1)}s remaining)`);
-                            triggerBingeCountdownFromEvent();
+                        if (remaining <= 45 && remaining > 0 && !bingeCountdownShowing) {
+                            console.log(`[AUTO-NEXT] ⚡ Near-end detected (${remaining.toFixed(1)}s remaining)`);
+                            if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
+                            showBingeCountdown();
                         }
                     }
                 }
-            } catch (err) {
-                // Silently ignore malformed messages
-            }
+            } catch (err) {}
         });
 
-        async function triggerBingeCountdownFromEvent() {
-            if (bingeCountdownShowing) return;
-            if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
-            await showBingeCountdown();
+        // ---- AUTO-NEXT TOGGLE ----
+        function updateAutoNextButtonUI() {
+            const btn = document.getElementById('autonext-toggle-btn');
+            if (!btn) return;
+            if (autoNextEnabled) {
+                btn.textContent = '⏭ AUTO-NEXT: ON';
+                btn.classList.add('autonext-on');
+            } else {
+                btn.textContent = '⏭ AUTO-NEXT: OFF';
+                btn.classList.remove('autonext-on');
+            }
         }
 
-        function showPlayerEventStatus(text) {
-            const el = document.getElementById('player-event-status');
-            if (!el) return;
-            el.textContent = text;
-            el.classList.remove('hidden');
-            el.style.opacity = '1';
-            if (bingeEventStatusTimer) clearTimeout(bingeEventStatusTimer);
-            bingeEventStatusTimer = setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.classList.add('hidden'), 700);
-            }, 3500);
+        function toggleAutoNext() {
+            autoNextEnabled = !autoNextEnabled;
+            localStorage.setItem('zonhd_autonext', autoNextEnabled ? 'true' : 'false');
+            updateAutoNextButtonUI();
+            if (autoNextEnabled && currentMedia.type === 'tv') {
+                scheduleBinge();
+            } else {
+                clearBingeTimers();
+            }
         }
 
-        // ---- ROBUST CONFIG LOADER ----
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/config');
@@ -515,9 +477,9 @@
                 API_KEY = FALLBACK_API_KEY;
             }
             if (!API_KEY) API_KEY = FALLBACK_API_KEY;
-
             try { renderContinueWatching(); } catch (e) {}
             try { updateFavBadge(); } catch (e) {}
+            try { updateAutoNextButtonUI(); } catch (e) {}
             try { await cacheTrendingIds(); } catch (e) {}
             try { fetchContent(); } catch (e) { console.error("fetchContent failed:", e); }
         }
@@ -526,13 +488,11 @@
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/trending/all/day?api_key=${API_KEY}&page=1`);
                 const data = await res.json();
-                if (data.results) {
-                    data.results.forEach(item => trendingIdsCache.add(item.id));
-                }
+                if (data.results) data.results.forEach(item => trendingIdsCache.add(item.id));
             } catch (e) {}
         }
 
-        // ---- BINGE AUTO-ADVANCE ----
+        // ---- AUTO-NEXT / BINGE ----
         function clearBingeTimers() {
             if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
             if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
@@ -545,17 +505,6 @@
             if (el) el.classList.add('hidden');
         }
 
-        function showBingeToast() {
-            const toast = document.getElementById('binge-toast');
-            if (!toast) return;
-            toast.classList.remove('hidden');
-            toast.style.animation = 'none';
-            void toast.offsetWidth;
-            toast.style.animation = '';
-            if (bingeToastTimer) clearTimeout(bingeToastTimer);
-            bingeToastTimer = setTimeout(() => { toast.classList.add('hidden'); }, 4200);
-        }
-
         async function getNextEpisodeInfo() {
             if (!currentMedia || currentMedia.type !== 'tv') return null;
             try {
@@ -563,7 +512,6 @@
                 const seasonData = await seasonRes.json();
                 const episodes = (seasonData.episodes || []).filter(ep => ep.episode_number > 0);
                 const currentIdx = episodes.findIndex(ep => ep.episode_number === currentMedia.e);
-
                 if (currentIdx >= 0 && currentIdx < episodes.length - 1) {
                     return { s: currentMedia.s, e: episodes[currentIdx + 1].episode_number };
                 }
@@ -575,50 +523,36 @@
                     return { s: validSeasons[currentSeasonIdx + 1].season_number, e: 1 };
                 }
                 return null;
-            } catch (e) { console.error('[BINGE] getNextEpisodeInfo failed:', e); return null; }
+            } catch (e) { return null; }
         }
 
         async function scheduleBinge() {
             clearBingeTimers();
+            if (!autoNextEnabled) return;
             if (!currentMedia || currentMedia.type !== 'tv') return;
 
             const urlParams = new URLSearchParams(window.location.search);
             const isTest = urlParams.get('bingetest') === '1';
+            if (isTest) {
+                console.log('[AUTO-NEXT] TEST MODE — countdown in 8s');
+                bingeStartTimer = setTimeout(() => { if (!bingeCountdownShowing) showBingeCountdown(); }, 8000);
+                return;
+            }
 
+            // Conservative fallback: fire 3 min AFTER expected end.
+            // PostMessage events (if vidsrc.to emits them) will fire the countdown sooner, at the real end.
             let runtime = 22;
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}/episode/${currentMedia.e}?api_key=${API_KEY}`);
                 const data = await res.json();
                 if (data && data.runtime && data.runtime > 0) runtime = data.runtime;
-            } catch (e) { console.log('[BINGE] runtime fetch failed, using default 22 min'); }
+            } catch (e) {}
 
-            const ms = isTest ? 8000 : Math.max((runtime * 60 - 60) * 1000, 5000);
-
-            console.log(`[BINGE] Timer fallback armed — countdown in ${Math.round(ms/1000)}s${isTest ? ' (TEST MODE)' : ''}`);
-
-            showBingeToast();
-
-            // Show the "listening" status badge briefly
-            const statusEl = document.getElementById('player-event-status');
-            if (statusEl && !bingeEventsDetected) {
-                statusEl.textContent = '🔍 Listening for player events…';
-                statusEl.classList.remove('hidden');
-                statusEl.style.opacity = '1';
-                if (bingeEventStatusTimer) clearTimeout(bingeEventStatusTimer);
-                bingeEventStatusTimer = setTimeout(() => {
-                    if (!bingeEventsDetected && statusEl) {
-                        statusEl.textContent = '⏱ Timer mode (no player events)';
-                        setTimeout(() => {
-                            statusEl.style.opacity = '0';
-                            setTimeout(() => statusEl.classList.add('hidden'), 700);
-                        }, 2500);
-                    }
-                }, 8000);
-            }
-
+            const ms = (runtime * 60 + 180) * 1000;
+            console.log(`[AUTO-NEXT] Fallback timer armed: ${Math.round(ms/1000)}s (runtime ${runtime}min + 3min buffer)`);
             bingeStartTimer = setTimeout(() => {
                 if (bingeCountdownShowing) return;
-                console.log('[BINGE] Timer fired — showing countdown');
+                console.log('[AUTO-NEXT] Fallback timer fired');
                 showBingeCountdown();
             }, ms);
         }
@@ -628,14 +562,9 @@
             if (bingeCountdownShowing) return;
 
             const next = await getNextEpisodeInfo();
-            if (!next) {
-                console.log('[BINGE] End of series — no next episode, countdown skipped');
-                return;
-            }
+            if (!next) { console.log('[AUTO-NEXT] End of series — no countdown'); return; }
 
-            console.log(`[BINGE] Showing countdown → S${next.s} E${next.e}`);
             bingeCountdownShowing = true;
-
             bingeCountdownValue = 5;
             const titleEl = document.getElementById('binge-next-title');
             const numEl = document.getElementById('binge-countdown-number');
@@ -653,24 +582,22 @@
                     bingeCountdownTimer = null;
                     hideBingeOverlay();
                     bingeCountdownShowing = false;
-                    console.log('[BINGE] Countdown hit 0 — advancing');
                     advanceToNextEpisode();
                 }
             }, 1000);
         }
 
         function cancelBingeCountdown() {
-            console.log('[BINGE] User cancelled countdown');
             if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
             bingeCountdownShowing = false;
             hideBingeOverlay();
+            // Do NOT reschedule — user chose to stay on this episode
         }
 
         async function advanceToNextEpisode() {
             clearBingeTimers();
             const next = await getNextEpisodeInfo();
-            if (!next) { console.log('[BINGE] No next episode to advance to'); return; }
-            console.log(`[BINGE] Advancing to S${next.s} E${next.e}`);
+            if (!next) return;
             currentMedia.s = next.s;
             currentMedia.e = next.e;
             startLuxeStream();
@@ -678,22 +605,17 @@
 
         window.testBinge = showBingeCountdown;
 
-        function getFavorites() {
-            return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]');
-        }
-
+        function getFavorites() { return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]'); }
         function updateFavBadge() {
             const favs = getFavorites();
             const badge = document.getElementById('fav-count-badge');
             if (badge) badge.innerText = favs.length;
         }
-
         function isCurrentFavorited() {
             if (!currentMedia || !currentMedia.id) return false;
             const favs = getFavorites();
             return favs.some(item => String(item.id) === String(currentMedia.id));
         }
-
         function updateFavButtonUI() {
             const btn = document.getElementById('favorite-toggle-btn');
             const icon = document.getElementById('fav-heart-icon');
@@ -713,9 +635,8 @@
             if (!currentMedia || !currentMedia.id) return;
             let favs = getFavorites();
             const existingIndex = favs.findIndex(item => String(item.id) === String(currentMedia.id));
-            if (existingIndex >= 0) {
-                favs.splice(existingIndex, 1);
-            } else {
+            if (existingIndex >= 0) { favs.splice(existingIndex, 1); }
+            else {
                 favs.unshift({
                     id: currentMedia.id,
                     type: currentMedia.type || 'movie',
@@ -726,9 +647,7 @@
             localStorage.setItem('zonhd_favorites', JSON.stringify(favs));
             updateFavButtonUI();
             updateFavBadge();
-            if (activeType === 'favorites') {
-                renderFavorites();
-            }
+            if (activeType === 'favorites') renderFavorites();
         }
 
         function renderFavorites() {
@@ -759,31 +678,10 @@
                 hasMore = true; 
                 document.getElementById('movie-grid').innerHTML = ''; 
             }
-            
-            if (activeType === 'favorites') {
-                renderFavorites();
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === 'anime') {
-                await fetchAniList(append);
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === '90s_nostalgia') {
-                await fetch90sNostalgia(append);
-                isLoading = false;
-                return;
-            }
-
-            if (activeType === 'list') {
-                await fetchTmdbList(activeID, append);
-                isLoading = false;
-                return;
-            }
-
+            if (activeType === 'favorites') { renderFavorites(); isLoading = false; return; }
+            if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
+            if (activeType === '90s_nostalgia') { await fetch90sNostalgia(append); isLoading = false; return; }
+            if (activeType === 'list') { await fetchTmdbList(activeID, append); isLoading = false; return; }
             if (['drama', 'romance', 'comedy', 'crime'].includes(activeType)) {
                 await fetchCuratedCategory(activeType, append);
                 isLoading = false;
@@ -799,11 +697,9 @@
                 const res = await fetch(url);
                 const data = await res.json();
                 let results = data.results || [];
-                
                 if (activeType === 'search') {
                     results = results.filter(item => item.media_type === 'movie' || item.media_type === 'tv');
                 }
-
                 if (results.length > 0) {
                     renderGrid(results);
                     currentPage++;
@@ -833,9 +729,7 @@
                                 return year >= 1990 && year <= 1999;
                             });
                             if (nineties) return nineties;
-                            return data.results.find(m =>
-                                (m.media_type === 'tv' || m.media_type === 'movie') && m.poster_path
-                            ) || null;
+                            return data.results.find(m => (m.media_type === 'tv' || m.media_type === 'movie') && m.poster_path) || null;
                         }
                         return null;
                     })
@@ -875,21 +769,17 @@
             let gId = genreMap[category];
             let results = [];
             let targetCount = 20, fetches = 0;
-            
             while (results.length < targetCount && currentPage <= 50 && fetches < 3) {
                 fetches++;
                 let urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
                 let urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=${gId}&sort_by=popularity.desc&page=${currentPage}`;
-                
                 if (category === 'crime') {
                     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=80,9648&sort_by=popularity.desc&page=${currentPage}`;
                 }
-
                 try {
                     const [resM, resT] = await Promise.all([fetch(urlMovies), fetch(urlTv)]);
                     const dataM = await resM.json();
                     const dataT = await resT.json();
-                    
                     let combined = [...(dataM.results || []), ...(dataT.results || [])];
                     let filtered = combined.filter(item => {
                         if (trendingIdsCache.has(item.id)) return false;
@@ -898,16 +788,13 @@
                         if (!item.poster_path) return false;
                         return true;
                     });
-                    
                     results.push(...filtered);
                     currentPage++;
                     if (!dataM.results && !dataT.results) { hasMore = false; break; }
                 } catch (e) { break; }
             }
-
-            if (results.length > 0) {
-                renderGrid(results.slice(0, 20));
-            } else { hasMore = false; }
+            if (results.length > 0) renderGrid(results.slice(0, 20));
+            else hasMore = false;
         }
 
         async function fetchAniList(append) {
@@ -940,17 +827,13 @@
             const titleText = document.getElementById('show-title');
             logoImg.classList.add('hidden');
             titleText.classList.remove('hidden');
-
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}&include_image_language=en,null`);
                 const data = await res.json();
                 if (data.logos && data.logos.length > 0) {
                     const logoPath = data.logos[0].file_path;
                     logoImg.src = `https://image.tmdb.org/t/p/w500${logoPath}`;
-                    logoImg.onload = () => {
-                        logoImg.classList.remove('hidden');
-                        titleText.classList.add('hidden');
-                    };
+                    logoImg.onload = () => { logoImg.classList.remove('hidden'); titleText.classList.add('hidden'); };
                 }
             } catch (e) {}
         }
@@ -1000,11 +883,9 @@
             const res = await fetch(`https://api.themoviedb.org/3/${type}/${finalId}?api_key=${API_KEY}`);
             const data = await res.json();
             currentMedia = { id: finalId, type, s: 1, e: 1, title: data.name || data.title, poster: data.poster_path, isAnime: isAniList };
-            
             document.getElementById('show-title').innerText = currentMedia.title;
             fetchAliterateLogo(finalId, type);
             fetchAlternateBackdrop(finalId, type, data.backdrop_path);
-
             document.getElementById('show-desc').innerText = data.overview || "No description available.";
             document.getElementById('show-year').innerText = (data.release_date || data.first_air_date || '').split('-')[0];
             document.getElementById('show-rating').innerText = `★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}`;
@@ -1014,13 +895,10 @@
             document.getElementById('tv-action-area-top').classList.toggle('hidden', type !== 'tv');
             document.getElementById('tv-action-area').classList.toggle('hidden', type !== 'tv');
             if (type === 'tv') renderSeasons(data);
-            
             updateFavButtonUI();
-
             document.getElementById('main-app-wrapper').style.display = 'none';
             document.getElementById('selector-overlay').style.display = 'block';
             window.scrollTo(0, 0);
-
             setTimeout(() => {
                 const playBtn = (type === 'movie') ? document.getElementById('play-movie-btn') : document.getElementById('main-tv-btn');
                 if(playBtn) playBtn.focus();
@@ -1045,9 +923,7 @@
 
         function scrollSeasons(direction) {
             const container = document.getElementById('season-buttons');
-            if (container) {
-                container.scrollBy({ left: direction * 200, behavior: 'smooth' });
-            }
+            if (container) container.scrollBy({ left: direction * 200, behavior: 'smooth' });
         }
 
         async function loadEpisodes(showId, seasonNum) {
@@ -1079,10 +955,13 @@
             playerOverlay.style.display = 'block';
 
             clearBingeTimers();
-            
+            updateAutoNextButtonUI();
+
+            // Add autoplay=1 so the next episode plays automatically when we switch
             const vidsrcUrl = (type === 'movie' 
-                ? `https://vidsrc.to/embed/movie/${id}` 
-                : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`);
+                ? `https://vidsrc.to/embed/movie/${id}?autoplay=1` 
+                : `https://vidsrc.to/embed/tv/${id}/${s}/${e}?autoplay=1`);
+
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
 
             iframe.src = "about:blank"; 
@@ -1096,7 +975,7 @@
                 } catch (err) { iframe.src = vidsrcUrl; }
             } else { iframe.src = vidsrcUrl; }
 
-            if (type === 'tv') {
+            if (type === 'tv' && autoNextEnabled) {
                 scheduleBinge();
             }
 
@@ -1148,14 +1027,9 @@
         }
 
         function setFilter(type, id = '') { 
-            if (activeType !== 'search') {
-                previousActiveType = activeType;
-                previousActiveID = activeID;
-            }
+            if (activeType !== 'search') { previousActiveType = activeType; previousActiveID = activeID; }
             activeType = type; activeID = id; 
-            if (type !== 'search') {
-                document.getElementById('search-input').value = '';
-            }
+            if (type !== 'search') document.getElementById('search-input').value = '';
             document.querySelectorAll('nav button, #side-menu button').forEach(b => b.classList.remove('active-filter'));
             if (event && event.currentTarget && event.currentTarget.tagName === 'BUTTON') {
                 event.currentTarget.classList.add('active-filter');
@@ -1169,19 +1043,14 @@
             const input = document.getElementById('search-input');
             const query = input.value.trim();
             if(query) {
-                if (activeType !== 'search') {
-                    previousActiveType = activeType;
-                    previousActiveID = activeID;
-                }
+                if (activeType !== 'search') { previousActiveType = activeType; previousActiveID = activeID; }
                 setFilter('search', query);
                 input.blur();
                 setTimeout(() => {
                     const firstResult = document.querySelector('#movie-grid .focusable');
                     if(firstResult) firstResult.focus();
                 }, 800);
-            } else {
-                handleSearchInput();
-            }
+            } else { handleSearchInput(); }
         }
 
         function handleSearchInput(e) {
@@ -1192,26 +1061,22 @@
                     const fallbackID = previousActiveID || '';
                     activeType = fallbackType;
                     activeID = fallbackID;
-                    
                     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-filter'));
                     const targetBtn = document.querySelector(`nav button[onclick*="${fallbackType}"]`) || document.getElementById('btn-trending');
                     if (targetBtn) targetBtn.classList.add('active-filter');
-                    
                     fetchContent();
                 }
             }
         }
 
         function handleSearch(e) { 
-            if (e.key === 'Enter') {
-                triggerSearch(); 
-            } else if (e.target.value.trim() === '' && activeType === 'search') {
-                handleSearchInput();
-            }
+            if (e.key === 'Enter') triggerSearch(); 
+            else if (e.target.value.trim() === '' && activeType === 'search') handleSearchInput();
         }
 
         window.onload = () => { 
             setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
+            updateAutoNextButtonUI();
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
@@ -1224,7 +1089,7 @@
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                if (current && current.id === 'search-input') { return; }
+                if (current && current.id === 'search-input') return;
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
