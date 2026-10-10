@@ -128,16 +128,6 @@
         .fav-heart-btn { transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
         .fav-heart-btn:hover { transform: scale(1.1); }
         .fav-heart-btn.is-fav svg { fill: #E50914 !important; stroke: #D4AF37 !important; filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8)); }
-
-        #binge-countdown-overlay { animation: bingeFade 0.3s ease-out; }
-        @keyframes bingeFade { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-
-        #autonext-toggle-btn.autonext-on {
-            background: rgba(212, 175, 55, 0.25) !important;
-            color: var(--gold) !important;
-            border-color: rgba(212, 175, 55, 0.8) !important;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
     </style>
 </head>
 <body>
@@ -212,6 +202,8 @@
                 <button class="focusable whitespace-nowrap" onclick="setFilter('comedy')">Comedy</button>
                 <button class="focusable whitespace-nowrap" onclick="setFilter('crime')">Crime</button>
                 <button class="focusable whitespace-nowrap" onclick="setFilter('genre', 10751)">Family</button>
+                <button class="focusable whitespace-nowrap" onclick="setFilter('marvel')">Marvel</button>
+                <button class="focusable whitespace-nowrap" onclick="setFilter('dc_universe')">DC Universe</button>
                 <button class="focusable whitespace-nowrap" onclick="setFilter('90s_nostalgia')">90s Nostalgia</button>
                 <button class="focusable whitespace-nowrap" onclick="setFilter('anime')">Anime</button>
             </nav>
@@ -271,26 +263,9 @@
 
     <div id="player-overlay">
         <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-[7000]">
-            <div class="flex items-center gap-3">
-                <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
-                <button id="autonext-toggle-btn" onclick="toggleAutoNext()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-[10px] tracking-widest uppercase">⏭ AUTO-NEXT: OFF</button>
-            </div>
+            <div class="bg-gold/20 text-gold px-4 py-2 rounded-full border border-gold/40 font-bold text-[10px] tracking-widest uppercase">Cinema Luxe Player</div>
             <button id="close-player-btn" onclick="closePlayer()" class="focusable bg-black/60 text-white px-4 py-2 rounded-full border border-white/20 font-bold text-xs">✕ CLOSE</button>
         </div>
-
-        <div id="binge-countdown-overlay" class="hidden absolute inset-0 flex items-center justify-center z-[7500] pointer-events-none">
-            <div class="bg-black/90 border-2 border-red-600 rounded-2xl px-10 py-8 text-center shadow-2xl pointer-events-auto" style="box-shadow: 0 0 40px rgba(229,9,20,0.5);">
-                <p class="text-red-500 text-[10px] uppercase tracking-[0.4em] font-bold mb-3">Up Next</p>
-                <p id="binge-next-title" class="text-white font-bold text-lg mb-4">Next Episode</p>
-                <p class="text-zinc-400 text-[10px] uppercase tracking-widest mb-2">Playing in</p>
-                <p id="binge-countdown-number" class="text-red-600 text-7xl font-extrabold mb-5" style="font-family: 'Playfair Display', serif;">5</p>
-                <div class="flex gap-3 justify-center">
-                    <button id="binge-cancel-btn" onclick="cancelBingeCountdown()" class="focusable bg-white/10 text-white px-5 py-2 rounded-full border border-white/30 font-bold text-xs uppercase tracking-wider">Cancel</button>
-                    <button id="binge-skip-btn" onclick="advanceToNextEpisode()" class="focusable bg-red-600 text-white px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider" style="box-shadow: 0 0 15px rgba(229,9,20,0.6);">Play Now ▸</button>
-                </div>
-            </div>
-        </div>
-
         <iframe id="luxe-player" class="w-full h-full" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture" referrerpolicy="no-referrer"></iframe>
     </div>
 
@@ -300,15 +275,6 @@
         let currentPage = 1, isLoading = false, hasMore = true;
         let savedScrollPosition = 0;
         let trendingIdsCache = new Set();
-
-        // Auto-next state
-        let autoNextEnabled = localStorage.getItem('zonhd_autonext') === 'true';
-        let bingeStartTimer = null;
-        let bingeCountdownTimer = null;
-        let bingeCountdownValue = 5;
-        let bingeCountdownShowing = false;
-        let playerEventsSeen = false;
-        let playerEventsCheckTimer = null;
 
         const FALLBACK_API_KEY = "1df5488d0113ddb270ab0027f311c1ea";
 
@@ -381,87 +347,87 @@
             "House Party", "House Party 2", "Dr. Dolittle"
         ];
 
-        // ============================================================
-        // PLAYER EVENT LISTENER (postMessage) — used for real end-detection
-        // ============================================================
-        window.addEventListener('message', function(e) {
-            try {
-                let data = e.data;
-                if (typeof data === 'string') {
-                    try { data = JSON.parse(data); } catch(_) {}
-                }
-                if (!data) return;
+        // ================================================================
+        // MARVEL — every film and series
+        // ================================================================
+        const MARVEL_TITLES = [
+            "Iron Man", "The Incredible Hulk", "Iron Man 2", "Thor",
+            "Captain America: The First Avenger", "The Avengers",
+            "Iron Man 3", "Thor: The Dark World", "Captain America: The Winter Soldier",
+            "Guardians of the Galaxy", "Avengers: Age of Ultron", "Ant-Man",
+            "Captain America: Civil War", "Doctor Strange",
+            "Guardians of the Galaxy Vol. 2", "Spider-Man: Homecoming",
+            "Thor: Ragnarok", "Black Panther", "Avengers: Infinity War",
+            "Ant-Man and the Wasp", "Captain Marvel", "Avengers: Endgame",
+            "Spider-Man: Far From Home", "Black Widow",
+            "Shang-Chi and the Legend of the Ten Rings", "Eternals",
+            "Spider-Man: No Way Home", "Doctor Strange in the Multiverse of Madness",
+            "Thor: Love and Thunder", "Black Panther: Wakanda Forever",
+            "Ant-Man and the Wasp: Quantumania", "Guardians of the Galaxy Vol. 3",
+            "The Marvels", "Deadpool & Wolverine", "Captain America: Brave New World",
+            "Thunderbolts*", "The Fantastic Four: First Steps", "Blade",
+            "Avengers: Doomsday", "Avengers: Secret Wars",
+            "Blade", "Blade II", "Blade: Trinity", "Daredevil", "Elektra",
+            "Fantastic Four", "Fantastic Four: Rise of the Silver Surfer",
+            "Ghost Rider", "Ghost Rider: Spirit of Vengeance", "Punisher: War Zone",
+            "The Punisher", "Hulk", "Spider-Man", "Spider-Man 2",
+            "Spider-Man 3", "The Amazing Spider-Man", "The Amazing Spider-Man 2",
+            "Venom", "Venom: Let There Be Carnage", "Venom: The Last Dance",
+            "Morbius", "Kraven the Hunter", "Madame Web",
+            "X-Men", "X2: X-Men United", "X-Men: The Last Stand",
+            "X-Men Origins: Wolverine", "X-Men: First Class",
+            "The Wolverine", "X-Men: Days of Future Past",
+            "Deadpool", "X-Men: Apocalypse", "Logan", "Deadpool 2",
+            "Dark Phoenix", "The New Mutants",
+            "WandaVision", "The Falcon and the Winter Soldier", "Loki",
+            "Hawkeye", "Moon Knight", "Ms. Marvel", "She-Hulk: Attorney at Law",
+            "Secret Invasion", "Echo", "Agatha All Along",
+            "Daredevil: Born Again", "Ironheart", "Daredevil",
+            "Jessica Jones", "Luke Cage", "Iron Fist", "The Defenders",
+            "The Punisher", "The Gifted", "Legion", "Agent Carter",
+            "Agents of S.H.I.E.L.D.", "Inhumans", "Runaways", "Cloak & Dagger",
+            "Helstrom", "The Walking Dead: Daryl Dixon"
+        ];
 
-                let eventType = '';
-                let currentTime = null;
-                let duration = null;
-
-                if (typeof data === 'object') {
-                    eventType = String(data.event || data.type || data.action || data.name || '').toLowerCase();
-                    currentTime = data.currentTime ?? data.current_time ?? data.time ?? data.position ?? data.progress ?? null;
-                    duration = data.duration ?? data.totalDuration ?? data.total ?? data.length ?? null;
-                    if (!eventType && data.data && typeof data.data === 'object') {
-                        eventType = String(data.data.event || data.data.type || '').toLowerCase();
-                        currentTime = currentTime ?? data.data.currentTime ?? null;
-                        duration = duration ?? data.data.duration ?? null;
-                    }
-                } else if (typeof data === 'string') {
-                    eventType = data.toLowerCase();
-                }
-
-                if (!playerEventsSeen) {
-                    playerEventsSeen = true;
-                    console.log('[AUTO-NEXT] Player events detected — real end-detection ACTIVE');
-                }
-
-                if (!autoNextEnabled) return;
-                if (!currentMedia || currentMedia.type !== 'tv') return;
-
-                // Real end event
-                if (eventType === 'ended' || eventType === 'end' || eventType === 'complete' || eventType === 'videoended' || eventType === 'finished') {
-                    console.log('[AUTO-NEXT] ⚡ Ended event received');
-                    if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
-                    if (!bingeCountdownShowing) showBingeCountdown();
-                    return;
-                }
-
-                // Near-end via timeupdate
-                if (eventType === 'timeupdate' || eventType === 'time' || eventType === 'progress') {
-                    if (currentTime != null && duration != null && duration > 0) {
-                        const remaining = duration - currentTime;
-                        if (remaining <= 45 && remaining > 0 && !bingeCountdownShowing) {
-                            console.log(`[AUTO-NEXT] ⚡ Near-end detected (${remaining.toFixed(1)}s remaining)`);
-                            if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
-                            showBingeCountdown();
-                        }
-                    }
-                }
-            } catch (err) {}
-        });
-
-        // ---- AUTO-NEXT TOGGLE ----
-        function updateAutoNextButtonUI() {
-            const btn = document.getElementById('autonext-toggle-btn');
-            if (!btn) return;
-            if (autoNextEnabled) {
-                btn.textContent = '⏭ AUTO-NEXT: ON';
-                btn.classList.add('autonext-on');
-            } else {
-                btn.textContent = '⏭ AUTO-NEXT: OFF';
-                btn.classList.remove('autonext-on');
-            }
-        }
-
-        function toggleAutoNext() {
-            autoNextEnabled = !autoNextEnabled;
-            localStorage.setItem('zonhd_autonext', autoNextEnabled ? 'true' : 'false');
-            updateAutoNextButtonUI();
-            if (autoNextEnabled && currentMedia.type === 'tv') {
-                scheduleBinge();
-            } else {
-                clearBingeTimers();
-            }
-        }
+        // ================================================================
+        // DC UNIVERSE — every film and series
+        // ================================================================
+        const DC_TITLES = [
+            "Superman and the Mole Men", "Batman", "Superman", "Superman II",
+            "Superman III", "Superman IV: The Quest for Peace", "Supergirl",
+            "Batman", "Batman Returns", "Batman Forever", "Batman & Robin",
+            "Batman Begins", "The Dark Knight", "The Dark Knight Rises",
+            "Man of Steel", "Batman v Superman: Dawn of Justice",
+            "Suicide Squad", "Wonder Woman", "Justice League",
+            "Zack Snyder's Justice League", "Aquaman", "Shazam!",
+            "Birds of Prey", "Wonder Woman 1984", "The Suicide Squad",
+            "Black Adam", "Shazam! Fury of the Gods", "The Flash",
+            "Blue Beetle", "Aquaman and the Lost Kingdom", "Joker",
+            "Joker: Folie à Deux", "The Batman", "The Batman Part II",
+            "Superman: Legacy", "Supergirl: Woman of Tomorrow",
+            "The Brave and the Bold", "Swamp Thing", "Clayface",
+            "Creature Commandos", "Peacemaker", "The Sandman",
+            "Lucifer", "Constantine", "Swamp Thing", "Doom Patrol",
+            "Titans", "Batwoman", "Supergirl", "Black Lightning",
+            "Legends of Tomorrow", "The Flash", "Arrow", "Smallville",
+            "Gotham", "Gotham Knights", "Pennyworth", "Krypton",
+            "Human Target", "iZombie", "Preacher", "DMZ", "Y: The Last Man",
+            "Sweet Tooth", "The Sandman", "Dead Boy Detectives",
+            "Justice League Unlimited", "Justice League",
+            "Batman: The Animated Series", "Superman: The Animated Series",
+            "Batman Beyond", "Static Shock", "The Zeta Project",
+            "Teen Titans", "Teen Titans Go!", "Young Justice",
+            "Harley Quinn", "My Adventures with Superman",
+            "Batman: The Brave and the Bold", "Green Lantern: The Animated Series",
+            "Beware the Batman", "Justice League Action",
+            "DC Super Hero Girls", "Batman: Caped Crusader",
+            "Watchmen", "Watchmen: Chapter I", "Watchmen: Chapter II",
+            "V for Vendetta", "The League of Extraordinary Gentlemen",
+            "Road to Perdition", "A History of Violence", "Constantine",
+            "The Losers", "Jonah Hex", "The Kitchen", "Birds of Prey",
+            "Shazam!", "Aquaman", "Wonder Woman", "Justice League",
+            "Suicide Squad", "Batman v Superman: Dawn of Justice"
+        ];
 
         async function fetchConfig() {
             try {
@@ -479,7 +445,6 @@
             if (!API_KEY) API_KEY = FALLBACK_API_KEY;
             try { renderContinueWatching(); } catch (e) {}
             try { updateFavBadge(); } catch (e) {}
-            try { updateAutoNextButtonUI(); } catch (e) {}
             try { await cacheTrendingIds(); } catch (e) {}
             try { fetchContent(); } catch (e) { console.error("fetchContent failed:", e); }
         }
@@ -491,119 +456,6 @@
                 if (data.results) data.results.forEach(item => trendingIdsCache.add(item.id));
             } catch (e) {}
         }
-
-        // ---- AUTO-NEXT / BINGE ----
-        function clearBingeTimers() {
-            if (bingeStartTimer) { clearTimeout(bingeStartTimer); bingeStartTimer = null; }
-            if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
-            bingeCountdownShowing = false;
-            hideBingeOverlay();
-        }
-
-        function hideBingeOverlay() {
-            const el = document.getElementById('binge-countdown-overlay');
-            if (el) el.classList.add('hidden');
-        }
-
-        async function getNextEpisodeInfo() {
-            if (!currentMedia || currentMedia.type !== 'tv') return null;
-            try {
-                const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}?api_key=${API_KEY}`);
-                const seasonData = await seasonRes.json();
-                const episodes = (seasonData.episodes || []).filter(ep => ep.episode_number > 0);
-                const currentIdx = episodes.findIndex(ep => ep.episode_number === currentMedia.e);
-                if (currentIdx >= 0 && currentIdx < episodes.length - 1) {
-                    return { s: currentMedia.s, e: episodes[currentIdx + 1].episode_number };
-                }
-                const showRes = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}?api_key=${API_KEY}`);
-                const showData = await showRes.json();
-                const validSeasons = (showData.seasons || []).filter(s => s.season_number > 0);
-                const currentSeasonIdx = validSeasons.findIndex(s => s.season_number === currentMedia.s);
-                if (currentSeasonIdx >= 0 && currentSeasonIdx < validSeasons.length - 1) {
-                    return { s: validSeasons[currentSeasonIdx + 1].season_number, e: 1 };
-                }
-                return null;
-            } catch (e) { return null; }
-        }
-
-        async function scheduleBinge() {
-            clearBingeTimers();
-            if (!autoNextEnabled) return;
-            if (!currentMedia || currentMedia.type !== 'tv') return;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const isTest = urlParams.get('bingetest') === '1';
-            if (isTest) {
-                console.log('[AUTO-NEXT] TEST MODE — countdown in 8s');
-                bingeStartTimer = setTimeout(() => { if (!bingeCountdownShowing) showBingeCountdown(); }, 8000);
-                return;
-            }
-
-            // Conservative fallback: fire 3 min AFTER expected end.
-            // PostMessage events (if vidsrc.to emits them) will fire the countdown sooner, at the real end.
-            let runtime = 22;
-            try {
-                const res = await fetch(`https://api.themoviedb.org/3/tv/${currentMedia.id}/season/${currentMedia.s}/episode/${currentMedia.e}?api_key=${API_KEY}`);
-                const data = await res.json();
-                if (data && data.runtime && data.runtime > 0) runtime = data.runtime;
-            } catch (e) {}
-
-            const ms = (runtime * 60 + 180) * 1000;
-            console.log(`[AUTO-NEXT] Fallback timer armed: ${Math.round(ms/1000)}s (runtime ${runtime}min + 3min buffer)`);
-            bingeStartTimer = setTimeout(() => {
-                if (bingeCountdownShowing) return;
-                console.log('[AUTO-NEXT] Fallback timer fired');
-                showBingeCountdown();
-            }, ms);
-        }
-
-        async function showBingeCountdown() {
-            bingeStartTimer = null;
-            if (bingeCountdownShowing) return;
-
-            const next = await getNextEpisodeInfo();
-            if (!next) { console.log('[AUTO-NEXT] End of series — no countdown'); return; }
-
-            bingeCountdownShowing = true;
-            bingeCountdownValue = 5;
-            const titleEl = document.getElementById('binge-next-title');
-            const numEl = document.getElementById('binge-countdown-number');
-            const overlay = document.getElementById('binge-countdown-overlay');
-
-            if (titleEl) titleEl.textContent = `S${next.s} E${next.e}`;
-            if (numEl) numEl.textContent = '5';
-            if (overlay) overlay.classList.remove('hidden');
-
-            bingeCountdownTimer = setInterval(() => {
-                bingeCountdownValue--;
-                if (numEl) numEl.textContent = String(bingeCountdownValue);
-                if (bingeCountdownValue <= 0) {
-                    clearInterval(bingeCountdownTimer);
-                    bingeCountdownTimer = null;
-                    hideBingeOverlay();
-                    bingeCountdownShowing = false;
-                    advanceToNextEpisode();
-                }
-            }, 1000);
-        }
-
-        function cancelBingeCountdown() {
-            if (bingeCountdownTimer) { clearInterval(bingeCountdownTimer); bingeCountdownTimer = null; }
-            bingeCountdownShowing = false;
-            hideBingeOverlay();
-            // Do NOT reschedule — user chose to stay on this episode
-        }
-
-        async function advanceToNextEpisode() {
-            clearBingeTimers();
-            const next = await getNextEpisodeInfo();
-            if (!next) return;
-            currentMedia.s = next.s;
-            currentMedia.e = next.e;
-            startLuxeStream();
-        }
-
-        window.testBinge = showBingeCountdown;
 
         function getFavorites() { return JSON.parse(localStorage.getItem('zonhd_favorites') || '[]'); }
         function updateFavBadge() {
@@ -681,6 +533,8 @@
             if (activeType === 'favorites') { renderFavorites(); isLoading = false; return; }
             if (activeType === 'anime') { await fetchAniList(append); isLoading = false; return; }
             if (activeType === '90s_nostalgia') { await fetch90sNostalgia(append); isLoading = false; return; }
+            if (activeType === 'marvel') { await fetchMarvel(); isLoading = false; return; }
+            if (activeType === 'dc_universe') { await fetchDC(); isLoading = false; return; }
             if (activeType === 'list') { await fetchTmdbList(activeID, append); isLoading = false; return; }
             if (['drama', 'romance', 'comedy', 'crime'].includes(activeType)) {
                 await fetchCuratedCategory(activeType, append);
@@ -706,6 +560,54 @@
                     hasMore = currentPage <= (data.total_pages || 1);
                 } else { hasMore = false; }
             } catch (err) { console.error("Fetch failed", err); } finally { isLoading = false; }
+        }
+
+        async function fetchMarvel() {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            const searchPromises = MARVEL_TITLES.map(title => 
+                fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.results) {
+                        return data.results.find(m => m.poster_path && (m.media_type === 'movie' || m.media_type === 'tv')) || null;
+                    }
+                    return null;
+                })
+                .catch(() => null)
+            );
+            const results = await Promise.all(searchPromises);
+            let unique = new Map();
+            results.forEach(m => {
+                if (m && m.poster_path && !unique.has(m.id)) {
+                    unique.set(m.id, m);
+                }
+            });
+            renderGrid(Array.from(unique.values()));
+        }
+
+        async function fetchDC() {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = '';
+            const searchPromises = DC_TITLES.map(title => 
+                fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.results) {
+                        return data.results.find(m => m.poster_path && (m.media_type === 'movie' || m.media_type === 'tv')) || null;
+                    }
+                    return null;
+                })
+                .catch(() => null)
+            );
+            const results = await Promise.all(searchPromises);
+            let unique = new Map();
+            results.forEach(m => {
+                if (m && m.poster_path && !unique.has(m.id)) {
+                    unique.set(m.id, m);
+                }
+            });
+            renderGrid(Array.from(unique.values()));
         }
 
         async function fetch90sNostalgia(append) {
@@ -953,17 +855,10 @@
             const playerOverlay = document.getElementById('player-overlay');
             const iframe = document.getElementById('luxe-player');
             playerOverlay.style.display = 'block';
-
-            clearBingeTimers();
-            updateAutoNextButtonUI();
-
-            // Add autoplay=1 so the next episode plays automatically when we switch
             const vidsrcUrl = (type === 'movie' 
                 ? `https://vidsrc.to/embed/movie/${id}?autoplay=1` 
                 : `https://vidsrc.to/embed/tv/${id}/${s}/${e}?autoplay=1`);
-
             const consumetUrl = `https://consumet-api-fawn.vercel.app/anime/gogoanime/watch/${encodeURIComponent(title.toLowerCase().replace(/ /g, '-'))}-episode-${e}`;
-
             iframe.src = "about:blank"; 
             if (isAnime) {
                 try {
@@ -974,11 +869,6 @@
                     iframe.src = response.ok ? consumetUrl : vidsrcUrl;
                 } catch (err) { iframe.src = vidsrcUrl; }
             } else { iframe.src = vidsrcUrl; }
-
-            if (type === 'tv' && autoNextEnabled) {
-                scheduleBinge();
-            }
-
             setTimeout(() => { if(document.getElementById('close-player-btn')) document.getElementById('close-player-btn').focus(); }, 400);
         }
 
@@ -1014,7 +904,6 @@
         }
 
         function closePlayer() { 
-            clearBingeTimers();
             document.getElementById('luxe-player').src = "about:blank";
             document.getElementById('player-overlay').style.display = 'none'; 
             document.getElementById('close-sel-btn').focus(); 
@@ -1027,9 +916,14 @@
         }
 
         function setFilter(type, id = '') { 
-            if (activeType !== 'search') { previousActiveType = activeType; previousActiveID = activeID; }
+            if (activeType !== 'search') {
+                previousActiveType = activeType;
+                previousActiveID = activeID;
+            }
             activeType = type; activeID = id; 
-            if (type !== 'search') document.getElementById('search-input').value = '';
+            if (type !== 'search') {
+                document.getElementById('search-input').value = '';
+            }
             document.querySelectorAll('nav button, #side-menu button').forEach(b => b.classList.remove('active-filter'));
             if (event && event.currentTarget && event.currentTarget.tagName === 'BUTTON') {
                 event.currentTarget.classList.add('active-filter');
@@ -1043,14 +937,19 @@
             const input = document.getElementById('search-input');
             const query = input.value.trim();
             if(query) {
-                if (activeType !== 'search') { previousActiveType = activeType; previousActiveID = activeID; }
+                if (activeType !== 'search') {
+                    previousActiveType = activeType;
+                    previousActiveID = activeID;
+                }
                 setFilter('search', query);
                 input.blur();
                 setTimeout(() => {
                     const firstResult = document.querySelector('#movie-grid .focusable');
                     if(firstResult) firstResult.focus();
                 }, 800);
-            } else { handleSearchInput(); }
+            } else {
+                handleSearchInput();
+            }
         }
 
         function handleSearchInput(e) {
@@ -1070,13 +969,15 @@
         }
 
         function handleSearch(e) { 
-            if (e.key === 'Enter') triggerSearch(); 
-            else if (e.target.value.trim() === '' && activeType === 'search') handleSearchInput();
+            if (e.key === 'Enter') {
+                triggerSearch(); 
+            } else if (e.target.value.trim() === '' && activeType === 'search') {
+                handleSearchInput();
+            }
         }
 
         window.onload = () => { 
             setTimeout(() => { const loader = document.getElementById('loader'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); } }, 1000);
-            updateAutoNextButtonUI();
             fetchConfig();
             const mc = new Hammer(document.body);
             mc.on("swiperight", () => toggleMenu());
@@ -1089,7 +990,7 @@
             const focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => el.offsetParent !== null);
             
             if (e.key === 'Backspace' || e.keyCode === 8 || e.keyCode === 10009) {
-                if (current && current.id === 'search-input') return;
+                if (current && current.id === 'search-input') { return; }
                 e.preventDefault();
                 if (document.getElementById('player-overlay').style.display === 'block') closePlayer();
                 else if (document.getElementById('selector-overlay').style.display === 'block') closeSelector();
