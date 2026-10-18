@@ -8,45 +8,65 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --gold-light: #F3E5AB; --red: #E50914; --burgundy: #58111A; --crimson: #990000; --black: #050505; }
-        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; overflow-anchor: none; }
-        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: -1;
-            background: radial-gradient(circle at 10% 20%, rgba(153,0,0,0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(212,175,55,0.08) 0%, transparent 45%), radial-gradient(circle at 50% 50%, rgba(88,17,26,0.1) 0%, transparent 60%);
-            animation: luxeShimmer 12s infinite alternate ease-in-out; }
-        @keyframes luxeShimmer { 0% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.03); } 100% { opacity: 0.8; transform: scale(1); } }
+        :root { 
+            --gold: #D4AF37; 
+            --gold-light: #F3E5AB;
+            --red: #E50914; 
+            --burgundy: #58111A;
+            --crimson: #990000;
+            --black: #050505; 
+        }
+        body { background: var(--black); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; touch-action: pan-y; }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(153, 0, 0, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(88, 17, 26, 0.1) 0%, transparent 60%);
+            animation: luxeShimmer 12s infinite alternate ease-in-out;
+        }
+        @keyframes luxeShimmer {
+            0% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+            100% { opacity: 0.8; transform: scale(1); }
+        }
         #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         .loader-medusa { width: 120px; height: 120px; border-radius: 50%; background: url('IMG_8035.jpeg'); background-size: cover; border: 3px solid var(--gold); box-shadow: 0 0 40px var(--red); animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
-        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: rgba(5,5,5,0.98); backdrop-filter: blur(15px); border-right: 1px solid rgba(212,175,55,0.3); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; display: flex; flex-direction: column; }
+        #side-menu { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: rgba(5,5,5,0.98); backdrop-filter: blur(15px); border-right: 1px solid rgba(212, 175, 55, 0.3); z-index: 3000; transform: translateX(-100%); transition: 0.4s ease; display: flex; flex-direction: column; }
         .menu-open { transform: translateX(0) !important; }
         @media screen and (min-width: 900px) and (min-height: 500px) { #side-menu { zoom: 0.82; } }
-        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212,175,55,0.15); }
-        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 30px rgba(229,9,20,0.6), 0 0 10px rgba(212,175,55,0.4); font-style: italic; }
-        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4,0,0.2,1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
-        .movie-card:hover { transform: translateY(-4px); border-color: rgba(212,175,55,0.5); box-shadow: 0 10px 25px rgba(229,9,20,0.25); }
-        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08) translateY(-4px); box-shadow: 0 0 30px rgba(212,175,55,0.7), 0 10px 25px rgba(229,9,20,0.4); z-index: 50; }
+        .hero-banner { height: 50vh; position: relative; background: linear-gradient(to bottom, rgba(5,5,5,0.2), var(--black)), url('IMG_8035.jpeg'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.15); }
+        .zonhd-logo { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 10vw, 5rem); color: var(--gold); text-shadow: 0 0 30px rgba(229, 9, 20, 0.6), 0 0 10px rgba(212, 175, 55, 0.4); font-style: italic; }
+        .movie-card { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
+        .movie-card:hover { transform: translateY(-4px); border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 10px 25px rgba(229, 9, 20, 0.25); }
+        .focusable:focus { outline: none; border-color: var(--gold) !important; transform: scale(1.08) translateY(-4px); box-shadow: 0 0 30px rgba(212, 175, 55, 0.7), 0 10px 25px rgba(229, 9, 20, 0.4); z-index: 50; }
         #selector-overlay { display: none; width: 100%; min-height: 100vh; background: var(--black); position: relative; z-index: 4000; }
         #details-backdrop { position: absolute; top: 0; width: 100%; height: 650px; opacity: 0.5; background-size: cover; background-position: center; pointer-events: none; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0)); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0)); }
         .rating-badge { border: 1.5px solid var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 13px; }
-        .tv-tag { background: rgba(153,0,0,0.3); border: 1px solid rgba(229,9,20,0.4); color: #ff6b6b; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
-        .btn-play-red { background: linear-gradient(135deg, #E50914, #990000); color: white; font-weight: 700; padding: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(229,9,20,0.4); transition: 0.3s; }
-        .btn-play-red:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(229,9,20,0.6); }
+        .tv-tag { background: rgba(153, 0, 0, 0.3); border: 1px solid rgba(229, 9, 20, 0.4); color: #ff6b6b; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+        .btn-play-red { background: linear-gradient(135deg, #E50914, #990000); color: white; font-weight: 700; padding: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 400px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(229, 9, 20, 0.4); transition: 0.3s; }
+        .btn-play-red:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(229, 9, 20, 0.6); }
         .episode-row { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; border: 2px solid transparent; border-radius: 8px; transition: 0.2s; }
-        .episode-row:hover { background: rgba(212,175,55,0.03); padding-left: 8px; padding-right: 8px; }
+        .episode-row:hover { background: rgba(212, 175, 55, 0.03); padding-left: 8px; padding-right: 8px; }
         .ep-thumbnail { width: 130px; aspect-ratio: 16/9; background-size: cover; border-radius: 6px; flex-shrink: 0; position: relative; border: 1px solid rgba(255,255,255,0.1); }
         .ep-play-btn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: 0.2s; }
-        .episode-row:hover .ep-play-btn { background: rgba(229,9,20,0.4); }
+        .episode-row:hover .ep-play-btn { background: rgba(229, 9, 20, 0.4); }
         #player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); text-shadow: 0 0 10px rgba(212,175,55,0.5); }
+        .active-filter { color: var(--gold) !important; border-bottom: 2px solid var(--gold); text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
         .origin-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(4px); color: var(--gold); font-size: 8px; text-align: center; padding: 3px; font-weight: 900; letter-spacing: 1.5px; border-top: 1px solid rgba(212,175,55,0.2); }
-        .luxe-search-container { position: relative; background: linear-gradient(135deg, rgba(20,20,20,0.95), rgba(10,10,10,0.98)); border: 1.5px solid rgba(212,175,55,0.4); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 20px rgba(212,175,55,0.15); transition: all 0.3s ease; }
-        .luxe-search-container:focus-within { border-color: var(--gold); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 25px rgba(212,175,55,0.5); }
-        .luxe-search-btn { background: linear-gradient(135deg, #D4AF37, #AA7C11); color: #050505; font-weight: 900; letter-spacing: 0.1em; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition: all 0.3s ease; }
-        .luxe-search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,175,55,0.5); }
+        .luxe-search-container { position: relative; background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.98)); border: 1.5px solid rgba(212, 175, 55, 0.4); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.15); transition: all 0.3s ease; }
+        .luxe-search-container:focus-within { border-color: var(--gold); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 0 25px rgba(212, 175, 55, 0.5); }
+        .luxe-search-btn { background: linear-gradient(135deg, #D4AF37, #AA7C11); color: #050505; font-weight: 900; letter-spacing: 0.1em; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); transition: all 0.3s ease; }
+        .luxe-search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
         .fav-heart-btn { transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
         .fav-heart-btn:hover { transform: scale(1.1); }
-        .fav-heart-btn.is-fav svg { fill: #E50914 !important; stroke: #D4AF37 !important; filter: drop-shadow(0 0 8px rgba(229,9,20,0.8)); }
+        .fav-heart-btn.is-fav svg { fill: #E50914 !important; stroke: #D4AF37 !important; filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.8)); }
     </style>
 </head>
 <body>
@@ -473,7 +493,7 @@
         }
 
         async function fetchMarvel() {
-            hasMore = false;
+            if (activeType !== 'marvel') return;
             const grid = document.getElementById('movie-grid');
             grid.innerHTML = '';
             const searchPromises = MARVEL_TITLES.map(title =>
@@ -488,6 +508,7 @@
                     .catch(() => null)
             );
             const fetchedResults = await Promise.all(searchPromises);
+            if (activeType !== 'marvel') return;
             let unique = new Map();
             fetchedResults.forEach(m => {
                 if (m && m.poster_path && !unique.has(m.id)) {
@@ -495,10 +516,11 @@
                 }
             });
             renderGrid(Array.from(unique.values()));
+            hasMore = false;
         }
 
         async function fetchDC() {
-            hasMore = false;
+            if (activeType !== 'dc_universe') return;
             const grid = document.getElementById('movie-grid');
             grid.innerHTML = '';
             const searchPromises = DC_TITLES.map(title =>
@@ -513,6 +535,7 @@
                     .catch(() => null)
             );
             const fetchedResults = await Promise.all(searchPromises);
+            if (activeType !== 'dc_universe') return;
             let unique = new Map();
             fetchedResults.forEach(m => {
                 if (m && m.poster_path && !unique.has(m.id)) {
@@ -520,6 +543,7 @@
                 }
             });
             renderGrid(Array.from(unique.values()));
+            hasMore = false;
         }
 
         async function fetch90sNostalgia(append) {
@@ -826,6 +850,10 @@
         function setFilter(type, id = '') {
             if (activeType !== 'search') { previousActiveType = activeType; previousActiveID = activeID; }
             activeType = type; activeID = id;
+            // Reset pagination state so the new tab loads immediately
+            currentPage = 1;
+            hasMore = true;
+            isLoading = false;
             if (type !== 'search') document.getElementById('search-input').value = '';
             document.querySelectorAll('nav button, #side-menu button').forEach(b => b.classList.remove('active-filter'));
             if (event && event.currentTarget && event.currentTarget.tagName === 'BUTTON') {
@@ -879,11 +907,9 @@
         };
 
         window.addEventListener('scroll', () => {
-            if (isLoading) return;
-            if (activeType === 'favorites') return;
             if (STATIC_TABS.includes(activeType)) return;
-            const docHeight = document.documentElement.scrollHeight;
-            if ((window.innerHeight + window.scrollY) >= docHeight - 1000) fetchContent(true);
+            if (activeType === 'favorites') return;
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) fetchContent(true);
         });
 
         document.addEventListener('keydown', function(e) {
@@ -925,4 +951,4 @@
         }
     </script>
 </body>
-</html
+</html>
